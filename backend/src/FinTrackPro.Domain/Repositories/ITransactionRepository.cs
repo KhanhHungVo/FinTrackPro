@@ -1,0 +1,11 @@
+using FinTrackPro.Domain.Entities;
+
+namespace FinTrackPro.Domain.Repositories;
+
+public interface ITransactionRepository
+{
+    Task<IEnumerable<Transaction>> GetByUserAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Transaction?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    void Add(Transaction transaction);
+    void Remove(Transaction transaction);
+}

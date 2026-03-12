@@ -1,0 +1,25 @@
+# Migrator image — runs EF Core migrations and exits.
+# Uses the full SDK image so dotnet-ef is available.
+# The runtime API image (Dockerfile) uses the smaller aspnet image and does NOT include dotnet-ef.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS migrator
+WORKDIR /src
+
+# Install EF Core CLI tool
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+# Restore dependencies (layer-cached separately from source)
+COPY ["src/FinTrackPro.API/FinTrackPro.API.csproj",                         "src/FinTrackPro.API/"]
+COPY ["src/FinTrackPro.Application/FinTrackPro.Application.csproj",         "src/FinTrackPro.Application/"]
+COPY ["src/FinTrackPro.Domain/FinTrackPro.Domain.csproj",                   "src/FinTrackPro.Domain/"]
+COPY ["src/FinTrackPro.Infrastructure/FinTrackPro.Infrastructure.csproj",   "src/FinTrackPro.Infrastructure/"]
+COPY ["src/FinTrackPro.BackgroundJobs/FinTrackPro.BackgroundJobs.csproj",   "src/FinTrackPro.BackgroundJobs/"]
+RUN dotnet restore "src/FinTrackPro.API/FinTrackPro.API.csproj"
+
+COPY . .
+
+# Apply any pending migrations; idempotent — safe to run on every deploy
+ENTRYPOINT ["dotnet", "ef", "database", "update", \
+            "--project", "src/FinTrackPro.Infrastructure", \
+            "--startup-project", "src/FinTrackPro.API", \
+            "--no-build"]

@@ -1,0 +1,72 @@
+import { useState } from 'react'
+import {
+  useWatchedSymbols,
+  useAddWatchedSymbol,
+  useRemoveWatchedSymbol,
+} from '@/entities/watched-symbol'
+
+export function WatchlistManager() {
+  const { data: symbols, isLoading } = useWatchedSymbols()
+  const { mutate: add, isPending: adding, error: addError } = useAddWatchedSymbol()
+  const { mutate: remove } = useRemoveWatchedSymbol()
+  const [symbol, setSymbol] = useState('')
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault()
+    add(symbol, { onSuccess: () => setSymbol('') })
+  }
+
+  return (
+    <div className="rounded-lg border p-6 max-w-md space-y-4">
+      <h2 className="text-lg font-semibold">Signal Watchlist</h2>
+      <p className="text-sm text-gray-500">
+        Symbols here are monitored by the 4-hour signal job (RSI, volume spikes).
+      </p>
+
+      <form onSubmit={handleAdd} className="flex gap-2">
+        <input
+          type="text"
+          placeholder="e.g. BTCUSDT"
+          value={symbol}
+          onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+          required
+          className="flex-1 rounded-md border px-3 py-2 text-sm font-mono"
+        />
+        <button
+          type="submit"
+          disabled={adding}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+        >
+          {adding ? '...' : 'Add'}
+        </button>
+      </form>
+
+      {addError && (
+        <p className="text-sm text-red-600">{(addError as Error).message}</p>
+      )}
+
+      {isLoading ? (
+        <div className="animate-pulse h-16 rounded bg-gray-100" />
+      ) : symbols?.length === 0 ? (
+        <p className="text-sm text-gray-400">No symbols watched yet.</p>
+      ) : (
+        <ul className="space-y-1">
+          {symbols?.map((ws) => (
+            <li
+              key={ws.id}
+              className="flex items-center justify-between rounded-md border px-3 py-2"
+            >
+              <span className="font-mono text-sm font-medium">{ws.symbol}</span>
+              <button
+                onClick={() => remove(ws.id)}
+                className="text-xs text-red-500 hover:text-red-700"
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
