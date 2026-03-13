@@ -110,8 +110,8 @@ This is the public client the React frontend uses for the Authorization Code flo
    - Authentication flow: check **Standard flow** only
    - Click **Next**.
 4. **Step 3 — Login settings**
-   - Valid redirect URIs: `http://localhost:5173/*`
-   - Valid post-logout redirect URIs: `http://localhost:5173`
+   - Valid redirect URIs: `http://localhost:5173` and `http://localhost:5173/*`
+   - Valid post-logout redirect URIs: `http://localhost:5173/`
    - Web origins: `http://localhost:5173`
    - Click **Save**.
 
@@ -123,6 +123,63 @@ This is the public client the React frontend uses for the Authorization Code flo
 2. Set **Username** (e.g. `testuser`) → click **Create**.
 3. Go to the **Credentials** tab → click **Set password**.
 4. Enter a password, turn **Temporary** Off → click **Save** → **Save password**.
+
+---
+
+#### 2e — Add the audience mapper to `fintrackpro-spa`
+
+By default Keycloak only includes `aud: account` in the access token. The API validates
+that the token contains `aud: fintrackpro-api` — this mapper adds it.
+
+1. Go to **Clients** → click `fintrackpro-spa`.
+2. Click the **Client scopes** tab → click the `fintrackpro-spa-dedicated` link.
+3. Click **Add mapper** → **By configuration** → choose **Audience**.
+4. Fill in:
+   - **Name**: `fintrackpro-api-audience`
+   - **Included Custom Audience**: `fintrackpro-api`
+   - **Add to access token**: On
+5. Click **Save**.
+
+> Without this step every API call returns `401 Audience validation failed`.
+
+---
+
+#### 2f — Enable self-registration and social login (Option A — open signup)
+
+By default Keycloak requires an admin to create accounts manually. Follow these steps to let users
+register themselves and optionally sign in with Google or Azure AD.
+
+**Self-registration (required for Option A):**
+
+1. Go to **Realm settings** → **Login** tab.
+2. Turn on **User registration** → click **Save**.
+
+The Keycloak login page now shows a **Register** link. Any visitor can create a local account.
+
+**Assign the `User` role automatically to every new registrant:**
+
+1. Go to **Realm settings** → **User registration** tab.
+2. Under **Default roles**, click **Add roles** → select `User` → **Assign**.
+
+New users get the `User` role on first login. Without this step their API calls return `403 Forbidden`.
+
+> **Assign Admin role manually:** Go to **Users** → select a user → **Role mappings** → assign the `Admin` realm role. Admin users can access the Hangfire dashboard at `/hangfire`.
+
+**Google login (optional):**
+
+1. Go to **Identity providers** → **Add provider** → **Google**.
+2. Enter the **Client ID** and **Client Secret** from your [Google Cloud Console](https://console.cloud.google.com/) OAuth 2.0 credentials.
+3. Click **Save**.
+
+Users on the login page will see a **Sign in with Google** button.
+
+**Azure AD login (optional):**
+
+1. Go to **Identity providers** → **Add provider** → **Microsoft**.
+2. Enter the **Client ID** and **Client Secret** from your Azure App Registration.
+3. Click **Save**.
+
+> Social login providers are configured entirely in Keycloak. No changes to the application are needed.
 
 ### Step 3 — Create and apply database migration (first time only)
 

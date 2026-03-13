@@ -27,9 +27,10 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: dev-mem
     ports:
       - "8080:8080"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
 
   # Init container: runs EF Core migrations then exits.
   # Uses the SDK image (dotnet-ef available) so the runtime API image stays lean.
@@ -69,3 +70,4 @@ services:
 
 volumes:
   sqlserver-data:
+  keycloak-data:

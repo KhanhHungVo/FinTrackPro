@@ -1,12 +1,13 @@
 using FinTrackPro.Application.Trading.Commands.CreateTrade;
 using FinTrackPro.Application.Trading.Commands.DeleteTrade;
 using FinTrackPro.Application.Trading.Queries.GetTrades;
+using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinTrackPro.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = UserRole.User)]
 public class TradesController : BaseApiController
 {
     [HttpGet]

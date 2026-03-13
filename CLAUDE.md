@@ -40,8 +40,8 @@ docker compose up --build                 # full docker
 Strict layer isolation with inward-only dependencies:
 
 - **Domain** (`FinTrackPro.Domain`) — entities, value objects, repository interfaces. No external dependencies.
-- **Application** (`FinTrackPro.Application`) — CQRS via MediatR (commands/queries/handlers), DTOs, FluentValidation validators, MediatR pipeline behaviors (validation, logging).
-- **Infrastructure** (`FinTrackPro.Infrastructure`) — EF Core (Code-First, migrations here), repository implementations, Keycloak JWT, Telegram.Bot, Skender.Stock.Indicators.
+- **Application** (`FinTrackPro.Application`) — CQRS via MediatR (commands/queries/handlers), DTOs, FluentValidation validators, MediatR pipeline behaviors: `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login).
+- **Infrastructure** (`FinTrackPro.Infrastructure`) — EF Core (Code-First, migrations here), repository implementations, Keycloak JWT, `KeycloakClaimsTransformer` (flattens `realm_access.roles` → `ClaimTypes.Role`), Telegram.Bot, Skender.Stock.Indicators.
 - **API** (`FinTrackPro.API`) — ASP.NET Core controllers, DI registration, middleware (exception handling → maps domain exceptions to HTTP codes), Scalar API docs.
 - **BackgroundJobs** (`FinTrackPro.BackgroundJobs`) — Hangfire job definitions: `MarketSignalJob` (every 4h), `BudgetOverrunJob` (daily).
 
@@ -56,6 +56,8 @@ Server state lives in **React Query** (TanStack). Client-only state (auth, UI fl
 
 ### Auth
 Keycloak 24 is the OIDC provider. The API validates JWT Bearer tokens; the frontend uses the Keycloak JS adapter. Realm: `fintrackpro`.
+
+Users self-register via Keycloak's login page (local accounts, Google, or Azure AD — configured in Keycloak, not the app). The `User` realm role is assigned automatically to every registrant via Keycloak Default Roles; `Admin` is assigned manually. Roles are stored only in Keycloak — never in the database.
 
 ## Key Configuration
 

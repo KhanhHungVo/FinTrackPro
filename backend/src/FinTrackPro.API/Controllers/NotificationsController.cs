@@ -1,11 +1,12 @@
 using FinTrackPro.Application.Notifications.Commands.SaveNotificationPreference;
 using FinTrackPro.Application.Notifications.Queries.GetNotificationPreference;
+using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinTrackPro.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = UserRole.User)]
 public class NotificationsController : BaseApiController
 {
     [HttpGet("preferences")]

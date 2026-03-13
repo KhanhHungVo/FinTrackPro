@@ -1,11 +1,12 @@
 using FinTrackPro.Application.Finance.Commands.CreateBudget;
 using FinTrackPro.Application.Finance.Queries.GetBudgets;
+using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinTrackPro.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = UserRole.User)]
 public class BudgetsController : BaseApiController
 {
     [HttpGet("{month}")]

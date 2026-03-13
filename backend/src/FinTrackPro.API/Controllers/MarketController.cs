@@ -1,10 +1,11 @@
 using FinTrackPro.Application.Common.Interfaces;
+using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinTrackPro.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = UserRole.User)]
 [ApiController]
 [Route("api/[controller]")]
 public class MarketController : ControllerBase

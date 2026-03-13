@@ -26,7 +26,7 @@ Clean Architecture with CQRS. Dependencies point inward — outer layers depend 
 - FluentValidation validators
 - Service interfaces (`ICurrentUserService`, `INotificationService`, `IBinanceService`, etc.)
 - DTOs (explicit `operator` conversions, no AutoMapper)
-- Pipeline behaviors: `ValidationBehavior`, `LoggingBehavior`
+- Pipeline behaviors: `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login)
 
 ### Infrastructure (`FinTrackPro.Infrastructure`)
 - EF Core `ApplicationDbContext` + entity configurations
@@ -34,6 +34,7 @@ Clean Architecture with CQRS. Dependencies point inward — outer layers depend 
 - External services: `BinanceService`, `FearGreedService`, `CoinGeckoService`
 - `TelegramNotificationChannel`, `NotificationService`
 - `CurrentUserService` (reads JWT claims via `IHttpContextAccessor`)
+- `KeycloakClaimsTransformer` (`IClaimsTransformation`) — flattens `realm_access.roles` JSON array into individual `ClaimTypes.Role` claims
 - `IMemoryCache` for external API responses
 
 ### API (`FinTrackPro.API`)
@@ -61,7 +62,7 @@ app → pages → widgets → features → entities → shared
 | `app/` | QueryProvider, BrowserRouter + Outlet layout, global CSS |
 | `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage |
 | `widgets/` | Navbar, FearGreedWidget, SignalsList |
-| `features/` | AddTransactionForm, AddTradeForm, AddBudgetForm, NotificationSettingsForm, WatchlistManager, authStore (Zustand) |
+| `features/` | AddTransactionForm, AddTradeForm, AddBudgetForm, NotificationSettingsForm, WatchlistManager, authStore (Zustand — `accessToken`, `displayName`, `email`, `isAuthenticated`) |
 | `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference — types + React Query hooks |
 | `shared/` | Axios client (Bearer injection + Keycloak redirect on 401), env config, `cn()` |
 
@@ -72,7 +73,7 @@ app → pages → widgets → features → entities → shared
 | ORM | EF Core 10 + SQL Server | Type-safe migrations, Clean Arch compatible |
 | CQRS | MediatR 12 | Decoupled handlers, pipeline behaviors |
 | Validation | FluentValidation 11 | Declarative, auto-wired via DI |
-| Auth | Keycloak + JWT Bearer | External IdP, SSO, multi-provider |
+| Auth | Keycloak + JWT Bearer | External IdP, SSO, multi-provider. Users self-register (local, Google, Azure AD). Roles (`User`/`Admin`) live in Keycloak; `KeycloakClaimsTransformer` maps them to ASP.NET Core claims. |
 | Background jobs | Hangfire + SQL Server storage | Persistent job history, retry policy |
 | Indicators | Skender.Stock.Indicators | Free, NuGet, covers RSI/EMA/BB |
 | Notifications | Telegram Bot | No cost, no email infra |

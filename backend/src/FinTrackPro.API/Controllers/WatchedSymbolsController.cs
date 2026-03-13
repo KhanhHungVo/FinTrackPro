@@ -1,12 +1,13 @@
 using FinTrackPro.Application.Trading.Commands.AddWatchedSymbol;
 using FinTrackPro.Application.Trading.Commands.RemoveWatchedSymbol;
 using FinTrackPro.Application.Trading.Queries.GetWatchedSymbols;
+using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinTrackPro.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = UserRole.User)]
 public class WatchedSymbolsController : BaseApiController
 {
     [HttpGet]

@@ -109,7 +109,9 @@ See [docs/dev-setup.md — Step 2](docs/dev-setup.md#step-2--keycloak-one-time-s
 1. Sign in at `http://localhost:8080` (`admin` / `admin`) → create realm **`fintrackpro`**.
 2. Create client **`fintrackpro-api`**: confidential, Service accounts roles flow only.
 3. Create client **`fintrackpro-spa`**: public, Standard flow, redirect URI `http://localhost:5173/*`, web origin `http://localhost:5173`.
-4. Create a test user under **Users** and set a non-temporary password.
+4. Create a test user under **Users** and set a non-temporary password (or skip and use self-registration — see step 5).
+5. **Audience mapper (required):** On `fintrackpro-spa` → Client scopes → `fintrackpro-spa-dedicated` → Add mapper → Audience → Included Custom Audience: `fintrackpro-api`. Without this every API call returns `401`.
+6. **Self-registration (recommended):** Realm settings → Login → turn on **User registration**. Realm settings → User registration → Default roles → add `User`. This lets anyone sign up without admin intervention. Google and Azure AD login can be added via Identity Providers — no app changes needed.
 
 **Telegram Bot**
 1. Create a bot via [@BotFather](https://t.me/BotFather) and copy the token.

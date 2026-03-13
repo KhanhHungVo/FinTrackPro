@@ -1,12 +1,13 @@
 using FinTrackPro.Application.Finance.Commands.CreateTransaction;
 using FinTrackPro.Application.Finance.Commands.DeleteTransaction;
 using FinTrackPro.Application.Finance.Queries.GetTransactions;
+using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinTrackPro.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = UserRole.User)]
 public class TransactionsController : BaseApiController
 {
     [HttpGet]

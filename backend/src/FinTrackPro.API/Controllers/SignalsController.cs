@@ -1,10 +1,11 @@
 using FinTrackPro.Application.Signals.Queries.GetSignals;
+using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinTrackPro.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = UserRole.User)]
 public class SignalsController : BaseApiController
 {
     [HttpGet]

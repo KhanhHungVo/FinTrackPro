@@ -1,6 +1,8 @@
+using FinTrackPro.API.Infrastructure;
 using FinTrackPro.API.Middleware;
 using FinTrackPro.Application;
 using FinTrackPro.BackgroundJobs.Jobs;
+using FinTrackPro.Domain.Constants;
 using FinTrackPro.Infrastructure;
 using Hangfire;
 using Hangfire.SqlServer;
@@ -31,6 +33,9 @@ builder.Services.AddAuthentication("Bearer")
         options.Authority = builder.Configuration["Keycloak:Authority"];
         options.Audience  = builder.Configuration["Keycloak:Audience"];
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        // Preserve original claim names from the JWT (e.g. "sub", "realm_access")
+        // Without this, ASP.NET Core remaps "sub" → ClaimTypes.NameIdentifier
+        options.MapInboundClaims = false;
     });
 
 builder.Services.AddAuthorization();
@@ -78,8 +83,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Hangfire Dashboard
-app.UseHangfireDashboard("/hangfire");
+// Hangfire Dashboard — restricted to Admin role
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new HangfireRoleFilter(UserRole.Admin)]
+});
 
 // Register recurring jobs
 RecurringJob.AddOrUpdate<MarketSignalJob>(

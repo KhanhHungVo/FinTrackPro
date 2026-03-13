@@ -1,9 +1,11 @@
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Domain.Repositories;
+using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure.ExternalServices;
 using FinTrackPro.Infrastructure.Persistence;
 using FinTrackPro.Infrastructure.Persistence.Repositories;
 using FinTrackPro.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +35,9 @@ public static class DependencyInjection
         services.AddScoped<IWatchedSymbolRepository, WatchedSymbolRepository>();
         services.AddScoped<ISignalRepository, SignalRepository>();
         services.AddScoped<INotificationPreferenceRepository, NotificationPreferenceRepository>();
+
+        // Auth
+        services.AddScoped<IClaimsTransformation, KeycloakClaimsTransformer>();
 
         // Infrastructure services
         services.AddHttpContextAccessor();

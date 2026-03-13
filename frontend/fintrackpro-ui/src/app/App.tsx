@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
-import { QueryProvider } from './providers'
+import { QueryProvider, KeycloakProvider } from './providers'
 import { Navbar } from '@/widgets/navbar'
 import { DashboardPage } from '@/pages/dashboard'
 import { TransactionsPage } from '@/pages/transactions'
@@ -21,19 +21,21 @@ function AppLayout() {
 
 export function App() {
   return (
-    <QueryProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard"    element={<DashboardPage />} />
-            <Route path="/transactions" element={<TransactionsPage />} />
-            <Route path="/budgets"      element={<BudgetsPage />} />
-            <Route path="/trades"       element={<TradesPage />} />
-            <Route path="/settings"     element={<SettingsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </QueryProvider>
+    <KeycloakProvider>
+      <QueryProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard"    element={<DashboardPage />} />
+              <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/budgets"      element={<BudgetsPage />} />
+              <Route path="/trades"       element={<TradesPage />} />
+              <Route path="/settings"     element={<SettingsPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </QueryProvider>
+    </KeycloakProvider>
   )
 }

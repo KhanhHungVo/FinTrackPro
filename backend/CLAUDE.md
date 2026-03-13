@@ -51,6 +51,18 @@ Follow this pattern for every new capability:
 Every command/query automatically passes through, in order:
 1. `ValidationBehavior` — runs all registered FluentValidation validators; throws `ValidationException` (→ HTTP 400) on failure.
 2. `LoggingBehavior` — logs request name and elapsed time.
+3. `EnsureUserBehavior` — if the caller has a Keycloak ID and no `AppUser` row exists, creates one (auto-provisions on first login).
+
+## Roles
+
+Roles are defined in `FinTrackPro.Domain.Constants.UserRole` and stored only in Keycloak — never in the database.
+
+| Role | Who gets it | How |
+|---|---|---|
+| `User` | Every self-registered user | Keycloak Default Roles |
+| `Admin` | Manually assigned | Keycloak Admin UI → Users → Role mappings |
+
+`KeycloakClaimsTransformer` (Infrastructure) flattens `realm_access.roles` from the JWT into `ClaimTypes.Role` claims on every request. All controllers require `[Authorize(Roles = UserRole.User)]`. The Hangfire dashboard (`/hangfire`) requires `UserRole.Admin`.
 
 ## Exception Handling
 
