@@ -23,7 +23,10 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     container_name: fintrackpro-keycloak
-    command: start-dev
+    # --import-realm scans /opt/keycloak/data/import/ on startup.
+    # Import is idempotent: if the realm already exists it is skipped, so manual
+    # changes (extra users, social login) persist across restarts.
+    command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -31,6 +34,7 @@ services:
       - "8080:8080"
     volumes:
       - keycloak-data:/opt/keycloak/data
+      - ./infra/docker/keycloak-realm.json:/opt/keycloak/data/import/fintrackpro-realm.json:ro
 
   # Init container: runs EF Core migrations then exits.
   # Uses the SDK image (dotnet-ef available) so the runtime API image stays lean.

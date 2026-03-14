@@ -58,7 +58,7 @@ cd frontend/fintrackpro-ui && npm install && npm run dev
 
 Open `http://localhost:5173` in your browser.
 
-> **Note:** Before the API will accept requests, complete the [Keycloak setup](#manual-setup) steps below.
+> Keycloak is provisioned automatically — no manual realm setup needed. Log in with `admin@fintrackpro.dev` / `Admin1234!` or register a new account.
 
 ## Repository Structure
 
@@ -80,7 +80,8 @@ FinTrackPro/
 ├── frontend/
 │   └── fintrackpro-ui/                # React 19 + Vite SPA (Feature-Sliced Design)
 ├── infra/
-│   └── docker/                        # Additional infrastructure configs
+│   └── docker/
+│       └── keycloak-realm.json        # Auto-imported on first `docker compose up`
 ├── docs/                              # Reference documentation
 ├── .github/workflows/ci.yml           # CI pipeline
 └── docker-compose.yml
@@ -100,22 +101,11 @@ FinTrackPro/
 
 ## Manual Setup
 
-Three one-time configuration steps are required before the application is fully functional:
+Only two manual steps remain — Keycloak is fully automated.
 
-**Keycloak realm and clients**
-
-See [docs/dev-setup.md — Step 2](docs/dev-setup.md#step-2--keycloak-one-time-setup) for the full field-by-field walkthrough. Summary:
-
-1. Sign in at `http://localhost:8080` (`admin` / `admin`) → create realm **`fintrackpro`**.
-2. Create client **`fintrackpro-api`**: confidential, Service accounts roles flow only.
-3. Create client **`fintrackpro-spa`**: public, Standard flow, redirect URI `http://localhost:5173/*`, web origin `http://localhost:5173`.
-4. Create a test user under **Users** and set a non-temporary password (or skip and use self-registration — see step 5).
-5. **Audience mapper (required):** On `fintrackpro-spa` → Client scopes → `fintrackpro-spa-dedicated` → Add mapper → Audience → Included Custom Audience: `fintrackpro-api`. Without this every API call returns `401`.
-6. **Self-registration (recommended):** Realm settings → Login → turn on **User registration**. Realm settings → User registration → Default roles → add `User`. This lets anyone sign up without admin intervention. Google and Azure AD login can be added via Identity Providers — no app changes needed.
-
-**Telegram Bot**
+**Telegram Bot** *(optional — notifications are silently skipped without it)*
 1. Create a bot via [@BotFather](https://t.me/BotFather) and copy the token.
-2. Set the `Telegram__BotToken` environment variable (or update `appsettings.json` locally — do **not** commit the token).
+2. Set the `Telegram__BotToken` environment variable (do **not** commit the token).
 
 **EF Core migrations**
 
@@ -125,3 +115,13 @@ See [docs/dev-setup.md — Step 2](docs/dev-setup.md#step-2--keycloak-one-time-s
   cd backend
   dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
   ```
+
+**Keycloak** *(zero-touch for dev)*
+
+The `fintrackpro` realm is auto-imported from `infra/docker/keycloak-realm.json` on first `docker compose up`. It includes both clients, audience mapper, roles, self-registration, and a default admin user (`admin@fintrackpro.dev` / `Admin1234!`).
+
+The dev `Keycloak__AdminClientSecret` (`dev-secret-change-in-prod`) is pre-set in `appsettings.Development.json` — no environment variable needed for local dev.
+
+> **Production:** rotate the `fintrackpro-api` client secret in Keycloak and set `Keycloak__AdminClientSecret` to the new value via environment variable.
+
+For custom Keycloak config (social login, extra users, redirect URIs) see the [manual setup reference](docs/dev-setup.md#manual-keycloak-setup-reference-only-needed-for-custom-configs-or-starting-from-scratch) in `docs/dev-setup.md`.

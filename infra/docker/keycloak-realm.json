@@ -1,0 +1,106 @@
+{
+  "realm": "fintrackpro",
+  "displayName": "FinTrackPro",
+  "enabled": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "User",
+        "description": "Standard application user",
+        "composite": false
+      },
+      {
+        "name": "Admin",
+        "description": "Administrator — can access Hangfire dashboard",
+        "composite": false
+      }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-fintrackpro",
+    "description": "${role_default-roles}",
+    "composite": true,
+    "composites": {
+      "realm": ["User"],
+      "client": {
+        "account": ["view-profile", "manage-account"]
+      }
+    }
+  },
+  "users": [
+    {
+      "username": "admin@fintrackpro.dev",
+      "email": "admin@fintrackpro.dev",
+      "firstName": "Admin",
+      "lastName": "Dev",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Admin", "User"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "fintrackpro-api",
+      "name": "FinTrackPro API",
+      "description": "Confidential backend client — used for token validation and Admin REST API access",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-secret-change-in-prod",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "redirectUris": [],
+      "webOrigins": []
+    },
+    {
+      "clientId": "fintrackpro-spa",
+      "name": "FinTrackPro SPA",
+      "description": "Public frontend client — Authorization Code flow for React app",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "protocolMappers": [
+        {
+          "name": "fintrackpro-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "fintrackpro-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

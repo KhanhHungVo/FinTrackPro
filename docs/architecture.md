@@ -35,6 +35,7 @@ Clean Architecture with CQRS. Dependencies point inward — outer layers depend 
 - `TelegramNotificationChannel`, `NotificationService`
 - `CurrentUserService` (reads JWT claims via `IHttpContextAccessor`)
 - `KeycloakClaimsTransformer` (`IClaimsTransformation`) — flattens `realm_access.roles` JSON array into individual `ClaimTypes.Role` claims
+- `KeycloakAdminService` (`IKeycloakAdminService`) — calls Keycloak Admin REST API via client-credentials to list realm users and their enabled status
 - `IMemoryCache` for external API responses
 
 ### API (`FinTrackPro.API`)
@@ -48,6 +49,7 @@ Clean Architecture with CQRS. Dependencies point inward — outer layers depend 
 ### BackgroundJobs (`FinTrackPro.BackgroundJobs`)
 - `MarketSignalJob` — every 4h: RSI + volume spike signals via Skender + Binance
 - `BudgetOverrunJob` — daily: checks category spending vs budget limits
+- `KeycloakUserSyncJob` — daily: diffs Keycloak realm users against `AppUser` table; deactivates rows for deleted or disabled accounts
 
 ## Frontend Architecture (FSD)
 
@@ -73,7 +75,7 @@ app → pages → widgets → features → entities → shared
 | ORM | EF Core 10 + SQL Server | Type-safe migrations, Clean Arch compatible |
 | CQRS | MediatR 12 | Decoupled handlers, pipeline behaviors |
 | Validation | FluentValidation 11 | Declarative, auto-wired via DI |
-| Auth | Keycloak + JWT Bearer | External IdP, SSO, multi-provider. Users self-register (local, Google, Azure AD). Roles (`User`/`Admin`) live in Keycloak; `KeycloakClaimsTransformer` maps them to ASP.NET Core claims. |
+| Auth | Keycloak + JWT Bearer | External IdP, SSO, multi-provider. Users self-register (local, Google, Azure AD). Roles (`User`/`Admin`) live in Keycloak; `KeycloakClaimsTransformer` maps them to ASP.NET Core claims. Local `AppUser` is a read-cache (profile synced on every login via `EnsureUserBehavior`; orphans soft-deleted nightly by `KeycloakUserSyncJob`). |
 | Background jobs | Hangfire + SQL Server storage | Persistent job history, retry policy |
 | Indicators | Skender.Stock.Indicators | Free, NuGet, covers RSI/EMA/BB |
 | Notifications | Telegram Bot | No cost, no email infra |

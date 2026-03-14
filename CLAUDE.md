@@ -43,7 +43,7 @@ Strict layer isolation with inward-only dependencies:
 - **Application** (`FinTrackPro.Application`) — CQRS via MediatR (commands/queries/handlers), DTOs, FluentValidation validators, MediatR pipeline behaviors: `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login).
 - **Infrastructure** (`FinTrackPro.Infrastructure`) — EF Core (Code-First, migrations here), repository implementations, Keycloak JWT, `KeycloakClaimsTransformer` (flattens `realm_access.roles` → `ClaimTypes.Role`), Telegram.Bot, Skender.Stock.Indicators.
 - **API** (`FinTrackPro.API`) — ASP.NET Core controllers, DI registration, middleware (exception handling → maps domain exceptions to HTTP codes), Scalar API docs.
-- **BackgroundJobs** (`FinTrackPro.BackgroundJobs`) — Hangfire job definitions: `MarketSignalJob` (every 4h), `BudgetOverrunJob` (daily).
+- **BackgroundJobs** (`FinTrackPro.BackgroundJobs`) — Hangfire job definitions: `MarketSignalJob` (every 4h), `BudgetOverrunJob` (daily), `KeycloakUserSyncJob` (daily — deactivates deleted/disabled Keycloak users in the local DB).
 
 DTOs use explicit `operator` conversions instead of AutoMapper. `ICurrentUserService` extracts the authenticated user from the JWT claim. Add new features as a command/query + handler pair in Application, then expose via a thin controller action.
 
@@ -57,6 +57,8 @@ Server state lives in **React Query** (TanStack). Client-only state (auth, UI fl
 ### Auth
 Keycloak 24 is the OIDC provider. The API validates JWT Bearer tokens; the frontend uses the Keycloak JS adapter. Realm: `fintrackpro`.
 
+The realm is **auto-provisioned** from `infra/docker/keycloak-realm.json` on first `docker compose up` (via `--import-realm`). Import is idempotent — skipped if the realm already exists. Default dev credentials: `admin@fintrackpro.dev` / `Admin1234!`.
+
 Users self-register via Keycloak's login page (local accounts, Google, or Azure AD — configured in Keycloak, not the app). The `User` realm role is assigned automatically to every registrant via Keycloak Default Roles; `Admin` is assigned manually. Roles are stored only in Keycloak — never in the database.
 
 ## Key Configuration
@@ -66,6 +68,8 @@ Users self-register via Keycloak's login page (local accounts, Google, or Azure 
 | `ConnectionStrings__DefaultConnection` | `appsettings.json` / env |
 | `Keycloak__Authority` | `appsettings.json` (e.g. `http://localhost:8080/realms/fintrackpro`) |
 | `Keycloak__Audience` | `appsettings.json` (e.g. `fintrackpro-api`) |
+| `Keycloak__AdminClientId` | `appsettings.json` (e.g. `fintrackpro-api`) |
+| `Keycloak__AdminClientSecret` | `appsettings.Development.json` (dev: `dev-secret-change-in-prod`); env var for production |
 | `Telegram__BotToken` | env var only |
 | `VITE_API_BASE_URL` | `frontend/fintrackpro-ui/.env` |
 | `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` |

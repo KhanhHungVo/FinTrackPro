@@ -4,6 +4,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS migrator
 WORKDIR /src
 
+# Prevent the host NuGet fallback folder (e.g. Visual Studio Windows path) from
+# leaking into the Linux container and causing MSB4018 resolution failures.
+ENV NUGET_FALLBACK_PACKAGES=""
+
 # Install EF Core CLI tool
 RUN dotnet tool install --global dotnet-ef
 ENV PATH="$PATH:/root/.dotnet/tools"
@@ -18,8 +22,7 @@ RUN dotnet restore "src/FinTrackPro.API/FinTrackPro.API.csproj"
 
 COPY . .
 
-# Apply any pending migrations; idempotent — safe to run on every deploy
-ENTRYPOINT ["dotnet", "ef", "database", "update", \
-            "--project", "src/FinTrackPro.Infrastructure", \
-            "--startup-project", "src/FinTrackPro.API", \
-            "--no-build"]
+# Build then apply any pending migrations; idempotent — safe to run on every deploy.
+# --no-build removed: bin/ is excluded from the Docker context via .dockerignore,
+# so the project must be compiled inside the container.
+ENTRYPOINT ["dotnet", "ef", "database", "update", "--project", "src/FinTrackPro.Infrastructure", "--startup-project", "src/FinTrackPro.API"]

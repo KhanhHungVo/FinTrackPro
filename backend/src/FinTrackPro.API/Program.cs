@@ -66,6 +66,7 @@ builder.Services.AddHangfireServer();
 // Background job classes
 builder.Services.AddScoped<MarketSignalJob>();
 builder.Services.AddScoped<BudgetOverrunJob>();
+builder.Services.AddScoped<KeycloakUserSyncJob>();
 
 var app = builder.Build();
 
@@ -97,6 +98,11 @@ RecurringJob.AddOrUpdate<MarketSignalJob>(
 
 RecurringJob.AddOrUpdate<BudgetOverrunJob>(
     "budget-overrun",
+    job => job.ExecuteAsync(CancellationToken.None),
+    Cron.Daily);
+
+RecurringJob.AddOrUpdate<KeycloakUserSyncJob>(
+    "keycloak-user-sync",
     job => job.ExecuteAsync(CancellationToken.None),
     Cron.Daily);
 

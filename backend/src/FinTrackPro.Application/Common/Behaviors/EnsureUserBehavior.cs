@@ -27,6 +27,17 @@ public class EnsureUserBehavior<TRequest, TResponse>(
                     provider: "keycloak"));
                 await db.SaveChangesAsync(cancellationToken);
             }
+            else
+            {
+                var jwtDisplayName = currentUser.DisplayName ?? keycloakId;
+                var jwtEmail = currentUser.Email ?? string.Empty;
+                var needsUpdate = user.DisplayName != jwtDisplayName || user.Email != jwtEmail;
+                var needsReactivation = !user.IsActive;
+
+                if (needsReactivation) user.Reactivate();
+                if (needsUpdate) user.UpdateProfile(jwtDisplayName, jwtEmail);
+                if (needsUpdate || needsReactivation) await db.SaveChangesAsync(cancellationToken);
+            }
         }
         return await next();
     }

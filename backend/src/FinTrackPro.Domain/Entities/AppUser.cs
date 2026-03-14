@@ -12,6 +12,8 @@ public class AppUser : AggregateRoot
 
     private AppUser() { }
 
+    public bool IsActive { get; private set; } = true;
+
     public static AppUser Create(string keycloakUserId, string email, string displayName, string provider)
     {
         return new AppUser
@@ -21,12 +23,18 @@ public class AppUser : AggregateRoot
             Email = email.Trim().ToLowerInvariant(),
             DisplayName = displayName.Trim(),
             Provider = provider,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
         };
     }
 
-    public void UpdateProfile(string displayName)
+    public void UpdateProfile(string displayName, string email)
     {
         DisplayName = displayName.Trim();
+        Email = email.Trim().ToLowerInvariant();
     }
+
+    public void Deactivate() => IsActive = false;
+
+    public void Reactivate() => IsActive = true;
 }

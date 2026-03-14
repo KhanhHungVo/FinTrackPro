@@ -27,8 +27,9 @@ docker compose up --build
 
 Compose handles startup order automatically:
 1. `sqlserver` starts and passes its health check
-2. `migrator` (SDK image) runs `dotnet ef database update` and exits
-3. `api` starts only after `migrator` completes successfully
+2. `keycloak` starts and auto-imports the `fintrackpro` realm from `infra/docker/keycloak-realm.json`
+3. `migrator` (SDK image) runs `dotnet ef database update` and exits
+4. `api` starts only after `migrator` completes successfully
 
 No local .NET toolchain required. Then start the frontend separately (it is not in the compose file):
 
@@ -46,7 +47,8 @@ npm run dev
 | Keycloak | http://localhost:8080 |
 | SQL Server | localhost:1433 |
 
-> Keycloak realm and clients still need the one-time setup below before auth works.
+> Keycloak realm is imported automatically on first start — no manual setup needed.
+> Log in with `admin@fintrackpro.dev` / `Admin1234!` (Admin role) or register a new account.
 
 ---
 
@@ -64,21 +66,28 @@ docker compose up -d sqlserver keycloak
 
 Wait ~15 seconds for SQL Server to be ready and Keycloak to finish booting.
 
-### Step 2 — Keycloak one-time setup
+> The `fintrackpro` realm is **automatically provisioned** from `infra/docker/keycloak-realm.json`
+> on first start. No manual Keycloak configuration is required. You can log in immediately with
+> `admin@fintrackpro.dev` / `Admin1234!`, or register a new account at http://localhost:5173.
+>
+> The import is idempotent — if the realm already exists (volume persisted from a previous run)
+> the JSON is silently skipped, so any manual changes you made are preserved.
 
-> Skip this step if you have already configured the realm before.
+<details>
+<summary>Manual Keycloak setup reference (only needed for custom configs or starting from scratch)</summary>
 
-#### 2a — Sign in and create the realm
+If you ever need to re-create the realm manually (e.g. wiped the volume, added a new social login
+provider, or changed redirect URIs), follow these steps.
+
+#### Sign in and create the realm
 
 1. Open http://localhost:8080 and sign in with **`admin`** / **`admin`**.
 2. Hover over the realm name in the top-left (defaults to **`master`**) → click **Create Realm**.
 3. Set **Realm name** to `fintrackpro` → click **Create**.
 
-You should now be inside the `fintrackpro` realm.
-
 ---
 
-#### 2b — Create the API client (`fintrackpro-api`)
+#### Create the API client (`fintrackpro-api`)
 
 This is the confidential backend client the API uses to validate tokens.
 
@@ -93,10 +102,12 @@ This is the confidential backend client the API uses to validate tokens.
    - Authentication flow: check only **Service accounts roles**
    - Click **Next**.
 4. **Step 3 — Login settings** — leave all fields empty → click **Save**.
+5. Go to the **Credentials** tab → copy the **Client secret** value.
+   For dev use `dev-secret-change-in-prod` (matches `appsettings.Development.json`).
 
 ---
 
-#### 2c — Create the SPA client (`fintrackpro-spa`)
+#### Create the SPA client (`fintrackpro-spa`)
 
 This is the public client the React frontend uses for the Authorization Code flow.
 
@@ -117,7 +128,7 @@ This is the public client the React frontend uses for the Authorization Code flo
 
 ---
 
-#### 2d — Create a test user
+#### Create a test user
 
 1. In the left sidebar go to **Users** → click **Create new user**.
 2. Set **Username** (e.g. `testuser`) → click **Create**.
@@ -126,7 +137,7 @@ This is the public client the React frontend uses for the Authorization Code flo
 
 ---
 
-#### 2e — Add the audience mapper to `fintrackpro-spa`
+#### Add the audience mapper to `fintrackpro-spa`
 
 By default Keycloak only includes `aud: account` in the access token. The API validates
 that the token contains `aud: fintrackpro-api` — this mapper adds it.
@@ -144,24 +155,17 @@ that the token contains `aud: fintrackpro-api` — this mapper adds it.
 
 ---
 
-#### 2f — Enable self-registration and social login (Option A — open signup)
+#### Enable self-registration and social login
 
-By default Keycloak requires an admin to create accounts manually. Follow these steps to let users
-register themselves and optionally sign in with Google or Azure AD.
-
-**Self-registration (required for Option A):**
+**Self-registration:**
 
 1. Go to **Realm settings** → **Login** tab.
 2. Turn on **User registration** → click **Save**.
-
-The Keycloak login page now shows a **Register** link. Any visitor can create a local account.
 
 **Assign the `User` role automatically to every new registrant:**
 
 1. Go to **Realm settings** → **User registration** tab.
 2. Under **Default roles**, click **Add roles** → select `User` → **Assign**.
-
-New users get the `User` role on first login. Without this step their API calls return `403 Forbidden`.
 
 > **Assign Admin role manually:** Go to **Users** → select a user → **Role mappings** → assign the `Admin` realm role. Admin users can access the Hangfire dashboard at `/hangfire`.
 
@@ -171,8 +175,6 @@ New users get the `User` role on first login. Without this step their API calls 
 2. Enter the **Client ID** and **Client Secret** from your [Google Cloud Console](https://console.cloud.google.com/) OAuth 2.0 credentials.
 3. Click **Save**.
 
-Users on the login page will see a **Sign in with Google** button.
-
 **Azure AD login (optional):**
 
 1. Go to **Identity providers** → **Add provider** → **Microsoft**.
@@ -181,7 +183,9 @@ Users on the login page will see a **Sign in with Google** button.
 
 > Social login providers are configured entirely in Keycloak. No changes to the application are needed.
 
-### Step 3 — Create and apply database migration (first time only)
+</details>
+
+### Step 2 — Create and apply database migration (first time only)
 
 > The Migrations folder is empty on a fresh clone — run this once before starting the API.
 > SQL Server must already be running (Step 1) before applying migrations.
@@ -200,7 +204,7 @@ dotnet ef database update \
 
 This works because `appsettings.json` targets `localhost,1433` — the port that Docker maps from the `sqlserver` container.
 
-### Step 4 — Run the API
+### Step 3 — Run the API
 
 ```bash
 cd backend
@@ -209,14 +213,17 @@ dotnet run --project src/FinTrackPro.API --launch-profile http
 
 API listens on **http://localhost:5018** (defined in `Properties/launchSettings.json`).
 
-Optional — set the Telegram bot token if testing notifications:
+The dev Keycloak admin secret is already set in `appsettings.Development.json` so the nightly
+`KeycloakUserSyncJob` works without any extra environment variables.
+
+Optional — set environment variables before starting if you need Telegram notifications:
 
 ```bash
 export Telegram__BotToken="your-token-here"
 dotnet run --project src/FinTrackPro.API --launch-profile http
 ```
 
-### Step 5 — Run the frontend
+### Step 4 — Run the frontend
 
 ```bash
 cd frontend/fintrackpro-ui
@@ -226,7 +233,7 @@ cp .env.example .env
 Open `.env` and change the API URL to the local port:
 
 ```
-VITE_API_BASE_URL=http://localhost:5018   # ← local API port, not 5000
+VITE_API_BASE_URL=http://localhost:5018   # local API port, not 5000
 VITE_KEYCLOAK_URL=http://localhost:8080
 VITE_KEYCLOAK_REALM=fintrackpro
 VITE_KEYCLOAK_CLIENT_ID=fintrackpro-spa
@@ -262,7 +269,7 @@ Run these checks in order after starting everything:
 1. **`<api-url>/scalar`** loads → API is up and connected to SQL Server
 2. **http://localhost:8080** shows the Keycloak login page → Auth service is ready
 3. **http://localhost:5173** redirects to the Keycloak login page → Full E2E path is working
-4. Log in with a Keycloak test user → Token is issued and accepted by the API
+4. Log in as `admin@fintrackpro.dev` / `Admin1234!` → Token is issued and accepted by the API
 
 ---
 

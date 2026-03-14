@@ -38,6 +38,7 @@ public static class DependencyInjection
 
         // Auth
         services.AddScoped<IClaimsTransformation, KeycloakClaimsTransformer>();
+        services.AddHttpClient<IKeycloakAdminService, KeycloakAdminService>();
 
         // Infrastructure services
         services.AddHttpContextAccessor();

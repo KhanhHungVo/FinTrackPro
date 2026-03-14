@@ -16,5 +16,8 @@ public class UserRepository : IUserRepository
     public Task<AppUser?> GetByKeycloakIdAsync(string keycloakUserId, CancellationToken cancellationToken = default) =>
         _context.Users.FirstOrDefaultAsync(u => u.KeycloakUserId == keycloakUserId, cancellationToken);
 
+    public Task<List<AppUser>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        _context.Users.ToListAsync(cancellationToken);
+
     public void Add(AppUser user) => _context.Users.Add(user);
 }
