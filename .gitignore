@@ -7,6 +7,9 @@ obj/
 appsettings.*.json
 !appsettings.Development.json
 
+# Test result output
+TestResults/
+
 # Node
 node_modules/
 dist/

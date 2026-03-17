@@ -19,13 +19,16 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore backend/FinTrackPro.sln
+        run: dotnet restore backend/FinTrackPro.slnx
 
       - name: Build
-        run: dotnet build backend/FinTrackPro.sln --no-restore -c Release
+        run: dotnet build backend/FinTrackPro.slnx --no-restore -c Release
 
-      - name: Test
-        run: dotnet test backend/FinTrackPro.sln --no-build -c Release --logger "trx;LogFileName=test-results.trx"
+      - name: Unit Tests
+        run: dotnet test backend/FinTrackPro.slnx --no-build -c Release --filter "Category!=Integration" --logger "trx;LogFileName=unit-test-results.trx"
+
+      - name: Integration Tests
+        run: dotnet test backend/FinTrackPro.slnx --no-build -c Release --filter "Category=Integration" --logger "trx;LogFileName=integration-test-results.trx"
 
       - name: Docker Build
         run: docker build -t fintrackpro-api:${{ github.sha }} ./backend

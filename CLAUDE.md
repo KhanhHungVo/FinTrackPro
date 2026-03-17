@@ -10,8 +10,10 @@ cd backend
 dotnet restore
 dotnet build
 dotnet run --project src/FinTrackPro.API
-dotnet test                                        # all tests
-dotnet test --filter "FullyQualifiedName~<Test>"  # single test
+dotnet test                                           # all tests
+dotnet test --filter "Category!=Integration"          # unit tests only (no Docker)
+dotnet test --filter "Category=Integration"           # integration tests (Docker required)
+dotnet test --filter "FullyQualifiedName~<Test>"      # single test
 
 # EF Core migrations
 dotnet ef migrations add <Name> --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
@@ -90,3 +92,11 @@ Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
 - `docs/dev-setup.md` — hybrid vs full-Docker setup
 - `docs/api-spec.md` — REST endpoints and schemas
 - `docs/database.md` — schema, tables, relationships
+
+## Documentation Sync Rules
+
+After any change to the **backend** (API endpoints, configuration, project structure, test setup, environment variables):
+- Review and update as needed: `README.md`, `backend/README.md`, `backend/tests/README.md`, and any affected file under `docs/`
+
+After any change to the **frontend**:
+- Additionally review and update: `frontend/fintrackpro-ui/README.md`

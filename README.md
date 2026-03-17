@@ -72,9 +72,11 @@ FinTrackPro/
 │   │   ├── FinTrackPro.Infrastructure/# EF Core, repositories, external clients
 │   │   └── FinTrackPro.BackgroundJobs/# Hangfire job definitions
 │   ├── tests/
-│   │   ├── FinTrackPro.Application.Tests/
-│   │   ├── FinTrackPro.Domain.Tests/
-│   │   └── FinTrackPro.Infrastructure.Tests/
+│   │   ├── FinTrackPro.Domain.UnitTests/
+│   │   ├── FinTrackPro.Application.UnitTests/
+│   │   ├── FinTrackPro.Api.IntegrationTests/
+│   │   ├── FinTrackPro.Infrastructure.Tests/
+│   │   └── Tests.Common/              # Shared test infrastructure (Testcontainers, fakes, builders)
 │   ├── Dockerfile                     # Runtime image (aspnet — lean, no SDK tools)
 │   └── Dockerfile.migrator            # Init container — runs EF migrations then exits
 ├── frontend/

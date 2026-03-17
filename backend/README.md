@@ -41,8 +41,17 @@ API listens on `http://localhost:5000`.
 ### Run tests
 
 ```bash
+# Unit tests only (fast, no Docker)
+dotnet test --filter "Category!=Integration"
+
+# Integration tests (requires Docker — SQL Server spun up via Testcontainers)
+dotnet test --filter "Category=Integration"
+
+# All tests
 dotnet test
 ```
+
+> Integration tests pull `mcr.microsoft.com/mssql/server:2022-latest` automatically via Testcontainers. Docker must be running.
 
 ## EF Core Migrations
 
