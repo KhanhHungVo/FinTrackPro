@@ -48,14 +48,10 @@ dotnet test
 
 ```bash
 # Add a new migration
-dotnet ef migrations add <MigrationName> \
-  --project src/FinTrackPro.Infrastructure \
-  --startup-project src/FinTrackPro.API
+dotnet ef migrations add <MigrationName> --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
 
 # Apply migrations to the database
-dotnet ef database update \
-  --project src/FinTrackPro.Infrastructure \
-  --startup-project src/FinTrackPro.API
+dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
 ```
 
 ## Configuration

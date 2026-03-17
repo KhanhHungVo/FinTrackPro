@@ -35,7 +35,7 @@ No local .NET toolchain required. Then start the frontend separately (it is not 
 
 ```bash
 cd frontend/fintrackpro-ui
-cp .env.example .env          # VITE_API_BASE_URL=http://localhost:5000 is correct here
+cp .env.example .env          # VITE_API_BASE_URL=http://localhost:5018 is correct here
 npm install
 npm run dev
 ```
@@ -43,7 +43,7 @@ npm run dev
 | Service | URL |
 |---|---|
 | Frontend | http://localhost:5173 |
-| API | http://localhost:5000 |
+| API | http://localhost:5018 |
 | Keycloak | http://localhost:8080 |
 | SQL Server | localhost:1433 |
 
@@ -193,13 +193,9 @@ that the token contains `aud: fintrackpro-api` — this mapper adds it.
 ```bash
 cd backend
 
-dotnet ef migrations add InitialCreate \
-  --project src/FinTrackPro.Infrastructure \
-  --startup-project src/FinTrackPro.API
+dotnet ef migrations add InitialCreate --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
 
-dotnet ef database update \
-  --project src/FinTrackPro.Infrastructure \
-  --startup-project src/FinTrackPro.API
+dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
 ```
 
 This works because `appsettings.json` targets `localhost,1433` — the port that Docker maps from the `sqlserver` container.
@@ -233,7 +229,7 @@ cp .env.example .env
 Open `.env` and change the API URL to the local port:
 
 ```
-VITE_API_BASE_URL=http://localhost:5018   # local API port, not 5000
+VITE_API_BASE_URL=http://localhost:5018   # local API port
 VITE_KEYCLOAK_URL=http://localhost:8080
 VITE_KEYCLOAK_REALM=fintrackpro
 VITE_KEYCLOAK_CLIENT_ID=fintrackpro-spa
@@ -254,7 +250,7 @@ Frontend runs at **http://localhost:5173**.
 |---|---|---|
 | Frontend | both | http://localhost:5173 |
 | API (local) | hybrid | http://localhost:5018 |
-| API (Docker) | full Docker | http://localhost:5000 |
+| API (Docker) | full Docker | http://localhost:5018 |
 | Keycloak | both | http://localhost:8080 |
 | SQL Server | both | localhost:1433 |
 | Scalar API docs | both | `<api-url>/scalar` |
