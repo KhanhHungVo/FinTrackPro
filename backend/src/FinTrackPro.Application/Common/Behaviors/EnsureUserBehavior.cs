@@ -14,22 +14,22 @@ public class EnsureUserBehavior<TRequest, TResponse>(
     public async Task<TResponse> Handle(
         TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
-        var keycloakId = currentUser.KeycloakUserId;
-        if (!string.IsNullOrWhiteSpace(keycloakId))
+        var externalId = currentUser.ExternalUserId;
+        if (!string.IsNullOrWhiteSpace(externalId))
         {
-            var user = await userRepository.GetByKeycloakIdAsync(keycloakId, cancellationToken);
+            var user = await userRepository.GetByExternalIdAsync(externalId, cancellationToken);
             if (user is null)
             {
                 userRepository.Add(AppUser.Create(
-                    keycloakUserId: keycloakId,
+                    externalUserId: externalId,
                     email: currentUser.Email ?? string.Empty,
-                    displayName: currentUser.DisplayName ?? keycloakId,
-                    provider: "keycloak"));
+                    displayName: currentUser.DisplayName ?? externalId,
+                    provider: currentUser.ProviderName));
                 await db.SaveChangesAsync(cancellationToken);
             }
             else
             {
-                var jwtDisplayName = currentUser.DisplayName ?? keycloakId;
+                var jwtDisplayName = currentUser.DisplayName ?? externalId;
                 var jwtEmail = currentUser.Email ?? string.Empty;
                 var needsUpdate = user.DisplayName != jwtDisplayName || user.Email != jwtEmail;
                 var needsReactivation = !user.IsActive;

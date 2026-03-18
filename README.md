@@ -94,6 +94,7 @@ FinTrackPro/
 | Document | Description |
 |---|---|
 | [docs/dev-setup.md](docs/dev-setup.md) | End-to-end dev setup — Docker, hybrid mode, migrations |
+| [docs/auth-setup.md](docs/auth-setup.md) | IAM provider setup — Keycloak manual config, Auth0 dashboard, switching providers |
 | [docs/api-spec.md](docs/api-spec.md) | REST API endpoints and request/response schemas |
 | [docs/architecture.md](docs/architecture.md) | System architecture, layers, data flow |
 | [docs/database.md](docs/database.md) | Database schema, tables, relationships |
@@ -122,8 +123,8 @@ Only two manual steps remain — Keycloak is fully automated.
 
 The `fintrackpro` realm is auto-imported from `infra/docker/keycloak-realm.json` on first `docker compose up`. It includes both clients, audience mapper, roles, self-registration, and a default admin user (`admin@fintrackpro.dev` / `Admin1234!`).
 
-The dev `Keycloak__AdminClientSecret` (`dev-secret-change-in-prod`) is pre-set in `appsettings.Development.json` — no environment variable needed for local dev.
+The dev `IdentityProvider__AdminClientSecret` (`dev-secret-change-in-prod`) is pre-set in `appsettings.Development.json` — no environment variable needed for local dev.
 
-> **Production:** rotate the `fintrackpro-api` client secret in Keycloak and set `Keycloak__AdminClientSecret` to the new value via environment variable.
+> **Production:** rotate the `fintrackpro-api` client secret in Keycloak and set `IdentityProvider__AdminClientSecret` to the new value via environment variable.
 
-For custom Keycloak config (social login, extra users, redirect URIs) see the [manual setup reference](docs/dev-setup.md#manual-keycloak-setup-reference-only-needed-for-custom-configs-or-starting-from-scratch) in `docs/dev-setup.md`.
+For custom Keycloak config (social login, extra users, redirect URIs) see the [manual setup reference](docs/auth-setup.md#manual-setup-reference) in `docs/auth-setup.md`.

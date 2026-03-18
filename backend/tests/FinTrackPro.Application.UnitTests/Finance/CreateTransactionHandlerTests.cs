@@ -23,7 +23,7 @@ public class CreateTransactionHandlerTests
     {
         _handler = new CreateTransactionCommandHandler(_context, _currentUser, _userRepository);
 
-        _currentUser.KeycloakUserId.Returns("kc-test");
+        _currentUser.ExternalUserId.Returns("kc-test");
 
         var transactions = Substitute.For<DbSet<Transaction>>();
         _context.Transactions.Returns(transactions);
@@ -33,7 +33,7 @@ public class CreateTransactionHandlerTests
     [Fact]
     public async Task Handle_ValidCommand_ReturnsNewGuid()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
 
         var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "Food", null, "2026-03");
@@ -48,7 +48,7 @@ public class CreateTransactionHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "Food", null, "2026-03");

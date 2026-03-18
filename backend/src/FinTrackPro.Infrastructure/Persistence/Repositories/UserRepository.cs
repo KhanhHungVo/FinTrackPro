@@ -13,8 +13,8 @@ public class UserRepository : IUserRepository
     public Task<AppUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
-    public Task<AppUser?> GetByKeycloakIdAsync(string keycloakUserId, CancellationToken cancellationToken = default) =>
-        _context.Users.FirstOrDefaultAsync(u => u.KeycloakUserId == keycloakUserId, cancellationToken);
+    public Task<AppUser?> GetByExternalIdAsync(string externalUserId, CancellationToken cancellationToken = default) =>
+        _context.Users.FirstOrDefaultAsync(u => u.ExternalUserId == externalUserId, cancellationToken);
 
     public Task<List<AppUser>> GetAllAsync(CancellationToken cancellationToken = default) =>
         _context.Users.ToListAsync(cancellationToken);

@@ -26,9 +26,9 @@ public class GetNotificationPreferenceQueryHandler
     public async Task<NotificationPreferenceDto?> Handle(
         GetNotificationPreferenceQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var pref = await _preferenceRepository.GetByUserAsync(user.Id, cancellationToken);
         return pref is null ? null : (NotificationPreferenceDto)pref;

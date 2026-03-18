@@ -25,9 +25,9 @@ public class GetSignalsQueryHandler : IRequestHandler<GetSignalsQuery, IEnumerab
     public async Task<IEnumerable<SignalDto>> Handle(
         GetSignalsQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var signals = await _signalRepository.GetLatestByUserAsync(user.Id, request.Count, cancellationToken);
         return signals.Select(s => (SignalDto)s);

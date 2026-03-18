@@ -8,7 +8,7 @@ Database: SQL Server. ORM: EF Core 10. Migrations assembly: `FinTrackPro.Infrast
 | Column | Type | Constraints |
 |---|---|---|
 | Id | uniqueidentifier | PK |
-| KeycloakUserId | nvarchar(200) | NOT NULL, UNIQUE INDEX |
+| ExternalUserId | nvarchar(200) | NOT NULL, UNIQUE INDEX |
 | Email | nvarchar(200) | NOT NULL, UNIQUE INDEX |
 | DisplayName | nvarchar(100) | NOT NULL |
 | Provider | nvarchar(50) | NOT NULL |

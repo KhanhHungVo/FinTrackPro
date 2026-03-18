@@ -11,7 +11,7 @@ public class AppUserTests
         var user = AppUser.Create("kc-123", "Test@Example.com", "  Test User  ", "local");
 
         user.Id.Should().NotBeEmpty();
-        user.KeycloakUserId.Should().Be("kc-123");
+        user.ExternalUserId.Should().Be("kc-123");
         user.Email.Should().Be("test@example.com");    // lowercased
         user.DisplayName.Should().Be("Test User");     // trimmed
         user.Provider.Should().Be("local");

@@ -25,9 +25,9 @@ public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, IEnumerab
     public async Task<IEnumerable<BudgetDto>> Handle(
         GetBudgetsQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var budgets = await _budgetRepository.GetByUserAndMonthAsync(user.Id, request.Month, cancellationToken);
         return budgets.Select(b => (BudgetDto)b);

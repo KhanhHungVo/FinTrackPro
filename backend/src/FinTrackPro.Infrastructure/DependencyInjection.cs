@@ -36,9 +36,21 @@ public static class DependencyInjection
         services.AddScoped<ISignalRepository, SignalRepository>();
         services.AddScoped<INotificationPreferenceRepository, NotificationPreferenceRepository>();
 
-        // Auth
-        services.AddScoped<IClaimsTransformation, KeycloakClaimsTransformer>();
-        services.AddHttpClient<IKeycloakAdminService, KeycloakAdminService>();
+        // Auth — provider-conditional registration
+        services.Configure<IdentityProviderOptions>(
+            configuration.GetSection(IdentityProviderOptions.SectionName));
+
+        var iamProvider = configuration["IdentityProvider:Provider"] ?? "keycloak";
+        if (iamProvider == "auth0")
+        {
+            services.AddScoped<IClaimsTransformation, Auth0ClaimsTransformer>();
+            services.AddHttpClient<IIamProviderService, Auth0ManagementService>();
+        }
+        else
+        {
+            services.AddScoped<IClaimsTransformation, KeycloakClaimsTransformer>();
+            services.AddHttpClient<IIamProviderService, KeycloakAdminService>();
+        }
 
         // Infrastructure services
         services.AddHttpContextAccessor();

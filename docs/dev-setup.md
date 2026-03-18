@@ -2,6 +2,21 @@
 
 Two ways to run the full stack locally. **Hybrid mode** is recommended for day-to-day development.
 
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [Mode A — Full Docker](#mode-a--full-docker-quick-smoke-test)
+- [Mode B — Hybrid (recommended)](#mode-b--hybrid-recommended-for-development)
+  - [Step 1 — Start infrastructure](#step-1--start-infrastructure)
+  - [Step 2 — Database migration](#step-2--create-and-apply-database-migration-first-time-only)
+  - [Step 3 — Run the API](#step-3--run-the-api)
+  - [Step 4 — Run the frontend](#step-4--run-the-frontend)
+- [Port Reference](#port-reference)
+- [Verifying the Stack](#verifying-the-stack)
+- [Stopping the Stack](#stopping-the-stack)
+
+> For IAM provider configuration (Keycloak manual setup, Auth0 dashboard config, switching providers) see [docs/auth-setup.md](auth-setup.md).
+
 ---
 
 ## Prerequisites
@@ -67,123 +82,15 @@ docker compose up -d sqlserver keycloak
 Wait ~15 seconds for SQL Server to be ready and Keycloak to finish booting.
 
 > The `fintrackpro` realm is **automatically provisioned** from `infra/docker/keycloak-realm.json`
-> on first start. No manual Keycloak configuration is required. You can log in immediately with
+> on first start. No manual Keycloak configuration is required. Log in immediately with
 > `admin@fintrackpro.dev` / `Admin1234!`, or register a new account at http://localhost:5173.
 >
 > The import is idempotent — if the realm already exists (volume persisted from a previous run)
 > the JSON is silently skipped, so any manual changes you made are preserved.
 
-<details>
-<summary>Manual Keycloak setup reference (only needed for custom configs or starting from scratch)</summary>
-
-If you ever need to re-create the realm manually (e.g. wiped the volume, added a new social login
-provider, or changed redirect URIs), follow these steps.
-
-#### Sign in and create the realm
-
-1. Open http://localhost:8080 and sign in with **`admin`** / **`admin`**.
-2. Hover over the realm name in the top-left (defaults to **`master`**) → click **Create Realm**.
-3. Set **Realm name** to `fintrackpro` → click **Create**.
+If you need to recreate the realm manually or configure custom settings (social login, redirect URIs, etc.), see the [Keycloak manual setup reference](auth-setup.md#manual-setup-reference).
 
 ---
-
-#### Create the API client (`fintrackpro-api`)
-
-This is the confidential backend client the API uses to validate tokens.
-
-1. In the left sidebar go to **Clients** → click **Create client**.
-2. **Step 1 — General settings**
-   - Client type: `OpenID Connect`
-   - Client ID: `fintrackpro-api`
-   - Click **Next**.
-3. **Step 2 — Capability config**
-   - **Client authentication**: turn **On** (this makes it confidential)
-   - **Authorization**: leave Off
-   - Authentication flow: check only **Service accounts roles**
-   - Click **Next**.
-4. **Step 3 — Login settings** — leave all fields empty → click **Save**.
-5. Go to the **Credentials** tab → copy the **Client secret** value.
-   For dev use `dev-secret-change-in-prod` (matches `appsettings.Development.json`).
-
----
-
-#### Create the SPA client (`fintrackpro-spa`)
-
-This is the public client the React frontend uses for the Authorization Code flow.
-
-1. In the left sidebar go to **Clients** → click **Create client**.
-2. **Step 1 — General settings**
-   - Client type: `OpenID Connect`
-   - Client ID: `fintrackpro-spa`
-   - Click **Next**.
-3. **Step 2 — Capability config**
-   - **Client authentication**: leave **Off** (public client — no secret)
-   - Authentication flow: check **Standard flow** only
-   - Click **Next**.
-4. **Step 3 — Login settings**
-   - Valid redirect URIs: `http://localhost:5173` and `http://localhost:5173/*`
-   - Valid post-logout redirect URIs: `http://localhost:5173/`
-   - Web origins: `http://localhost:5173`
-   - Click **Save**.
-
----
-
-#### Create a test user
-
-1. In the left sidebar go to **Users** → click **Create new user**.
-2. Set **Username** (e.g. `testuser`) → click **Create**.
-3. Go to the **Credentials** tab → click **Set password**.
-4. Enter a password, turn **Temporary** Off → click **Save** → **Save password**.
-
----
-
-#### Add the audience mapper to `fintrackpro-spa`
-
-By default Keycloak only includes `aud: account` in the access token. The API validates
-that the token contains `aud: fintrackpro-api` — this mapper adds it.
-
-1. Go to **Clients** → click `fintrackpro-spa`.
-2. Click the **Client scopes** tab → click the `fintrackpro-spa-dedicated` link.
-3. Click **Add mapper** → **By configuration** → choose **Audience**.
-4. Fill in:
-   - **Name**: `fintrackpro-api-audience`
-   - **Included Custom Audience**: `fintrackpro-api`
-   - **Add to access token**: On
-5. Click **Save**.
-
-> Without this step every API call returns `401 Audience validation failed`.
-
----
-
-#### Enable self-registration and social login
-
-**Self-registration:**
-
-1. Go to **Realm settings** → **Login** tab.
-2. Turn on **User registration** → click **Save**.
-
-**Assign the `User` role automatically to every new registrant:**
-
-1. Go to **Realm settings** → **User registration** tab.
-2. Under **Default roles**, click **Add roles** → select `User` → **Assign**.
-
-> **Assign Admin role manually:** Go to **Users** → select a user → **Role mappings** → assign the `Admin` realm role. Admin users can access the Hangfire dashboard at `/hangfire`.
-
-**Google login (optional):**
-
-1. Go to **Identity providers** → **Add provider** → **Google**.
-2. Enter the **Client ID** and **Client Secret** from your [Google Cloud Console](https://console.cloud.google.com/) OAuth 2.0 credentials.
-3. Click **Save**.
-
-**Azure AD login (optional):**
-
-1. Go to **Identity providers** → **Add provider** → **Microsoft**.
-2. Enter the **Client ID** and **Client Secret** from your Azure App Registration.
-3. Click **Save**.
-
-> Social login providers are configured entirely in Keycloak. No changes to the application are needed.
-
-</details>
 
 ### Step 2 — Create and apply database migration (first time only)
 
@@ -200,6 +107,8 @@ dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-pro
 
 This works because `appsettings.json` targets `localhost,1433` — the port that Docker maps from the `sqlserver` container.
 
+---
+
 ### Step 3 — Run the API
 
 ```bash
@@ -209,8 +118,8 @@ dotnet run --project src/FinTrackPro.API --launch-profile http
 
 API listens on **http://localhost:5018** (defined in `Properties/launchSettings.json`).
 
-The dev Keycloak admin secret is already set in `appsettings.Development.json` so the nightly
-`KeycloakUserSyncJob` works without any extra environment variables.
+The dev `IdentityProvider:AdminClientSecret` is already set in `appsettings.Development.json` so the nightly
+`IamUserSyncJob` works without any extra environment variables.
 
 Optional — set environment variables before starting if you need Telegram notifications:
 
@@ -219,6 +128,8 @@ export Telegram__BotToken="your-token-here"
 dotnet run --project src/FinTrackPro.API --launch-profile http
 ```
 
+---
+
 ### Step 4 — Run the frontend
 
 ```bash
@@ -226,14 +137,30 @@ cd frontend/fintrackpro-ui
 cp .env.example .env
 ```
 
-Open `.env` and change the API URL to the local port:
+Open `.env` and set the values for your chosen IAM provider.
+
+**Keycloak (default):**
 
 ```
-VITE_API_BASE_URL=http://localhost:5018   # local API port
+VITE_API_BASE_URL=http://localhost:5018
+VITE_AUTH_PROVIDER=keycloak
 VITE_KEYCLOAK_URL=http://localhost:8080
 VITE_KEYCLOAK_REALM=fintrackpro
 VITE_KEYCLOAK_CLIENT_ID=fintrackpro-spa
 ```
+
+**Auth0:**
+
+```
+VITE_API_BASE_URL=http://localhost:5018
+VITE_AUTH_PROVIDER=auth0
+VITE_AUTH0_DOMAIN=your-tenant.auth0.com
+VITE_AUTH0_CLIENT_ID=your-spa-client-id
+VITE_AUTH0_AUDIENCE=https://api.fintrackpro.dev
+```
+
+> Auth0 requires a one-time dashboard setup before first use. See [docs/auth-setup.md](auth-setup.md#auth0-cloud-iam).
+> To run the full stack in Docker with Auth0 (no Keycloak), see [Auth0 with Full Docker](auth-setup.md#auth0-with-full-docker).
 
 ```bash
 npm install

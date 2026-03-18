@@ -1,2 +1,2 @@
 export { QueryProvider } from './QueryProvider'
-export { KeycloakProvider } from './KeycloakProvider'
+export { AuthProvider } from './AuthProvider'

@@ -1,7 +1,7 @@
 # FinTrackPro — API Specification
 
-Base URL: `http://localhost:5000`
-Auth: All endpoints require `Authorization: Bearer <keycloak_jwt>` unless noted.
+Base URL: `http://localhost:5018`
+Auth: All endpoints require `Authorization: Bearer <jwt>` unless noted.
 API docs UI: `GET /scalar` (development only)
 OpenAPI JSON: `GET /openapi/v1.json` (development only)
 

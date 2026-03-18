@@ -27,9 +27,9 @@ public class DeleteTradeCommandHandler : IRequestHandler<DeleteTradeCommand>
 
     public async Task Handle(DeleteTradeCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var trade = await _tradeRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Trade), request.Id);

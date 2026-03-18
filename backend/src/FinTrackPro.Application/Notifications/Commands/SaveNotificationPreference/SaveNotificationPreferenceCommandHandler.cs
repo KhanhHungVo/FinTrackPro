@@ -27,9 +27,9 @@ public class SaveNotificationPreferenceCommandHandler : IRequestHandler<SaveNoti
 
     public async Task Handle(SaveNotificationPreferenceCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var existing = await _preferenceRepository.GetByUserAsync(user.Id, cancellationToken);
         if (existing is null)

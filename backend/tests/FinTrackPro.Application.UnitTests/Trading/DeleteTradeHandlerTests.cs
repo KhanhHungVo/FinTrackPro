@@ -22,7 +22,7 @@ public class DeleteTradeHandlerTests
     public DeleteTradeHandlerTests()
     {
         _handler = new DeleteTradeCommandHandler(_context, _tradeRepository, _currentUser, _userRepository);
-        _currentUser.KeycloakUserId.Returns("kc-test");
+        _currentUser.ExternalUserId.Returns("kc-test");
         _context.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
     }
 
@@ -31,7 +31,7 @@ public class DeleteTradeHandlerTests
     {
         var trade = Trade.Create(TestUser.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, null);
 
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _tradeRepository.GetByIdAsync(trade.Id, Arg.Any<CancellationToken>())
             .Returns(trade);
@@ -45,7 +45,7 @@ public class DeleteTradeHandlerTests
     [Fact]
     public async Task Handle_TradeNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _tradeRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((Trade?)null);
@@ -62,7 +62,7 @@ public class DeleteTradeHandlerTests
         var otherUser = AppUser.Create("kc-other", "other@dev.com", "Other", "local");
         var trade = Trade.Create(otherUser.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, null);
 
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _tradeRepository.GetByIdAsync(trade.Id, Arg.Any<CancellationToken>())
             .Returns(trade);

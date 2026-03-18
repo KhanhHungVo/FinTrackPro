@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { keycloak } from '@/shared/lib/keycloak'
+import { authAdapter } from '@/shared/lib/auth'
 
 interface AuthState {
   accessToken: string | null
@@ -21,12 +21,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ accessToken: token, isAuthenticated: true })
   },
   setProfile: (displayName, email) => set({ displayName, email }),
-  // Clears local state and ends the Keycloak session
+  // Clears local state and ends the IAM provider session
   logout: () => {
     localStorage.removeItem('access_token')
     set({ accessToken: null, displayName: null, email: null, isAuthenticated: false })
-    if (keycloak.authenticated) {
-      keycloak.logout({ redirectUri: window.location.origin })
-    }
+    authAdapter.logout(window.location.origin)
   },
 }))

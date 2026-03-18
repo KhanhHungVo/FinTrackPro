@@ -2,19 +2,24 @@ version: '3.9'
 
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    # azure-sql-edge is Microsoft's ARM64-native SQL Server variant.
+    # On Windows/Linux (amd64), Docker pulls the amd64 layer automatically — no behavioural difference.
+    # mssql/server:2022 has no ARM64 image and crashes under QEMU emulation on Apple Silicon.
+    image: mcr.microsoft.com/azure-sql-edge:latest
     container_name: fintrackpro-sqlserver
     environment:
       SA_PASSWORD: "YourStrong@Passw0rd"
-      ACCEPT_EULA: "Y"
+      ACCEPT_EULA: "1"
+      MSSQL_PID: "Developer"
     ports:
       - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
     # Health check so dependent services wait until SQL Server is actually ready,
-    # not just started. Uses sqlcmd bundled in the mssql image.
+    # not just started.
+    # azure-sql-edge does not ship sqlcmd, so we use a TCP connect test instead.
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -No -C"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/1433'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -56,12 +61,14 @@ services:
       dockerfile: Dockerfile
     container_name: fintrackpro-api
     ports:
-      - "5000:8080"
+      - "5018:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FinTrackPro;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;"
-      Keycloak__Authority: "http://keycloak:8080/realms/fintrackpro"
-      Keycloak__Audience: "fintrackpro-api"
+      Keycloak__Authority: "http://localhost:8080/realms/fintrackpro"
+      Keycloak__MetadataAddress: "http://keycloak:8080/realms/fintrackpro/.well-known/openid-configuration"
+      IdentityProvider__Audience: "https://api.fintrackpro.dev"
+      IdentityProvider__AdminClientId: "fintrackpro-api"
       Telegram__BotToken: "${TELEGRAM_BOT_TOKEN}"
       Cors__Origins: "http://localhost:5173"
     depends_on:

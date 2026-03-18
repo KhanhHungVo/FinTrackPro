@@ -2,10 +2,12 @@ using FinTrackPro.API.Infrastructure;
 using FinTrackPro.API.Middleware;
 using FinTrackPro.Application;
 using FinTrackPro.BackgroundJobs.Jobs;
+using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Domain.Constants;
 using FinTrackPro.Infrastructure;
 using Hangfire;
 using Hangfire.SqlServer;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -26,16 +28,48 @@ builder.Services.AddControllers();
 // OpenAPI (built-in .NET 10)
 builder.Services.AddOpenApi();
 
-// Authentication — Keycloak JWT Bearer
+// Authentication — JWT Bearer (Keycloak or Auth0)
+var iamProvider = builder.Configuration["IdentityProvider:Provider"] ?? "keycloak";
+var audience    = builder.Configuration["IdentityProvider:Audience"]!;
+
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
-        options.Authority = builder.Configuration["Keycloak:Authority"];
-        options.Audience  = builder.Configuration["Keycloak:Audience"];
-        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-        // Preserve original claim names from the JWT (e.g. "sub", "realm_access")
-        // Without this, ASP.NET Core remaps "sub" → ClaimTypes.NameIdentifier
-        options.MapInboundClaims = false;
+        if (iamProvider == "auth0")
+        {
+            var domain    = builder.Configuration["Auth0:Domain"];
+            var authority = $"https://{domain}/";
+            // Auth0 OIDC discovery lives at the standard path under the Authority.
+            options.Authority            = authority;
+            options.Audience             = audience;
+            options.RequireHttpsMetadata = true;
+            options.MapInboundClaims     = false;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidIssuer   = authority,
+                ValidAudience = audience,
+            };
+        }
+        else // keycloak (default)
+        {
+            var authority       = builder.Configuration["Keycloak:Authority"];
+            var metadataAddress = builder.Configuration["Keycloak:MetadataAddress"];
+            // Authority validates the `iss` claim in tokens (always the public URL).
+            // MetadataAddress is where the API fetches signing keys — differs in Docker
+            // (uses container hostname) vs hybrid dev (same as Authority base URL).
+            options.Authority            = authority;
+            options.MetadataAddress      = metadataAddress;
+            options.Audience             = audience;
+            options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+            // Preserve original claim names from the JWT (e.g. "sub", "realm_access")
+            // Without this, ASP.NET Core remaps "sub" → ClaimTypes.NameIdentifier
+            options.MapInboundClaims = false;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidIssuer   = authority,
+                ValidAudience = audience,
+            };
+        }
     });
 
 builder.Services.AddAuthorization();
@@ -66,7 +100,7 @@ builder.Services.AddHangfireServer();
 // Background job classes
 builder.Services.AddScoped<MarketSignalJob>();
 builder.Services.AddScoped<BudgetOverrunJob>();
-builder.Services.AddScoped<KeycloakUserSyncJob>();
+builder.Services.AddScoped<IamUserSyncJob>();
 
 var app = builder.Build();
 
@@ -101,8 +135,8 @@ RecurringJob.AddOrUpdate<BudgetOverrunJob>(
     job => job.ExecuteAsync(CancellationToken.None),
     Cron.Daily);
 
-RecurringJob.AddOrUpdate<KeycloakUserSyncJob>(
-    "keycloak-user-sync",
+RecurringJob.AddOrUpdate<IamUserSyncJob>(
+    "iam-user-sync",
     job => job.ExecuteAsync(CancellationToken.None),
     Cron.Daily);
 

@@ -10,11 +10,11 @@ namespace FinTrackPro.Infrastructure.Auth;
 /// Calls the Keycloak Admin REST API using a client-credentials token
 /// obtained from the fintrackpro-api service account.
 /// Configuration required:
-///   Keycloak:Authority      — e.g. http://localhost:8080/realms/fintrackpro
-///   Keycloak:AdminClientId  — e.g. fintrackpro-api
-///   Keycloak:AdminClientSecret — client secret from Keycloak Credentials tab
+///   Keycloak:Authority               — e.g. http://localhost:8080/realms/fintrackpro
+///   IdentityProvider:AdminClientId   — e.g. fintrackpro-api
+///   IdentityProvider:AdminClientSecret — client secret from Keycloak Credentials tab
 /// </summary>
-public class KeycloakAdminService : IKeycloakAdminService
+public class KeycloakAdminService : IIamProviderService
 {
     private readonly HttpClient _http;
     private readonly IConfiguration _configuration;
@@ -30,7 +30,7 @@ public class KeycloakAdminService : IKeycloakAdminService
         _logger = logger;
     }
 
-    public async Task<List<KeycloakUserInfo>> GetAllUsersAsync(CancellationToken cancellationToken = default)
+    public async Task<List<IamUserInfo>> GetAllUsersAsync(CancellationToken cancellationToken = default)
     {
         var token = await GetAdminTokenAsync(cancellationToken);
         if (token is null) return [];
@@ -39,7 +39,7 @@ public class KeycloakAdminService : IKeycloakAdminService
         var realmBase = authority[..authority.LastIndexOf("/realms/", StringComparison.Ordinal)]; // http://localhost:8080
         var realm = authority[(authority.LastIndexOf('/') + 1)..]; // fintrackpro
 
-        var result = new List<KeycloakUserInfo>();
+        var result = new List<IamUserInfo>();
         const int pageSize = 100;
         var first = 0;
 
@@ -59,7 +59,7 @@ public class KeycloakAdminService : IKeycloakAdminService
             var page = await response.Content.ReadFromJsonAsync<List<KeycloakUserRepresentation>>(cancellationToken: cancellationToken);
             if (page is null || page.Count == 0) break;
 
-            result.AddRange(page.Select(u => new KeycloakUserInfo(u.Id, u.Enabled)));
+            result.AddRange(page.Select(u => new IamUserInfo(u.Id, u.Enabled)));
 
             if (page.Count < pageSize) break;
             first += pageSize;
@@ -71,12 +71,12 @@ public class KeycloakAdminService : IKeycloakAdminService
     private async Task<string?> GetAdminTokenAsync(CancellationToken cancellationToken)
     {
         var authority = _configuration["Keycloak:Authority"]!;
-        var clientId = _configuration["Keycloak:AdminClientId"];
-        var clientSecret = _configuration["Keycloak:AdminClientSecret"];
+        var clientId = _configuration["IdentityProvider:AdminClientId"];
+        var clientSecret = _configuration["IdentityProvider:AdminClientSecret"];
 
         if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
         {
-            _logger.LogWarning("Keycloak:AdminClientId or Keycloak:AdminClientSecret not configured — skipping user sync");
+            _logger.LogWarning("IdentityProvider:AdminClientId or IdentityProvider:AdminClientSecret not configured — skipping user sync");
             return null;
         }
 

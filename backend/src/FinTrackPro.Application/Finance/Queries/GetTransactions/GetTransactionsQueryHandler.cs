@@ -25,9 +25,9 @@ public class GetTransactionsQueryHandler : IRequestHandler<GetTransactionsQuery,
     public async Task<IEnumerable<TransactionDto>> Handle(
         GetTransactionsQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var transactions = await _transactionRepository.GetByUserAsync(user.Id, cancellationToken);
 

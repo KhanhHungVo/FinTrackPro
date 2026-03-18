@@ -20,10 +20,10 @@ npx vitest run src/path/to/file.test.ts
 ## Environment Setup
 
 Copy `.env.example` to `.env` and set:
-- `VITE_API_BASE_URL` — backend REST API base URL
-- `VITE_KEYCLOAK_URL` — Keycloak server URL
-- `VITE_KEYCLOAK_REALM` — Keycloak realm name
-- `VITE_KEYCLOAK_CLIENT_ID` — Keycloak client ID
+- `VITE_API_BASE_URL` — backend REST API base URL (`http://localhost:5018`)
+- `VITE_AUTH_PROVIDER` — `"keycloak"` (default) or `"auth0"`
+- Keycloak mode: `VITE_KEYCLOAK_URL`, `VITE_KEYCLOAK_REALM`, `VITE_KEYCLOAK_CLIENT_ID`
+- Auth0 mode: `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, `VITE_AUTH0_AUDIENCE`
 
 Access env vars via `shared/config/env.ts` (never read `import.meta.env` directly).
 
@@ -61,6 +61,6 @@ app → pages → widgets → features → entities → shared
 - Use TailwindCSS v4 utility classes
 - Use `cn()` from `shared/lib/cn.ts` to merge conditional class names
 
-**Auth state** is managed by a Zustand store in `features/auth/`. The Axios instance in `shared/api/client.ts` automatically injects the Bearer token and redirects to the Keycloak login page on 401.
+**Auth state** is managed by a Zustand store in `features/auth/`. The Axios instance in `shared/api/client.ts` automatically injects the Bearer token and triggers re-login via `authAdapter` on 401. The active adapter (`KeycloakAdapter` or `Auth0Adapter`) is selected at runtime from `VITE_AUTH_PROVIDER`.
 
 **Path alias:** `@/` maps to `src/` — use it for all non-relative imports.

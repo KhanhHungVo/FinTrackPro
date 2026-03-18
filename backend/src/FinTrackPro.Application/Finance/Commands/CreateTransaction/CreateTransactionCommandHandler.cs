@@ -24,9 +24,9 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
 
     public async Task<Guid> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var transaction = Transaction.Create(
             user.Id, request.Type, request.Amount,

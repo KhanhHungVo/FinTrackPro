@@ -9,7 +9,7 @@
 | Framework | ASP.NET Core 10 |
 | Architecture | Clean Architecture + MediatR |
 | ORM | Entity Framework Core 10 |
-| Auth | Keycloak (JWT Bearer) |
+| Auth | Keycloak / Auth0 (JWT Bearer) |
 | Background jobs | Hangfire |
 | API docs | Scalar |
 | Logging | Serilog |
@@ -36,7 +36,7 @@ dotnet build
 dotnet run --project src/FinTrackPro.API
 ```
 
-API listens on `http://localhost:5000`.
+API listens on `http://localhost:5018`.
 
 ### Run tests
 
@@ -70,8 +70,12 @@ Key sections in `appsettings.json` / environment variables:
 | Key | Description |
 |---|---|
 | `ConnectionStrings__DefaultConnection` | SQL Server connection string |
+| `IdentityProvider__Provider` | Active IAM provider: `"keycloak"` (default) or `"auth0"` |
+| `IdentityProvider__Audience` | JWT audience — `https://api.fintrackpro.dev` (URI convention) |
+| `IdentityProvider__AdminClientId` | M2M client ID for the active IAM provider's admin API |
+| `IdentityProvider__AdminClientSecret` | M2M client secret — set via `appsettings.Development.json` or env var |
 | `Keycloak__Authority` | Keycloak realm URL, e.g. `http://localhost:8080/realms/fintrackpro` |
-| `Keycloak__Audience` | Expected JWT audience, e.g. `fintrackpro-api` |
+| `Auth0__Domain` | Auth0 tenant domain, e.g. `your-tenant.auth0.com` |
 | `Telegram__BotToken` | Telegram Bot API token — **never commit this value** |
 | `Cors__Origins` | Allowed CORS origins, e.g. `http://localhost:5173` |
 
@@ -84,8 +88,8 @@ export Telegram__BotToken="your-token-here"
 
 | URL | Description |
 |---|---|
-| `http://localhost:5000/scalar` | Interactive API documentation (Scalar) |
-| `http://localhost:5000/hangfire` | Hangfire dashboard — background job monitor |
+| `http://localhost:5018/scalar` | Interactive API documentation (Scalar) |
+| `http://localhost:5018/hangfire` | Hangfire dashboard — background job monitor |
 
 ## Project Structure
 

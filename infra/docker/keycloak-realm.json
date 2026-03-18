@@ -95,7 +95,7 @@
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
           "config": {
-            "included.client.audience": "fintrackpro-api",
+            "included.client.audience": "https://api.fintrackpro.dev",
             "id.token.claim": "false",
             "access.token.claim": "true"
           }

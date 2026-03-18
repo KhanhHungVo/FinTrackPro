@@ -21,7 +21,7 @@ public class GetTransactionsHandlerTests
     public GetTransactionsHandlerTests()
     {
         _handler = new GetTransactionsQueryHandler(_userRepository, _transactionRepository, _currentUser);
-        _currentUser.KeycloakUserId.Returns("kc-test");
+        _currentUser.ExternalUserId.Returns("kc-test");
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class GetTransactionsHandlerTests
         var older = Transaction.Create(TestUser.Id, TransactionType.Expense, 10m, "Food", null, "2026-02");
         var newer = Transaction.Create(TestUser.Id, TransactionType.Income, 200m, "Salary", null, "2026-03");
 
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _transactionRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(new[] { older, newer });
@@ -48,7 +48,7 @@ public class GetTransactionsHandlerTests
         var march = Transaction.Create(TestUser.Id, TransactionType.Expense, 50m, "Food", null, "2026-03");
         var feb = Transaction.Create(TestUser.Id, TransactionType.Expense, 30m, "Transport", null, "2026-02");
 
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _transactionRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(new[] { march, feb });
@@ -62,7 +62,7 @@ public class GetTransactionsHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(new GetTransactionsQuery(), CancellationToken.None);

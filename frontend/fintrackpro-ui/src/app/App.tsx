@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
-import { QueryProvider, KeycloakProvider } from './providers'
+import { QueryProvider, AuthProvider } from './providers'
 import { Navbar } from '@/widgets/navbar'
 import { DashboardPage } from '@/pages/dashboard'
 import { TransactionsPage } from '@/pages/transactions'
@@ -21,7 +21,7 @@ function AppLayout() {
 
 export function App() {
   return (
-    <KeycloakProvider>
+    <AuthProvider>
       <QueryProvider>
         <BrowserRouter>
           <Routes>
@@ -36,6 +36,6 @@ export function App() {
           </Routes>
         </BrowserRouter>
       </QueryProvider>
-    </KeycloakProvider>
+    </AuthProvider>
   )
 }

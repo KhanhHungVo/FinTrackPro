@@ -1,0 +1,30 @@
+# Auth0 override — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.auth0.yml up --build
+#
+# This override:
+#   1. Moves the keycloak service into an unused profile so it is never started
+#   2. Removes the API's depends_on keycloak condition
+#   3. Injects Auth0 env vars into the api container
+#
+# Required variables in a repo-root .env file (see .env.example):
+#   AUTH0_DOMAIN, AUTH0_M2M_CLIENT_ID, AUTH0_M2M_CLIENT_SECRET
+
+services:
+  keycloak:
+    profiles:
+      - keycloak-only   # excluded from the default profile — never started
+
+  api:
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    environment:
+      IdentityProvider__Provider: "auth0"
+      IdentityProvider__AdminClientId: "${AUTH0_M2M_CLIENT_ID}"
+      IdentityProvider__AdminClientSecret: "${AUTH0_M2M_CLIENT_SECRET}"
+      Auth0__Domain: "${AUTH0_DOMAIN}"
+      # Override the Keycloak metadata address set in the base compose — not used by Auth0
+      Keycloak__MetadataAddress: ""
+      Keycloak__Authority: ""

@@ -43,9 +43,9 @@ Strict layer isolation with inward-only dependencies:
 
 - **Domain** (`FinTrackPro.Domain`) — entities, value objects, repository interfaces. No external dependencies.
 - **Application** (`FinTrackPro.Application`) — CQRS via MediatR (commands/queries/handlers), DTOs, FluentValidation validators, MediatR pipeline behaviors: `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login).
-- **Infrastructure** (`FinTrackPro.Infrastructure`) — EF Core (Code-First, migrations here), repository implementations, Keycloak JWT, `KeycloakClaimsTransformer` (flattens `realm_access.roles` → `ClaimTypes.Role`), Telegram.Bot, Skender.Stock.Indicators.
+- **Infrastructure** (`FinTrackPro.Infrastructure`) — EF Core (Code-First, migrations here), repository implementations, IAM provider abstraction (`IIamProviderService` / `IClaimsTransformation` — selected via `IdentityProvider:Provider` config: `"keycloak"` uses `KeycloakAdminService` + `KeycloakClaimsTransformer`; `"auth0"` uses `Auth0ManagementService` + `Auth0ClaimsTransformer`), Telegram.Bot, Skender.Stock.Indicators.
 - **API** (`FinTrackPro.API`) — ASP.NET Core controllers, DI registration, middleware (exception handling → maps domain exceptions to HTTP codes), Scalar API docs.
-- **BackgroundJobs** (`FinTrackPro.BackgroundJobs`) — Hangfire job definitions: `MarketSignalJob` (every 4h), `BudgetOverrunJob` (daily), `KeycloakUserSyncJob` (daily — deactivates deleted/disabled Keycloak users in the local DB).
+- **BackgroundJobs** (`FinTrackPro.BackgroundJobs`) — Hangfire job definitions: `MarketSignalJob` (every 4h), `BudgetOverrunJob` (daily), `IamUserSyncJob` (daily — deactivates deleted/disabled users from the active IAM provider in the local DB).
 
 DTOs use explicit `operator` conversions instead of AutoMapper. `ICurrentUserService` extracts the authenticated user from the JWT claim. Add new features as a command/query + handler pair in Application, then expose via a thin controller action.
 
@@ -54,27 +54,34 @@ Strict top-down layer hierarchy (upper layers may only import from lower):
 ```
 app → pages → widgets → features → entities → shared
 ```
-Server state lives in **React Query** (TanStack). Client-only state (auth, UI flags) lives in **Zustand**. HTTP calls go through an Axios instance that injects the Keycloak Bearer token and redirects on 401.
+Server state lives in **React Query** (TanStack). Client-only state (auth, UI flags) lives in **Zustand**. HTTP calls go through an Axios instance that injects the Bearer token (via `authAdapter.getToken()`) and handles 401 via `authAdapter.refreshToken()`.
 
 ### Auth
-Keycloak 24 is the OIDC provider. The API validates JWT Bearer tokens; the frontend uses the Keycloak JS adapter. Realm: `fintrackpro`.
+The IAM provider is selected by a single config key: `IdentityProvider:Provider = "keycloak" | "auth0"` (backend) and `VITE_AUTH_PROVIDER=keycloak|auth0` (frontend). Both providers issue JWT Bearer tokens; the backend and frontend use provider-specific adapters behind a shared interface.
 
-The realm is **auto-provisioned** from `infra/docker/keycloak-realm.json` on first `docker compose up` (via `--import-realm`). Import is idempotent — skipped if the realm already exists. Default dev credentials: `admin@fintrackpro.dev` / `Admin1234!`.
+**Keycloak** (local dev, Docker): realm `fintrackpro` is auto-provisioned from `infra/docker/keycloak-realm.json` on first `docker compose up`. Import is idempotent. Default dev credentials: `admin@fintrackpro.dev` / `Admin1234!`. The `User` role is assigned by Default Roles; `Admin` is assigned manually.
 
-Users self-register via Keycloak's login page (local accounts, Google, or Azure AD — configured in Keycloak, not the app). The `User` realm role is assigned automatically to every registrant via Keycloak Default Roles; `Admin` is assigned manually. Roles are stored only in Keycloak — never in the database.
+**Auth0** (cloud, free tier): requires one-time dashboard setup (API, SPA app, M2M app, roles, post-login Action). See `docs/auth-setup.md` for the full Auth0 setup guide.
+
+Roles (`User`, `Admin`) are stored only in the IAM provider — never in the database. `AppUser.ExternalUserId` stores the JWT `sub` claim; `AppUser.Provider` records which IAM issued it.
 
 ## Key Configuration
 
 | Variable | Where |
 |---|---|
 | `ConnectionStrings__DefaultConnection` | `appsettings.json` / env |
-| `Keycloak__Authority` | `appsettings.json` (e.g. `http://localhost:8080/realms/fintrackpro`) |
-| `Keycloak__Audience` | `appsettings.json` (e.g. `fintrackpro-api`) |
-| `Keycloak__AdminClientId` | `appsettings.json` (e.g. `fintrackpro-api`) |
-| `Keycloak__AdminClientSecret` | `appsettings.Development.json` (dev: `dev-secret-change-in-prod`); env var for production |
+| `IdentityProvider__Provider` | `appsettings.json` (default `"keycloak"`); override to `"auth0"` for cloud |
+| `IdentityProvider__Audience` | `appsettings.json` — JWT `aud` claim; URI convention (`https://api.fintrackpro.dev`) |
+| `IdentityProvider__AdminClientId` | `appsettings.json` — M2M client ID for the active IAM provider's admin API |
+| `IdentityProvider__AdminClientSecret` | `appsettings.Development.json` (gitignored); env var for production |
+| `Keycloak__Authority` | `appsettings.json` — validates `iss` claim |
+| `Keycloak__MetadataAddress` | `appsettings.json` — overridden in `docker-compose.yml` for container DNS |
+| `Auth0__Domain` | `appsettings.Development.json` / env |
 | `Telegram__BotToken` | env var only |
+| `VITE_AUTH_PROVIDER` | `frontend/fintrackpro-ui/.env` (`"keycloak"` or `"auth0"`) |
 | `VITE_API_BASE_URL` | `frontend/fintrackpro-ui/.env` |
-| `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` |
+| `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` (Keycloak mode) |
+| `VITE_AUTH0_DOMAIN/CLIENT_ID/AUDIENCE` | `frontend/fintrackpro-ui/.env` (Auth0 mode) |
 
 Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
 
@@ -90,6 +97,7 @@ Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
 ## Docs
 - `docs/architecture.md` — layer descriptions and design decisions
 - `docs/dev-setup.md` — hybrid vs full-Docker setup
+- `docs/auth-setup.md` — IAM provider setup (Keycloak manual config, Auth0 dashboard, switching providers)
 - `docs/api-spec.md` — REST endpoints and schemas
 - `docs/database.md` — schema, tables, relationships
 

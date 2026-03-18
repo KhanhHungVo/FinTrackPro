@@ -32,7 +32,7 @@ BackgroundJobs → Application
 
 - **Domain** — entities, value objects, domain exceptions, repository interfaces. Zero external dependencies.
 - **Application** — MediatR commands/queries/handlers, FluentValidation validators, DTOs with explicit `operator` conversions (no AutoMapper).
-- **Infrastructure** — EF Core Code-First (`ApplicationDbContext`), repository implementations, Keycloak JWT, external HTTP clients (Binance, CoinGecko, Fear & Greed), Telegram.Bot, Skender.Stock.Indicators.
+- **Infrastructure** — EF Core Code-First (`ApplicationDbContext`), repository implementations, IAM provider abstraction (Keycloak or Auth0 — selected via `IdentityProvider:Provider`), external HTTP clients (Binance, CoinGecko, Fear & Greed), Telegram.Bot, Skender.Stock.Indicators.
 - **API** — thin controllers delegating entirely to MediatR, `ExceptionHandlingMiddleware`, DI wiring via `AddApplicationServices()` / `AddInfrastructureServices()`.
 - **BackgroundJobs** — Hangfire job classes; registered in `Program.cs` as recurring jobs.
 
@@ -51,18 +51,18 @@ Follow this pattern for every new capability:
 Every command/query automatically passes through, in order:
 1. `ValidationBehavior` — runs all registered FluentValidation validators; throws `ValidationException` (→ HTTP 400) on failure.
 2. `LoggingBehavior` — logs request name and elapsed time.
-3. `EnsureUserBehavior` — if the caller has a Keycloak ID and no `AppUser` row exists, creates one (auto-provisions on first login).
+3. `EnsureUserBehavior` — if the caller has an external IAM ID and no `AppUser` row exists, creates one (auto-provisions on first login).
 
 ## Roles
 
-Roles are defined in `FinTrackPro.Domain.Constants.UserRole` and stored only in Keycloak — never in the database.
+Roles are defined in `FinTrackPro.Domain.Constants.UserRole` and stored only in the IAM provider — never in the database.
 
 | Role | Who gets it | How |
 |---|---|---|
-| `User` | Every self-registered user | Keycloak Default Roles |
-| `Admin` | Manually assigned | Keycloak Admin UI → Users → Role mappings |
+| `User` | Every self-registered user | Keycloak: Default Roles / Auth0: post-registration Action |
+| `Admin` | Manually assigned | Keycloak Admin UI or Auth0 dashboard |
 
-`KeycloakClaimsTransformer` (Infrastructure) flattens `realm_access.roles` from the JWT into `ClaimTypes.Role` claims on every request. All controllers require `[Authorize(Roles = UserRole.User)]`. The Hangfire dashboard (`/hangfire`) requires `UserRole.Admin`.
+The active claims transformer (`KeycloakClaimsTransformer` or `Auth0ClaimsTransformer`) maps provider-specific role claims to `ClaimTypes.Role` on every request. All controllers require `[Authorize(Roles = UserRole.User)]`. The Hangfire dashboard (`/hangfire`) requires `UserRole.Admin`.
 
 ## Exception Handling
 
@@ -106,8 +106,12 @@ All external HTTP clients are registered as typed `HttpClient` factories in `Add
 | Variable | Where |
 |---|---|
 | `ConnectionStrings__DefaultConnection` | `appsettings.json` / env |
-| `Keycloak__Authority` | `appsettings.json` |
-| `Keycloak__Audience` | `appsettings.json` |
+| `IdentityProvider__Audience` | `appsettings.json` — JWT `aud` claim; URI convention (`https://api.fintrackpro.dev`) |
+| `IdentityProvider__AdminClientId` | `appsettings.json` — M2M client ID for the active IAM provider's admin API |
+| `IdentityProvider__AdminClientSecret` | `appsettings.Development.json` (gitignored); env var for production |
+| `Keycloak__Authority` | `appsettings.json` — validates `iss` claim in tokens |
+| `Keycloak__MetadataAddress` | `appsettings.json` — where the API fetches signing keys; overridden in Docker to use container hostname |
+| `Auth0__Domain` | `appsettings.Development.json` / env — Auth0 tenant domain |
 | `Telegram__BotToken` | env var only |
 
 Infrastructure dependencies (hybrid dev): `docker compose up -d sqlserver keycloak` from the repo root.

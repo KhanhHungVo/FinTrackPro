@@ -23,7 +23,7 @@ public class CreateTradeHandlerTests
     public CreateTradeHandlerTests()
     {
         _handler = new CreateTradeCommandHandler(_context, _currentUser, _userRepository, _binanceService);
-        _currentUser.KeycloakUserId.Returns("kc-test");
+        _currentUser.ExternalUserId.Returns("kc-test");
 
         var trades = Substitute.For<DbSet<Trade>>();
         _context.Trades.Returns(trades);
@@ -33,7 +33,7 @@ public class CreateTradeHandlerTests
     [Fact]
     public async Task Handle_ValidCommand_ReturnsNewGuid()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _binanceService.IsValidSymbolAsync("BTCUSDT", Arg.Any<CancellationToken>())
             .Returns(true);
@@ -50,7 +50,7 @@ public class CreateTradeHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(
@@ -63,7 +63,7 @@ public class CreateTradeHandlerTests
     [Fact]
     public async Task Handle_InvalidSymbol_ThrowsDomainException()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _binanceService.IsValidSymbolAsync("FAKESYMBOL", Arg.Any<CancellationToken>())
             .Returns(false);

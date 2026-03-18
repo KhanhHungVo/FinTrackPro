@@ -21,7 +21,7 @@ public class CreateBudgetHandlerTests
     public CreateBudgetHandlerTests()
     {
         _handler = new CreateBudgetCommandHandler(_context, _currentUser, _userRepository);
-        _currentUser.KeycloakUserId.Returns("kc-test");
+        _currentUser.ExternalUserId.Returns("kc-test");
 
         var budgets = Substitute.For<DbSet<Budget>>();
         _context.Budgets.Returns(budgets);
@@ -31,7 +31,7 @@ public class CreateBudgetHandlerTests
     [Fact]
     public async Task Handle_ValidCommand_ReturnsNewGuid()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns(TestUser);
 
         var command = new CreateBudgetCommand("Food", 500m, "2026-03");
@@ -46,7 +46,7 @@ public class CreateBudgetHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByKeycloakIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "2026-03"), CancellationToken.None);

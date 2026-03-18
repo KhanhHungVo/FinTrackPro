@@ -25,9 +25,9 @@ public class GetTradesQueryHandler : IRequestHandler<GetTradesQuery, IEnumerable
     public async Task<IEnumerable<TradeDto>> Handle(
         GetTradesQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var trades = await _tradeRepository.GetByUserAsync(user.Id, cancellationToken);
         return trades

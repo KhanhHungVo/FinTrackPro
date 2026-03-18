@@ -27,9 +27,9 @@ public class CreateTradeCommandHandler : IRequestHandler<CreateTradeCommand, Gui
 
     public async Task<Guid> Handle(CreateTradeCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var isValid = await _binanceService.IsValidSymbolAsync(request.Symbol, cancellationToken);
         if (!isValid)

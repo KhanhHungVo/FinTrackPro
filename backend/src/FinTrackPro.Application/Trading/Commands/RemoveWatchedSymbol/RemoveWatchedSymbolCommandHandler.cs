@@ -27,9 +27,9 @@ public class RemoveWatchedSymbolCommandHandler : IRequestHandler<RemoveWatchedSy
 
     public async Task Handle(RemoveWatchedSymbolCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var symbol = await _watchedSymbolRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(WatchedSymbol), request.Id);

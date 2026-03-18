@@ -27,9 +27,9 @@ public class DeleteTransactionCommandHandler : IRequestHandler<DeleteTransaction
 
     public async Task Handle(DeleteTransactionCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByKeycloakIdAsync(
-            _currentUser.KeycloakUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.KeycloakUserId!);
+        var user = await _userRepository.GetByExternalIdAsync(
+            _currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
 
         var transaction = await _transactionRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Transaction), request.Id);

@@ -21,8 +21,8 @@ React 19 single-page application for FinTrackPro, structured with Feature-Sliced
 
 - Node.js 22+
 - npm 10+
-- FinTrackPro API running on `http://localhost:5000`
-- Keycloak running on `http://localhost:8080`
+- FinTrackPro API running on `http://localhost:5018`
+- Keycloak on `http://localhost:8080` (Keycloak mode) **or** an Auth0 tenant (Auth0 mode)
 
 ## Getting Started
 
@@ -45,10 +45,14 @@ Create a `.env` file in this directory (copy from `.env.example`):
 
 | Variable | Description | Example |
 |---|---|---|
-| `VITE_API_BASE_URL` | Base URL of the FinTrackPro API | `http://localhost:5000` |
-| `VITE_KEYCLOAK_URL` | Keycloak server URL | `http://localhost:8080` |
-| `VITE_KEYCLOAK_REALM` | Keycloak realm name | `fintrackpro` |
-| `VITE_KEYCLOAK_CLIENT_ID` | Keycloak public client ID for the SPA | `fintrackpro-spa` |
+| `VITE_API_BASE_URL` | Base URL of the FinTrackPro API | `http://localhost:5018` |
+| `VITE_AUTH_PROVIDER` | Active auth provider | `keycloak` or `auth0` |
+| `VITE_KEYCLOAK_URL` | Keycloak server URL *(Keycloak mode only)* | `http://localhost:8080` |
+| `VITE_KEYCLOAK_REALM` | Keycloak realm name *(Keycloak mode only)* | `fintrackpro` |
+| `VITE_KEYCLOAK_CLIENT_ID` | Keycloak public client ID *(Keycloak mode only)* | `fintrackpro-spa` |
+| `VITE_AUTH0_DOMAIN` | Auth0 tenant domain *(Auth0 mode only)* | `your-tenant.auth0.com` |
+| `VITE_AUTH0_CLIENT_ID` | Auth0 SPA client ID *(Auth0 mode only)* | `abc123` |
+| `VITE_AUTH0_AUDIENCE` | Auth0 API audience *(Auth0 mode only)* | `https://api.fintrackpro.dev` |
 
 > All variables must be prefixed with `VITE_` to be accessible in the browser bundle.
 
