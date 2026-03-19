@@ -34,6 +34,29 @@ public class AppUser : AggregateRoot
         Email = email.Trim().ToLowerInvariant();
     }
 
+    public bool SyncIdentity(string externalUserId, string email, string displayName, string provider)
+    {
+        var normalizedExternalUserId = externalUserId.Trim();
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var normalizedDisplayName = displayName.Trim();
+        var normalizedProvider = provider.Trim();
+
+        var changed =
+            ExternalUserId != normalizedExternalUserId ||
+            Email != normalizedEmail ||
+            DisplayName != normalizedDisplayName ||
+            Provider != normalizedProvider ||
+            !IsActive;
+
+        ExternalUserId = normalizedExternalUserId;
+        Email = normalizedEmail;
+        DisplayName = normalizedDisplayName;
+        Provider = normalizedProvider;
+        IsActive = true;
+
+        return changed;
+    }
+
     public void Deactivate() => IsActive = false;
 
     public void Reactivate() => IsActive = true;

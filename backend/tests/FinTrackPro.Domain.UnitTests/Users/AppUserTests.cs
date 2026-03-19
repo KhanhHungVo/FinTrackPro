@@ -50,4 +50,20 @@ public class AppUserTests
         user.DisplayName.Should().Be("New Name");
         user.Email.Should().Be("new@example.com");
     }
+
+    [Fact]
+    public void SyncIdentity_UpdatesIdentityProviderProfileAndReactivatesUser()
+    {
+        var user = AppUser.Create("kc-1", "old@b.com", "Old Name", "local");
+        user.Deactivate();
+
+        var changed = user.SyncIdentity(" auth0-2 ", "NEW@EXAMPLE.COM", "  New Name  ", " auth0 ");
+
+        changed.Should().BeTrue();
+        user.ExternalUserId.Should().Be("auth0-2");
+        user.Email.Should().Be("new@example.com");
+        user.DisplayName.Should().Be("New Name");
+        user.Provider.Should().Be("auth0");
+        user.IsActive.Should().BeTrue();
+    }
 }

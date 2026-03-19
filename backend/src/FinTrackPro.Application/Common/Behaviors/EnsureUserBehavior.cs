@@ -17,28 +17,41 @@ public class EnsureUserBehavior<TRequest, TResponse>(
         var externalId = currentUser.ExternalUserId;
         if (!string.IsNullOrWhiteSpace(externalId))
         {
-            var user = await userRepository.GetByExternalIdAsync(externalId, cancellationToken);
+            var email = currentUser.Email ?? string.Empty;
+            var displayName = currentUser.DisplayName ?? externalId;
+            var provider = currentUser.ProviderName;
+
+            var user = await GetByIdentityAsync(externalId, email, cancellationToken);
             if (user is null)
             {
-                userRepository.Add(AppUser.Create(
+                var newUser = AppUser.Create(
                     externalUserId: externalId,
-                    email: currentUser.Email ?? string.Empty,
-                    displayName: currentUser.DisplayName ?? externalId,
-                    provider: currentUser.ProviderName));
-                await db.SaveChangesAsync(cancellationToken);
+                    email: email,
+                    displayName: displayName,
+                    provider: provider);
+
+                var canonicalUser = await userRepository.EnsureCreatedAsync(newUser, cancellationToken);
+                if (canonicalUser.SyncIdentity(externalId, email, displayName, provider))
+                    await db.SaveChangesAsync(cancellationToken);
             }
             else
             {
-                var jwtDisplayName = currentUser.DisplayName ?? externalId;
-                var jwtEmail = currentUser.Email ?? string.Empty;
-                var needsUpdate = user.DisplayName != jwtDisplayName || user.Email != jwtEmail;
-                var needsReactivation = !user.IsActive;
-
-                if (needsReactivation) user.Reactivate();
-                if (needsUpdate) user.UpdateProfile(jwtDisplayName, jwtEmail);
-                if (needsUpdate || needsReactivation) await db.SaveChangesAsync(cancellationToken);
+                if (user.SyncIdentity(externalId, email, displayName, provider))
+                    await db.SaveChangesAsync(cancellationToken);
             }
         }
         return await next();
+    }
+
+    private async Task<AppUser?> GetByIdentityAsync(
+        string externalId,
+        string email,
+        CancellationToken cancellationToken)
+    {
+        var user = await userRepository.GetByExternalIdAsync(externalId, cancellationToken);
+        if (user is not null || string.IsNullOrWhiteSpace(email))
+            return user;
+
+        return await userRepository.GetByEmailAsync(email, cancellationToken);
     }
 }
