@@ -218,7 +218,9 @@ Auth0 free tier supports up to 7,500 MAU and requires no self-hosted infrastruct
    }
    ```
 
-   Wire it up: Actions → **Flows** → **Login** → drag `inject-roles-into-token` between **Start** and **Complete** → click **Apply**.
+   Wire it up: Actions → **Triggers** → **post-login** → drag `inject-roles-into-token` between **Start** and **Complete** → click **Apply**.
+
+   > **Note:** Auth0 renamed "Flows" to "Triggers" in their dashboard. **post-login** is the equivalent of the old "Login Flow".
 
 6. **Post-Registration Action** (optional — auto-assign `User` role to new sign-ups, mirrors Keycloak Default Roles) — Actions → **Library** → **+ Build Custom**
    - **Name**: `auto-assign-user-role`
@@ -245,7 +247,7 @@ Auth0 free tier supports up to 7,500 MAU and requires no self-hosted infrastruct
 
    In the **Secrets** panel add: `DOMAIN` (your Auth0 tenant domain), `CLIENT_ID` and `CLIENT_SECRET` (M2M app credentials from Step 4).
 
-   Wire it up: Actions → **Flows** → **Post User Registration** → drag `auto-assign-user-role` into the flow → click **Apply**.
+   Wire it up: Actions → **Triggers** → **post-user-registration** → drag `auto-assign-user-role` into the flow → click **Apply**.
 
 ---
 
