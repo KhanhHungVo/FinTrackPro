@@ -15,11 +15,17 @@ class Auth0Adapter implements IAuthAdapter {
       },
     })
 
+    const params = new URLSearchParams(window.location.search)
+
+    // Auth0 returned an error (e.g. invalid audience, unauthorized client) — clear
+    // the URL and throw so AuthProvider shows an error screen instead of looping.
+    if (params.has('error')) {
+      window.history.replaceState({}, document.title, window.location.pathname)
+      throw new Error(params.get('error_description') ?? params.get('error') ?? 'Auth0 error')
+    }
+
     // Handle the redirect callback after Auth0 redirects back to the app
-    if (
-      window.location.search.includes('code=') &&
-      window.location.search.includes('state=')
-    ) {
+    if (params.has('code') && params.has('state')) {
       await this.client.handleRedirectCallback()
       window.history.replaceState({}, document.title, window.location.pathname)
     }
