@@ -111,12 +111,13 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();            // /openapi/v1.json
     app.MapScalarApiReference(); // Scalar UI at /scalar
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
 
 // Hangfire Dashboard — restricted to Admin role
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
