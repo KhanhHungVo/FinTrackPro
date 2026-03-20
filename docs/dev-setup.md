@@ -121,12 +121,19 @@ API listens on **http://localhost:5018** (defined in `Properties/launchSettings.
 The dev `IdentityProvider:AdminClientSecret` is already set in `appsettings.Development.json` so the nightly
 `IamUserSyncJob` works without any extra environment variables.
 
-Optional — set environment variables before starting if you need Telegram notifications:
+Optional — set environment variables before starting if you need Telegram notifications or CoinGecko data:
 
 ```bash
 export Telegram__BotToken="your-token-here"
+export CoinGecko__ApiKey="your-demo-or-pro-key-here"   # required — CoinGecko free tier now requires an API key
 dotnet run --project src/FinTrackPro.API --launch-profile http
 ```
+
+> Get a free Demo API key at https://www.coingecko.com/en/api — sign up and copy the key from the
+> Developer Dashboard. Set it in `appsettings.Development.json` under `CoinGecko:ApiKey` or via
+> the `CoinGecko__ApiKey` environment variable. If using the Pro plan, replace the header name
+> `x-cg-demo-api-key` with `x-cg-pro-api-key` in
+> `FinTrackPro.Infrastructure/DependencyInjection.cs`.
 
 ---
 

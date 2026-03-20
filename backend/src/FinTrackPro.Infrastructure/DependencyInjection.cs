@@ -76,6 +76,10 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri("https://api.coingecko.com");
             client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+            var apiKey = configuration["CoinGecko:ApiKey"];
+            if (!string.IsNullOrWhiteSpace(apiKey))
+                client.DefaultRequestHeaders.Add("x-cg-demo-api-key", apiKey);
         });
 
         return services;
