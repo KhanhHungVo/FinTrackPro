@@ -20,6 +20,14 @@ dist/
 # Docker
 .docker/
 
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+*.tfstate
+*.tfstate.backup
+terraform.tfplan
+
 # Misc
 .DS_Store
 Thumbs.db
