@@ -1,0 +1,110 @@
+# render.yaml — Render Blueprint for FinTrackPro
+# https://render.com/docs/blueprint-spec
+#
+# Deploy: Render dashboard → New → Blueprint → connect this repo.
+# Render detects this file and provisions both services.
+#
+# Secrets (sync: false) are entered once in the Render dashboard and stored encrypted.
+# They are never committed to source control.
+#
+# Migrations: run manually before each schema-changing deploy:
+#   cd backend
+#   dotnet ef database update \
+#     --project src/FinTrackPro.Infrastructure \
+#     --startup-project src/FinTrackPro.API
+# See docs/render-migration-strategies.md for automated options.
+
+services:
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  - type: web
+    name: fintrackpro-api
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    # dockerContext must be backend/ — the Dockerfile COPY paths are relative to it.
+    dockerContext: backend
+    plan: starter
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      # Kestrel must bind to port 8080 (what Render's load balancer forwards to).
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+
+      # Azure SQL connection string — enter in Render dashboard.
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+
+      - key: IdentityProvider__Provider
+        value: auth0
+
+      # Must match the Auth0 API identifier and the VITE_AUTH0_AUDIENCE on the frontend.
+      - key: IdentityProvider__Audience
+        value: https://api.fintrackpro.dev
+
+      # Auth0 M2M application credentials (for IamUserSyncJob and admin operations).
+      - key: IdentityProvider__AdminClientId
+        sync: false
+
+      - key: IdentityProvider__AdminClientSecret
+        sync: false
+
+      # Auth0 tenant domain, e.g. dev-abc123.us.auth0.com
+      - key: Auth0__Domain
+        sync: false
+
+      # Set to the deployed frontend URL after first deploy, e.g.:
+      #   https://fintrackpro-ui.onrender.com
+      # Comma-separate multiple origins if needed.
+      - key: Cors__Origins
+        sync: false
+
+      - key: CoinGecko__ApiKey
+        sync: false
+
+      # Optional — background job sends Telegram alerts.
+      - key: Telegram__BotToken
+        sync: false
+
+  # ── Frontend Static Site ─────────────────────────────────────────────────────
+  - type: web
+    name: fintrackpro-ui
+    runtime: static
+    # rootDir tells Render where the frontend package lives within the monorepo.
+    rootDir: frontend/fintrackpro-ui
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    branch: main
+    region: oregon
+
+    # Rewrite all paths to index.html so React Router handles client-side routing.
+    # The public/_redirects file provides the same rule for belt-and-suspenders coverage.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    envVars:
+      - key: VITE_AUTH_PROVIDER
+        value: auth0
+
+      # Set to the API Render URL, e.g. https://fintrackpro-api.onrender.com
+      # VITE_* vars are injected at BUILD TIME — must be set before npm run build.
+      - key: VITE_API_BASE_URL
+        sync: false
+
+      # Auth0 tenant domain — same value as Auth0__Domain on the API.
+      - key: VITE_AUTH0_DOMAIN
+        sync: false
+
+      # Auth0 SPA application client ID (not the M2M client).
+      - key: VITE_AUTH0_CLIENT_ID
+        sync: false
+
+      # Must match IdentityProvider__Audience on the API.
+      - key: VITE_AUTH0_AUDIENCE
+        value: https://api.fintrackpro.dev

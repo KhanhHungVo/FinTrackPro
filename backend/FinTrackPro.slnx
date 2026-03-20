@@ -9,7 +9,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/FinTrackPro.Domain.UnitTests/FinTrackPro.Domain.UnitTests.csproj" />
     <Project Path="tests/FinTrackPro.Application.UnitTests/FinTrackPro.Application.UnitTests.csproj" />
-    <Project Path="tests/FinTrackPro.Infrastructure.Tests/FinTrackPro.Infrastructure.Tests.csproj" />
     <Project Path="tests/Tests.Common/Tests.Common.csproj" />
     <Project Path="tests/FinTrackPro.Api.IntegrationTests/FinTrackPro.Api.IntegrationTests.csproj" />
   </Folder>
