@@ -1,6 +1,6 @@
 # FinTrackPro — Implementation Roadmap
 
-> Last updated: 2026-03-12
+> Last updated: 2026-03-20
 
 ---
 
@@ -28,7 +28,8 @@
 
 | Artifact | File | Status |
 |---|---|---|
-| JWT Bearer middleware | `API/Program.cs` — `AddJwtBearer` with Keycloak Authority/Audience | ✅ |
+| JWT Bearer middleware | `API/Program.cs` — `AddJwtBearer` provider-conditional (Keycloak or Auth0) | ✅ |
+| Auth0 provider | `Auth0ClaimsTransformer`, `Auth0ManagementService` — `IdentityProvider:Provider = "auth0"` | ✅ |
 | `ICurrentUserService` | `Application/Common/Interfaces/ICurrentUserService.cs` | ✅ |
 | `CurrentUserService` | `Infrastructure/Services/CurrentUserService.cs` — reads `sub`, `email`, `name` from JWT claims | ✅ |
 | `[Authorize]` on all controllers | All 7 controllers | ✅ |
@@ -149,8 +150,10 @@
 
 | Artifact | File | Status |
 |---|---|---|
-| `docker-compose.yml` | Root — SQL Server + Keycloak + API | ✅ |
-| `backend/Dockerfile` | Multi-stage .NET 10 build | ✅ |
+| `docker-compose.yml` | Root — SQL Server + Keycloak + migrator + API | ✅ |
+| `backend/Dockerfile` | Multi-stage .NET 10 runtime image | ✅ |
+| `backend/Dockerfile.migrator` | SDK-based init container — runs `dotnet ef database update` then exits | ✅ |
+| Azure SQL Database | `rg-fintrackpro-prod` / `sql-fintrackpro` — provisioned 2026-03-20 | ✅ |
 | GitHub Actions CI | `.github/workflows/ci.yml` — build + test + Docker | ✅ |
 | Azure App Service provisioning | — | ⏳ Manual |
 | Azure Static Web Apps | — | ⏳ Manual |
@@ -162,14 +165,15 @@
 
 | # | Step | Notes |
 |---|---|---|
-| 1 | Keycloak realm | Create realm `fintrackpro`, client `fintrackpro-api` (confidential), configure Google + Azure AD identity providers |
+| 1 | IAM provider | **Keycloak**: create realm `fintrackpro`, clients, audience mapper — see [docs/auth-setup.md](auth-setup.md#keycloak). **Auth0**: API, SPA app, M2M app, roles, post-login Action — see [docs/auth-setup.md](auth-setup.md#auth0-cloud-iam) |
 | 2 | EF Core migration | `dotnet ef migrations add InitialCreate --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API` |
-| 3 | Run migration | `dotnet ef database update --startup-project src/FinTrackPro.API` |
-| 4 | Telegram Bot | Create via @BotFather → set token in `appsettings.json` |
-| 5 | Frontend env | Copy `.env.example` → `.env`, set `VITE_API_BASE_URL` |
-| 6 | Start environment | `docker compose up` then `dotnet run` then `npm run dev` |
-| 7 | Azure deployment | Provision App Service (API) + Static Web App (frontend) |
-| 8 | GitHub secrets | `TELEGRAM_BOT_TOKEN`, `AZURE_*` credentials |
+| 3 | Run migration | `dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API` |
+| 4 | Azure SQL | Provision resource group, logical server, database, firewall — see [docs/dev-setup.md Mode C](dev-setup.md#mode-c--hybrid-dev-against-azure-sql); store connection string in User Secrets |
+| 5 | Telegram Bot | Create via @BotFather → set token via env var or User Secrets (`Telegram:BotToken`) |
+| 6 | Frontend env | Copy `.env.example` → `.env`, set `VITE_API_BASE_URL` and IAM provider vars |
+| 7 | Start environment | `docker compose up` then `dotnet run` then `npm run dev` |
+| 8 | Azure deployment | Provision App Service (API) + Static Web App (frontend) |
+| 9 | GitHub secrets | `TELEGRAM_BOT_TOKEN`, `AZURE_*` credentials, `ConnectionStrings__DefaultConnection` |
 
 ---
 

@@ -75,7 +75,7 @@ app → pages → widgets → features → entities → shared
 
 | Decision | Choice | Reason |
 |---|---|---|
-| ORM | EF Core 10 + SQL Server | Type-safe migrations, Clean Arch compatible |
+| ORM | EF Core 10 + SQL Server (local Docker) / Azure SQL (production) | Type-safe migrations, Clean Arch compatible; same provider targets both |
 | CQRS | MediatR 12 | Decoupled handlers, pipeline behaviors |
 | Validation | FluentValidation 11 | Declarative, auto-wired via DI |
 | Auth | Keycloak / Auth0 + JWT Bearer | Swappable IAM providers via `IdentityProvider:Provider` config. Roles (`User`/`Admin`) live in the IAM provider only; the active claims transformer maps them to ASP.NET Core `ClaimTypes.Role`. Local `AppUser` stores `ExternalUserId` (JWT `sub`) + `Provider` field; profile is synced on every login via `EnsureUserBehavior`; orphans are soft-deleted nightly by `IamUserSyncJob`. |

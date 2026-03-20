@@ -10,15 +10,16 @@ Personal finance tracking application with budgeting, expense management, and Te
 
 ## Architecture
 
-Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server, with Keycloak handling authentication and Hangfire running background jobs (e.g. scheduled Telegram notifications). See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
+Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server (local) / Azure SQL (production), with Keycloak or Auth0 handling authentication and Hangfire running background jobs (e.g. scheduled Telegram notifications). See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
 
 ## Prerequisites
 
-| Tool | Version |
-|---|---|
-| Docker Desktop | Latest |
-| .NET SDK | 10.0 |
-| Node.js | 22+ |
+| Tool | Version | Notes |
+|---|---|---|
+| Docker Desktop | Latest | Required for local SQL Server + Keycloak containers |
+| .NET SDK | 10.0 | |
+| Node.js | 22+ | |
+| Azure subscription | — | Required for Azure SQL (production / cloud dev) |
 
 ## Quick Start
 
@@ -75,7 +76,6 @@ FinTrackPro/
 │   │   ├── FinTrackPro.Domain.UnitTests/
 │   │   ├── FinTrackPro.Application.UnitTests/
 │   │   ├── FinTrackPro.Api.IntegrationTests/
-│   │   ├── FinTrackPro.Infrastructure.Tests/
 │   │   └── Tests.Common/              # Shared test infrastructure (Testcontainers, fakes, builders)
 │   ├── Dockerfile                     # Runtime image (aspnet — lean, no SDK tools)
 │   └── Dockerfile.migrator            # Init container — runs EF migrations then exits
@@ -104,19 +104,26 @@ FinTrackPro/
 
 ## Manual Setup
 
-Only two manual steps remain — Keycloak is fully automated.
-
 **Telegram Bot** *(optional — notifications are silently skipped without it)*
 1. Create a bot via [@BotFather](https://t.me/BotFather) and copy the token.
-2. Set the `Telegram__BotToken` environment variable (do **not** commit the token).
+2. Set the token via User Secrets or env var — do **not** commit it:
+   ```bash
+   dotnet user-secrets set "Telegram:BotToken" "your-token" --project backend/src/FinTrackPro.API
+   # or: export Telegram__BotToken="your-token"
+   ```
 
 **EF Core migrations**
 
 - **Full Docker:** handled automatically by the `migrator` init container on every `docker compose up --build`.
-- **Hybrid mode:** run once after `docker compose up -d sqlserver`:
+- **Hybrid mode (local SQL Server):** run once after `docker compose up -d sqlserver`:
   ```bash
   cd backend
   dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
+  ```
+- **Azure SQL:** set the connection string via User Secrets or env var first, then run the same command:
+  ```bash
+  dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<azure-sql-string>" --project src/FinTrackPro.API
+  cd backend && dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
   ```
 
 **Keycloak** *(zero-touch for dev)*
@@ -128,3 +135,11 @@ The dev `IdentityProvider__AdminClientSecret` (`dev-secret-change-in-prod`) is p
 > **Production:** rotate the `fintrackpro-api` client secret in Keycloak and set `IdentityProvider__AdminClientSecret` to the new value via environment variable.
 
 For custom Keycloak config (social login, extra users, redirect URIs) see the [manual setup reference](docs/auth-setup.md#manual-setup-reference) in `docs/auth-setup.md`.
+
+**Auth0** *(cloud IAM alternative)*
+
+Requires a one-time dashboard setup: API, SPA app, M2M app, roles, and a post-login Action for role injection. See [docs/auth-setup.md](docs/auth-setup.md#auth0-cloud-iam) for the full guide. Switch with `IdentityProvider:Provider = "auth0"` (backend) and `VITE_AUTH_PROVIDER=auth0` (frontend).
+
+**Azure SQL** *(production database)*
+
+Requires portal provisioning: resource group → logical server → database → firewall rules. See [docs/dev-setup.md — Mode C](docs/dev-setup.md#mode-c--hybrid-dev-against-azure-sql) for the full setup guide and how to connect from local dev machines.

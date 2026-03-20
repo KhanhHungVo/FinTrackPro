@@ -1,6 +1,8 @@
 # FinTrackPro — Database Schema
 
-Database: SQL Server. ORM: EF Core 10. Migrations assembly: `FinTrackPro.Infrastructure`.
+Database: SQL Server (local Docker) / Azure SQL (production). ORM: EF Core 10. Migrations assembly: `FinTrackPro.Infrastructure`.
+
+> **Production target:** Azure SQL (General Purpose Serverless or Basic tier). The same EF Core Code-First migrations and `Microsoft.EntityFrameworkCore.SqlServer` provider target both local SQL Server and Azure SQL — no schema or code changes required when switching. See [docs/dev-setup.md — Mode C](dev-setup.md#mode-c--hybrid-dev-against-azure-sql) for connecting to Azure SQL from a local dev machine.
 
 ## Tables
 

@@ -11,6 +11,7 @@ Two ways to run the full stack locally. **Hybrid mode** is recommended for day-t
   - [Step 2 — Database migration](#step-2--create-and-apply-database-migration-first-time-only)
   - [Step 3 — Run the API](#step-3--run-the-api)
   - [Step 4 — Run the frontend](#step-4--run-the-frontend)
+- [Mode C — Hybrid dev against Azure SQL](#mode-c--hybrid-dev-against-azure-sql)
 - [Port Reference](#port-reference)
 - [Verifying the Stack](#verifying-the-stack)
 - [Stopping the Stack](#stopping-the-stack)
@@ -175,6 +176,65 @@ npm run dev
 ```
 
 Frontend runs at **http://localhost:5173**.
+
+---
+
+---
+
+## Mode C — Hybrid dev against Azure SQL
+
+Run the API locally but target Azure SQL instead of the local Docker SQL Server container. Useful when working across multiple machines or when you want to test against the production database schema.
+
+### Prerequisites
+
+- Azure SQL database provisioned (see [Azure Portal setup](../docs/auth-setup.md) or the portal checklist in the project plan)
+- Your machine's IP added to the Azure SQL firewall rules (`sql-fintrackpro` → **Security → Networking → Firewall rules**)
+- The ADO.NET connection string copied from the Azure portal (**FinTrackPro database → Connection strings → ADO.NET**)
+
+### Step 1 — Set the connection string
+
+Add `DefaultConnection` to `appsettings.Development.json` (this file is gitignored — safe for secrets):
+
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Server=tcp:<your-server>.database.windows.net,1433;Initial Catalog=FinTrackPro;Persist Security Info=False;User ID=<admin-login>;Password=<your-password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+}
+```
+
+Replace `<your-server>`, `<admin-login>`, and `<your-password>` with the values from the portal.
+
+Alternatively, set it as an environment variable for the current shell session only (never committed):
+
+```powershell
+# PowerShell
+$env:ConnectionStrings__DefaultConnection = "Server=tcp:<your-server>.database.windows.net,1433;..."
+```
+
+### Step 2 — Apply migrations
+
+```bash
+cd backend
+dotnet ef database update \
+  --project src/FinTrackPro.Infrastructure \
+  --startup-project src/FinTrackPro.API
+```
+
+This applies the `InitialCreate` migration to the Azure database (idempotent — safe to run again if already applied).
+
+### Step 3 — Run the API
+
+No Docker required — skip `docker compose up` entirely.
+
+```bash
+cd backend
+dotnet run --project src/FinTrackPro.API --launch-profile http
+```
+
+### Step 4 — Run the frontend
+
+Same as Mode B Step 4 — no changes needed.
+
+> **Multi-device note:** If you switch networks (home, office, VPN), your public IP changes. Add each new IP in the Azure portal under `sql-fintrackpro` → **Security → Networking → Firewall rules**, or add a `0.0.0.0–255.255.255.255` rule to allow all IPs during development.
 
 ---
 

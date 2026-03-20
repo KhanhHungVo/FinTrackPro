@@ -78,12 +78,20 @@ Roles (`User`, `Admin`) are stored only in the IAM provider — never in the dat
 | `Keycloak__MetadataAddress` | `appsettings.json` — overridden in `docker-compose.yml` for container DNS |
 | `Auth0__Domain` | `appsettings.Development.json` / env |
 | `Telegram__BotToken` | env var only |
+| `CoinGecko__ApiKey` | `appsettings.Development.json` / env — Demo or Pro API key; required for `/market/trending` endpoint |
 | `VITE_AUTH_PROVIDER` | `frontend/fintrackpro-ui/.env` (`"keycloak"` or `"auth0"`) |
 | `VITE_API_BASE_URL` | `frontend/fintrackpro-ui/.env` |
 | `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` (Keycloak mode) |
 | `VITE_AUTH0_DOMAIN/CLIENT_ID/AUDIENCE` | `frontend/fintrackpro-ui/.env` (Auth0 mode) |
 
 Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
+
+**Local dev secrets:** use `dotnet user-secrets` (Development environment only) to store sensitive values outside the repo. Secrets override `appsettings.Development.json` at runtime:
+```bash
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<azure-sql-string>" --project backend/src/FinTrackPro.API
+dotnet user-secrets set "IdentityProvider:AdminClientSecret" "<secret>" --project backend/src/FinTrackPro.API
+dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrackPro.API
+```
 
 ## Ports (local hybrid dev)
 | Service | Port |
