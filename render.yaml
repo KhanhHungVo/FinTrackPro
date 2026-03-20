@@ -79,7 +79,6 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     branch: main
-    region: oregon
 
     # Rewrite all paths to index.html so React Router handles client-side routing.
     # The public/_redirects file provides the same rule for belt-and-suspenders coverage.
