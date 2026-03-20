@@ -163,7 +163,7 @@ Auth0 free tier supports up to 7,500 MAU and requires no self-hosted infrastruct
 ### One-time Auth0 Dashboard configuration
 
 1. **API** — Applications → APIs → **+ Create API**
-   - **Name**: `FinTrackPro API`
+   - **Name**: `fintrackpro-api`
    - **Identifier** (audience): `https://api.fintrackpro.dev`
    - **Signing Algorithm**: `RS256`
    - Click **Create**.
@@ -185,7 +185,7 @@ Auth0 free tier supports up to 7,500 MAU and requires no self-hosted infrastruct
 
    | Role name | Description | Assignment |
    |---|---|---|
-   | `User` | Standard user | Auto-assigned via Post-Registration Action |
+   | `User` | Standard user | Auto-assigned via Post-Login Action (covers password and social sign-ups) |
    | `Admin` | Admin access (Hangfire dashboard) | Assigned manually in dashboard |
 
 4. **M2M Application** (for nightly user sync job) — Applications → Applications → **+ Create Application**
@@ -193,61 +193,92 @@ Auth0 free tier supports up to 7,500 MAU and requires no self-hosted infrastruct
    - **Application Type**: `Machine to Machine Application`
    - Click **Create**.
 
-   On the authorization screen:
-   - **API**: select **Auth0 Management API**
-   - **Permissions**: check `read:users`
-   - Click **Authorize**.
+   Grant Management API access:
+   - Go to **Applications → APIs → Auth0 Management API → Application Access** tab
+   - Find `fintrackpro-m2m` → click **Edit**
+   - Check: `read:users`, `read:roles`, `update:users`
+   - Click **Update**.
 
    On the **Settings** tab, copy:
    - **Client ID** → `IdentityProvider:AdminClientId`
    - **Client Secret** → `IdentityProvider:AdminClientSecret`
 
-5. **Post-Login Action** (inject roles into access token) — Actions → **Library** → **+ Build Custom**
+5. **API Application Access** — Applications → APIs → `fintrackpro-api` → **Application Access** tab
+
+   Authorize the two apps created above so they can request tokens for this API:
+   - Click **Edit** next to `fintrackpro-spa` → set **User Access** to **Authorized** → **Update**.
+   - Click **Edit** next to `fintrackpro-m2m` → set **Client Access** to **Authorized** → **Update**.
+
+   > Without this step Auth0 returns `invalid_request: Client is not authorized to access resource server "https://api.fintrackpro.dev"` when the SPA or backend tries to get a token.
+
+   While on the API page, go to the **Settings** tab and enable:
+   - **Enable RBAC** → On
+   - **Add Permissions in the Access Token** → On
+
+   > This ensures `event.authorization.roles` is populated during the Post-Login Action execution (Step 6), making role injection reliable. The backend does **not** read the RBAC `permissions` claim directly — it reads the custom `https://fintrackpro.dev/roles` claim set by the Action — so both must be used together.
+
+6. **Post-Login Action** (inject roles into access token) — Actions → **Library** → **+ Build Custom**
    - **Name**: `inject-roles-into-token`
    - **Trigger**: `Login / Post Login`
    - Click **Create**.
+
+   Add the `auth0` npm dependency (required for `ManagementClient`):
+   - Click the **Dependencies** icon (cube icon) in the left sidebar
+   - Click **+ Add dependency** → Name: `auth0`, Version: `4`
+   - Click **Save**
 
    Paste the following, then click **Deploy**:
 
    ```javascript
    exports.onExecutePostLogin = async (event, api) => {
      const ns = 'https://fintrackpro.dev'
-     const roles = event.authorization?.roles ?? []
+     let roles = event.authorization?.roles ?? []
+
+     // Auto-assign User role on first login.
+     // Covers social logins (Google, etc.) — the post-user-registration trigger
+     // does NOT fire for social sign-ups, so this is the only reliable place.
+     if (roles.length === 0) {
+       try {
+         const { ManagementClient } = require('auth0')
+         const mgmt = new ManagementClient({
+           domain: event.secrets.DOMAIN,
+           clientId: event.secrets.CLIENT_ID,
+           clientSecret: event.secrets.CLIENT_SECRET,
+         })
+
+         // auth0 v4 SDK: getAll() returns { data: Role[], ... }
+         // Use name_filter to avoid fetching all roles unnecessarily
+         const { data: matched } = await mgmt.roles.getAll({ name_filter: 'User' })
+         const userRole = matched.find(r => r.name === 'User')
+
+         if (userRole) {
+           await mgmt.users.assignRoles(
+             { id: event.user.user_id },
+             { roles: [userRole.id] }
+           )
+           roles = ['User']
+         }
+       } catch (err) {
+         // Log but do not block login — user will have no roles until next login
+         console.error('Failed to auto-assign User role:', err instanceof Error ? err.message : String(err))
+       }
+     }
+
+     // Always set the claim (empty array if role assignment failed)
      api.accessToken.setCustomClaim(`${ns}/roles`, JSON.stringify(roles))
      api.idToken.setCustomClaim(`${ns}/roles`, JSON.stringify(roles))
    }
    ```
 
+   In the **Secrets** panel add: `DOMAIN` (your Auth0 tenant domain), `CLIENT_ID` and `CLIENT_SECRET` (M2M app credentials from Step 4).
+
    Wire it up: Actions → **Triggers** → **post-login** → drag `inject-roles-into-token` between **Start** and **Complete** → click **Apply**.
 
    > **Note:** Auth0 renamed "Flows" to "Triggers" in their dashboard. **post-login** is the equivalent of the old "Login Flow".
 
-6. **Post-Registration Action** (optional — auto-assign `User` role to new sign-ups, mirrors Keycloak Default Roles) — Actions → **Library** → **+ Build Custom**
-   - **Name**: `auto-assign-user-role`
-   - **Trigger**: `User Registration / Post User Registration`
-   - Click **Create**.
+   > **Social logins (Google, GitHub, etc.):** The `post-user-registration` trigger does **not** fire for social sign-ups. This action handles role assignment for all login methods. Existing users with no role will be auto-assigned `User` on their next login.
 
-   Paste the following, then click **Deploy**:
-
-   ```javascript
-   exports.onExecutePostUserRegistration = async (event, api) => {
-     const ManagementClient = require('auth0').ManagementClient
-     const mgmt = new ManagementClient({
-       domain: event.secrets.DOMAIN,
-       clientId: event.secrets.CLIENT_ID,
-       clientSecret: event.secrets.CLIENT_SECRET,
-     })
-     const roles = await mgmt.roles.getAll()
-     const userRole = roles.find(r => r.name === 'User')
-     if (userRole) {
-       await mgmt.users.assignRoles({ id: event.user.user_id }, { roles: [userRole.id] })
-     }
-   }
-   ```
-
-   In the **Secrets** panel add: `DOMAIN` (your Auth0 tenant domain), `CLIENT_ID` and `CLIENT_SECRET` (M2M app credentials from Step 4).
-
-   Wire it up: Actions → **Triggers** → **post-user-registration** → drag `auto-assign-user-role` into the flow → click **Apply**.
+   > **Post-Registration Action is not needed.** The Post-Login Action above already handles role assignment for all login methods (password and social). The `post-user-registration` trigger only fires for password sign-ups and does not cover social logins (Google, GitHub, etc.), making it incomplete and redundant.
 
 ---
 
