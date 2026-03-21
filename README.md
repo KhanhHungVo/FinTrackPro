@@ -10,7 +10,7 @@ Personal finance tracking application with budgeting, expense management, and Te
 
 ## Architecture
 
-Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server (local) / Azure SQL (production), with Keycloak or Auth0 handling authentication and Hangfire running background jobs (e.g. scheduled Telegram notifications). See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
+Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server (local) / Azure SQL (production), with Keycloak or Auth0 for authentication and Hangfire for background jobs. See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
 
 ## Prerequisites
 
@@ -19,47 +19,35 @@ Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server (loca
 | Docker Desktop | Latest | Required for local SQL Server + Keycloak containers |
 | .NET SDK | 10.0 | |
 | Node.js | 22+ | |
-| Azure subscription | — | Required for Azure SQL (production / cloud dev) |
+| Azure subscription | — | Required for Azure SQL (production) |
 
 ## Quick Start
 
 **Full Docker (no local .NET toolchain required):**
 
 ```bash
-# 1. Clone
-git clone <repo-url>
-cd FinTrackPro
-
-# 2. Start everything — migrations run automatically via the migrator init container
+git clone <repo-url> && cd FinTrackPro
 docker compose up --build
 
-# 3. Start the frontend (not in compose)
 cd frontend/fintrackpro-ui
-cp .env.example .env
-npm install
-npm run dev
+cp .env.example .env && npm install && npm run dev
 ```
 
-**Hybrid (recommended for development — hot reload + debugger):**
+**Hybrid (recommended — hot reload + debugger):**
 
 ```bash
-# 1. Start infrastructure only
 docker compose up -d sqlserver keycloak
 
-# 2. Apply migrations (first time)
 cd backend
 dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
-
-# 3. Run the API locally
 dotnet run --project src/FinTrackPro.API
 
-# 4. Run the frontend
 cd frontend/fintrackpro-ui && npm install && npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Open `http://localhost:5173`. Keycloak is provisioned automatically — log in with `admin@fintrackpro.dev` / `Admin1234!`.
 
-> Keycloak is provisioned automatically — no manual realm setup needed. Log in with `admin@fintrackpro.dev` / `Admin1234!` or register a new account.
+See [docs/dev-setup.md](docs/dev-setup.md) for all modes including Azure SQL and Render deployment.
 
 ## Repository Structure
 
@@ -67,79 +55,72 @@ Open `http://localhost:5173` in your browser.
 FinTrackPro/
 ├── backend/
 │   ├── src/
-│   │   ├── FinTrackPro.API/           # ASP.NET Core — controllers, middleware, DI
-│   │   ├── FinTrackPro.Application/   # Use cases, MediatR handlers, DTOs
-│   │   ├── FinTrackPro.Domain/        # Entities, value objects, domain events
-│   │   ├── FinTrackPro.Infrastructure/# EF Core, repositories, external clients
-│   │   └── FinTrackPro.BackgroundJobs/# Hangfire job definitions
+│   │   ├── FinTrackPro.API/            # ASP.NET Core — controllers, middleware, DI
+│   │   ├── FinTrackPro.Application/    # CQRS via MediatR, DTOs, validators
+│   │   ├── FinTrackPro.Domain/         # Entities, value objects, domain events
+│   │   ├── FinTrackPro.Infrastructure/ # EF Core, repositories, external clients
+│   │   └── FinTrackPro.BackgroundJobs/ # Hangfire job definitions
 │   ├── tests/
 │   │   ├── FinTrackPro.Domain.UnitTests/
 │   │   ├── FinTrackPro.Application.UnitTests/
 │   │   ├── FinTrackPro.Api.IntegrationTests/
-│   │   └── Tests.Common/              # Shared test infrastructure (Testcontainers, fakes, builders)
-│   ├── Dockerfile                     # Runtime image (aspnet — lean, no SDK tools)
-│   └── Dockerfile.migrator            # Init container — runs EF migrations then exits
+│   │   └── Tests.Common/               # Shared infrastructure (Testcontainers, fakes, builders)
+│   ├── Dockerfile                      # Runtime image (aspnet — lean, no SDK tools)
+│   └── Dockerfile.migrator             # Init container — runs EF migrations then exits
 ├── frontend/
-│   └── fintrackpro-ui/                # React 19 + Vite SPA (Feature-Sliced Design)
+│   └── fintrackpro-ui/                 # React 19 + Vite SPA (Feature-Sliced Design)
 ├── infra/
-│   └── docker/
-│       └── keycloak-realm.json        # Auto-imported on first `docker compose up`
-├── docs/                              # Reference documentation
-├── .github/workflows/ci.yml           # CI pipeline
+│   ├── docker/
+│   │   └── keycloak-realm.json         # Auto-imported on first `docker compose up`
+│   └── terraform/                      # Terraform IaC — Render API + frontend (TF Cloud state)
+├── docs/                               # Reference documentation
+├── .github/workflows/ci.yml            # CI pipeline
 └── docker-compose.yml
 ```
+
+## Deployment — Render.com
+
+Both services (API + frontend) are deployed to Render via **Terraform** (`infra/terraform/`). The `render.yaml` Blueprint remains as a fallback for manual one-click deploys.
+
+See [docs/render-terraform-deploy.md](docs/render-terraform-deploy.md) for the full deploy guide (Terraform + render.yaml fallback + migration strategies).
+
+> **Migrations** must be applied from your local machine before any schema-changing deploy — the production Docker image has no .NET SDK.
 
 ## Documentation
 
 | Document | Description |
 |---|---|
-| [docs/dev-setup.md](docs/dev-setup.md) | End-to-end dev setup — Docker, hybrid mode, migrations |
-| [docs/auth-setup.md](docs/auth-setup.md) | IAM provider setup — Keycloak manual config, Auth0 dashboard, switching providers |
+| [docs/dev-setup.md](docs/dev-setup.md) | End-to-end dev setup — Docker, hybrid, Azure SQL, Render |
+| [docs/render-terraform-deploy.md](docs/render-terraform-deploy.md) | Render deployment — Terraform (primary) + render.yaml (fallback) + migration strategies |
+| [docs/auth-setup.md](docs/auth-setup.md) | IAM provider setup — Keycloak and Auth0, switching providers |
+| [docs/architecture.md](docs/architecture.md) | System architecture, layers, data flow, infrastructure |
 | [docs/api-spec.md](docs/api-spec.md) | REST API endpoints and request/response schemas |
-| [docs/architecture.md](docs/architecture.md) | System architecture, layers, data flow |
-| [docs/database.md](docs/database.md) | Database schema, tables, relationships |
-| [docs/roadmap.md](docs/roadmap.md) | Planned features and release milestones |
+| [docs/database.md](docs/database.md) | Database schema, tables, relationships, migration commands |
+| [docs/roadmap.md](docs/roadmap.md) | Feature phases and release milestones |
+| [docs/testing.md](docs/testing.md) | Manual end-to-end test scenarios |
+| [docs/auth0-config-as-code-plan.md](docs/auth0-config-as-code-plan.md) | Plan: Auth0 config-as-code via `auth0 deploy` CLI (not yet implemented) |
 | [backend/README.md](backend/README.md) | Backend developer reference |
 | [frontend/fintrackpro-ui/README.md](frontend/fintrackpro-ui/README.md) | Frontend developer reference |
 
 ## Manual Setup
 
 **Telegram Bot** *(optional — notifications are silently skipped without it)*
-1. Create a bot via [@BotFather](https://t.me/BotFather) and copy the token.
-2. Set the token via User Secrets or env var — do **not** commit it:
-   ```bash
-   dotnet user-secrets set "Telegram:BotToken" "your-token" --project backend/src/FinTrackPro.API
-   # or: export Telegram__BotToken="your-token"
-   ```
 
-**EF Core migrations**
+Create a bot via [@BotFather](https://t.me/BotFather), then set the token — do **not** commit it:
+```bash
+dotnet user-secrets set "Telegram:BotToken" "your-token" --project backend/src/FinTrackPro.API
+# or: export Telegram__BotToken="your-token"
+```
 
-- **Full Docker:** handled automatically by the `migrator` init container on every `docker compose up --build`.
-- **Hybrid mode (local SQL Server):** run once after `docker compose up -d sqlserver`:
-  ```bash
-  cd backend
-  dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
-  ```
-- **Azure SQL:** set the connection string via User Secrets or env var first, then run the same command:
-  ```bash
-  dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<azure-sql-string>" --project src/FinTrackPro.API
-  cd backend && dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
-  ```
+**Keycloak** — zero-touch for dev. The `fintrackpro` realm auto-imports from `infra/docker/keycloak-realm.json` on first `docker compose up`. See [docs/auth-setup.md](docs/auth-setup.md) for custom config or production rotation.
 
-**Keycloak** *(zero-touch for dev)*
+**Auth0** — requires one-time dashboard setup (API, SPA app, M2M app, roles, post-login Action). See [docs/auth-setup.md](docs/auth-setup.md#auth0-cloud-iam). Switch with `IdentityProvider:Provider = "auth0"` and `VITE_AUTH_PROVIDER=auth0`.
 
-The `fintrackpro` realm is auto-imported from `infra/docker/keycloak-realm.json` on first `docker compose up`. It includes both clients, audience mapper, roles, self-registration, and a default admin user (`admin@fintrackpro.dev` / `Admin1234!`).
+**Azure SQL** — requires portal provisioning and firewall configuration. See [docs/dev-setup.md — Mode C](docs/dev-setup.md#mode-c--hybrid-dev-against-azure-sql).
 
-The dev `IdentityProvider__AdminClientSecret` (`dev-secret-change-in-prod`) is pre-set in `appsettings.Development.json` — no environment variable needed for local dev.
-
-> **Production:** rotate the `fintrackpro-api` client secret in Keycloak and set `IdentityProvider__AdminClientSecret` to the new value via environment variable.
-
-For custom Keycloak config (social login, extra users, redirect URIs) see the [manual setup reference](docs/auth-setup.md#manual-setup-reference) in `docs/auth-setup.md`.
-
-**Auth0** *(cloud IAM alternative)*
-
-Requires a one-time dashboard setup: API, SPA app, M2M app, roles, and a post-login Action for role injection. See [docs/auth-setup.md](docs/auth-setup.md#auth0-cloud-iam) for the full guide. Switch with `IdentityProvider:Provider = "auth0"` (backend) and `VITE_AUTH_PROVIDER=auth0` (frontend).
-
-**Azure SQL** *(production database)*
-
-Requires portal provisioning: resource group → logical server → database → firewall rules. See [docs/dev-setup.md — Mode C](docs/dev-setup.md#mode-c--hybrid-dev-against-azure-sql) for the full setup guide and how to connect from local dev machines.
+**EF Core migrations** — Full Docker runs them automatically via the `migrator` init container. For all other modes, run manually:
+```bash
+cd backend
+dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
+```
+See [docs/database.md](docs/database.md) for adding new migrations.

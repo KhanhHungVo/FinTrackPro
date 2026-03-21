@@ -85,3 +85,23 @@ app → pages → widgets → features → entities → shared
 | Caching | IMemoryCache (in-process) | Single instance — swap to Redis when scaling |
 | API docs | Scalar + .NET 10 built-in OpenAPI | Swashbuckle incompatible with .NET 10 |
 | Frontend state | React Query (server) + Zustand (client) | Clear separation of concerns |
+
+## Infrastructure
+
+### Terraform (`infra/terraform/`)
+
+Render services are managed as code using the official `render-oss/render` Terraform provider.
+State is stored in **Terraform Cloud** (free tier). See [render-terraform-deploy.md](render-terraform-deploy.md) for the full deploy guide.
+
+| Resource | Type | Description |
+|---|---|---|
+| `render_web_service.api` | Docker Web Service | .NET 10 API — Starter plan, Oregon region |
+| `render_static_site.frontend` | Static Site | React/Vite SPA — CDN-distributed globally |
+
+All secrets are stored as sensitive Terraform Cloud workspace variables — never committed to source.
+See [infra/terraform/variables.tf](../infra/terraform/variables.tf) for the full variable list and
+[infra/terraform/terraform.tfvars.example](../infra/terraform/terraform.tfvars.example) for a safe example.
+
+### render.yaml
+
+The `render.yaml` Blueprint at the repo root is retained as a **fallback** for manual one-click Render dashboard deploys. Terraform is the authoritative deployment tool.

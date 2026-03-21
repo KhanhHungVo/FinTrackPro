@@ -1,5 +1,7 @@
 # End-to-End Test Guide
 
+> This guide covers **manual end-to-end testing** of all provider × mode combinations. For automated unit and integration tests, see [backend/tests/README.md](../backend/tests/README.md).
+
 Manual test checklist for all four provider × mode combinations. Run in order — each scenario starts from a clean slate.
 
 ## Contents

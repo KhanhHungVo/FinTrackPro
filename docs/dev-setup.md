@@ -272,3 +272,16 @@ docker compose down
 # To also delete the SQL Server data volume (full reset)
 docker compose down -v
 ```
+
+---
+
+## Mode D — Deploy to Render.com
+
+Both services (API + frontend) are deployed to Render via **Terraform** (`infra/terraform/`).
+The `render.yaml` Blueprint remains as a fallback for manual one-click deploys.
+
+See **[docs/render-terraform-deploy.md](render-terraform-deploy.md)** for the complete guide covering:
+- Terraform step-by-step (primary)
+- render.yaml Blueprint (fallback)
+- Migration strategies
+- Post-deploy Auth0 wiring and verification checklist

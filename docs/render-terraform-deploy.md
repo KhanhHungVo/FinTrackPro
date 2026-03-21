@@ -1,0 +1,182 @@
+# Deploy FinTrackPro to Render
+
+Terraform is the authoritative deployment tool. State is stored in Terraform Cloud (free tier).
+The configuration lives in [infra/terraform/](../infra/terraform/).
+
+The `render.yaml` Blueprint remains in the repo as a fallback for manual one-click deploys.
+
+---
+
+## Prerequisites
+
+- [Terraform CLI >= 1.7](https://developer.hashicorp.com/terraform/install) installed
+- A [Render account](https://render.com) with the repo connected
+- Auth0 tenant configured — see [auth-setup.md](auth-setup.md)
+- Azure SQL database provisioned and connection string ready
+
+---
+
+## Option A — Terraform (recommended)
+
+### Step 1 — Update the repo URL in render.tf
+
+In [infra/terraform/render.tf](../infra/terraform/render.tf), replace both placeholder URLs:
+
+```hcl
+repo_url = "https://github.com/your-org/FinTrackPro"
+```
+
+with your actual GitHub repo URL. There are two occurrences — one per resource.
+
+### Step 2 — Create Terraform Cloud org and workspace
+
+1. Sign up at [app.terraform.io](https://app.terraform.io)
+2. Create organization **`fintrackpro`** (must match `main.tf` → `organization = "fintrackpro"`, or change both)
+3. Create workspace **`fintrackpro-prod`** → run type: **API-driven**
+
+### Step 3 — Add variables to the workspace
+
+In workspace → **Variables** tab, add each as a **Terraform variable**.
+
+| Variable | Value | Sensitive? |
+|---|---|---|
+| `render_api_key` | Render → Account → API Keys | Yes |
+| `render_owner_id` | Run `curl` command below to get `tea-...` / `usr-...` ID | No |
+| `db_connection_string` | Azure SQL ADO.NET connection string | Yes |
+| `auth0_domain` | `dev-xxxx.us.auth0.com` | No |
+| `auth0_m2m_client_id` | Auth0 M2M app client ID | No |
+| `auth0_m2m_client_secret` | Auth0 M2M app client secret | Yes |
+| `cors_origins` | `https://fintrackpro-ui.onrender.com` (update after first deploy) | No |
+| `coingecko_api_key` | CoinGecko Demo or Pro API key | Yes |
+| `telegram_bot_token` | Telegram bot token — leave `""` if unused | Yes |
+| `vite_api_base_url` | `https://fintrackpro-api.onrender.com` (update after first deploy) | No |
+| `vite_auth0_domain` | Same as `auth0_domain` | No |
+| `vite_auth0_client_id` | Auth0 SPA app client ID | No |
+
+**Finding your `render_owner_id`:** Render's Account Settings page doesn't show it directly. Fetch it via API:
+
+```bash
+curl -s -H "Authorization: Bearer <your_render_api_key>" \
+  https://api.render.com/v1/owners?limit=1
+# Look for "id": "tea-..." or "usr-..." in the response
+```
+
+### Step 4 — Authenticate and deploy
+
+```bash
+terraform login                  # one-time — opens browser to generate API token
+
+cd infra/terraform
+terraform init                   # downloads render-oss/render provider, connects to TF Cloud
+terraform plan                   # preview: should show 2 resources to create
+terraform apply                  # type "yes" — deploys both services
+```
+
+Terraform outputs the deployed URLs:
+
+```
+api_url      = "https://fintrackpro-api.onrender.com"
+frontend_url = "https://fintrackpro-ui.onrender.com"
+```
+
+### Step 5 — Post-deploy wiring
+
+**Update CORS and frontend API URL** — go back to TF Cloud workspace variables:
+
+| Variable | New value |
+|---|---|
+| `cors_origins` | value of `api_url` output |
+| `vite_api_base_url` | value of `api_url` output |
+
+Then re-apply: `terraform apply`
+
+**Update Auth0 SPA settings** — Auth0 dashboard → your SPA app → Settings:
+
+| Field | Value |
+|---|---|
+| Allowed Callback URLs | `https://fintrackpro-ui.onrender.com/callback` |
+| Allowed Logout URLs | `https://fintrackpro-ui.onrender.com` |
+| Allowed Web Origins | `https://fintrackpro-ui.onrender.com` |
+
+---
+
+## Option B — render.yaml Blueprint (fallback)
+
+Use this if you prefer a one-click Render dashboard deploy without Terraform.
+
+### Prerequisites
+
+- Auth0 configured (see [auth-setup.md](auth-setup.md))
+- Azure SQL provisioned with firewall rules open to Azure services
+- `render.yaml` committed to `main`
+
+### Deploy steps
+
+1. Push to `main`
+2. Render dashboard → **New** → **Blueprint** → connect the repo
+3. Render detects both services (`fintrackpro-api`, `fintrackpro-ui`)
+4. Enter all `sync: false` secret values when prompted:
+
+   **API service**
+
+   | Variable | Value |
+   |---|---|
+   | `ConnectionStrings__DefaultConnection` | Azure SQL connection string |
+   | `IdentityProvider__AdminClientId` | Auth0 M2M app client ID |
+   | `IdentityProvider__AdminClientSecret` | Auth0 M2M app client secret |
+   | `Auth0__Domain` | e.g. `dev-abc123.us.auth0.com` |
+   | `Cors__Origins` | Frontend URL — set after first deploy |
+   | `CoinGecko__ApiKey` | Demo or Pro API key |
+   | `Telegram__BotToken` | Optional |
+
+   **Frontend service** (`VITE_*` are build-time — must be set before `npm run build` runs)
+
+   | Variable | Value |
+   |---|---|
+   | `VITE_API_BASE_URL` | API Render URL |
+   | `VITE_AUTH0_DOMAIN` | e.g. `dev-abc123.us.auth0.com` |
+   | `VITE_AUTH0_CLIENT_ID` | Auth0 SPA client ID |
+
+5. Click **Apply** — both services build in parallel (~3–5 min for .NET Docker build)
+6. After deploy: copy the frontend URL → update `Cors__Origins` → redeploy API
+
+---
+
+## Migrations
+
+The API Docker image (`aspnet:10.0`) has no .NET SDK — `dotnet ef` cannot run in the container. Apply migrations **from your local machine** before any schema-changing deploy:
+
+```bash
+# Point to production DB via user-secrets or env var (never commit)
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<prod-string>" \
+  --project backend/src/FinTrackPro.API
+
+cd backend
+dotnet ef database update \
+  --project src/FinTrackPro.Infrastructure \
+  --startup-project src/FinTrackPro.API
+```
+
+| Strategy | When to use |
+|---|---|
+| **Manual** (above) | Current approach — simple, full control |
+| **Startup migration** (`db.Database.Migrate()` in `Program.cs`) | Zero-touch PaaS pattern; idempotent but couples migration to app boot |
+| **GitHub Actions** | Best for teams — migration runs in CI before Render deploys, secrets stay in GitHub |
+
+---
+
+## Verification
+
+| Check | How |
+|---|---|
+| API health | `curl https://fintrackpro-api.onrender.com/health` → `{"status":"healthy"}` |
+| Frontend loads | Open `https://fintrackpro-ui.onrender.com` |
+| Auth0 login | Complete login flow, land on dashboard |
+| SPA routing | Hard refresh on `/dashboard` → no 404 |
+
+---
+
+## Ongoing Deployments
+
+Code pushes to `main` trigger auto-deploys on Render (both services have `auto_deploy = true`).
+`terraform apply` is only needed for infrastructure changes (env vars, plan tier, new services).

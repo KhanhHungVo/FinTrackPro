@@ -6,7 +6,7 @@ resource "render_web_service" "api" {
 
   runtime_source = {
     docker = {
-      repo_url        = "https://github.com/your-org/FinTrackPro"  # update to your repo URL
+      repo_url        = "https://github.com/KhanhHungVo/FinTrackPro"
       branch          = "main"
       dockerfile_path = "backend/Dockerfile"
       context         = "backend"
@@ -36,7 +36,7 @@ resource "render_web_service" "api" {
 # ── Frontend — Static Site ─────────────────────────────────────────────────────
 resource "render_static_site" "frontend" {
   name          = "fintrackpro-ui"
-  repo_url      = "https://github.com/your-org/FinTrackPro"  # update to your repo URL
+  repo_url      = "https://github.com/KhanhHungVo/FinTrackPro"  # update to your repo URL
   branch        = "main"
   build_command = "npm install && npm run build"
   publish_path  = "dist"

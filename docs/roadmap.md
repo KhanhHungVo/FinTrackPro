@@ -1,6 +1,6 @@
 # FinTrackPro — Implementation Roadmap
 
-> Last updated: 2026-03-20
+> Last updated: 2026-03-21
 
 ---
 
@@ -155,9 +155,9 @@
 | `backend/Dockerfile.migrator` | SDK-based init container — runs `dotnet ef database update` then exits | ✅ |
 | Azure SQL Database | `rg-fintrackpro-prod` / `sql-fintrackpro` — provisioned 2026-03-20 | ✅ |
 | GitHub Actions CI | `.github/workflows/ci.yml` — build + test + Docker | ✅ |
-| Azure App Service provisioning | — | ⏳ Manual |
-| Azure Static Web Apps | — | ⏳ Manual |
-| GitHub Actions secrets | `TELEGRAM_BOT_TOKEN`, connection strings | ⏳ Manual |
+| Terraform IaC (Render) | `infra/terraform/` — API + frontend, TF Cloud backend | ✅ |
+| Azure App Service / Static Web Apps | — | 🔲 Not planned (using Render instead) |
+| GitHub Actions CD secrets | `TELEGRAM_BOT_TOKEN`, `ConnectionStrings__DefaultConnection` | ⏳ Manual (set in TF Cloud) |
 
 ---
 
@@ -172,8 +172,7 @@
 | 5 | Telegram Bot | Create via @BotFather → set token via env var or User Secrets (`Telegram:BotToken`) |
 | 6 | Frontend env | Copy `.env.example` → `.env`, set `VITE_API_BASE_URL` and IAM provider vars |
 | 7 | Start environment | `docker compose up` then `dotnet run` then `npm run dev` |
-| 8 | Azure deployment | Provision App Service (API) + Static Web App (frontend) |
-| 9 | GitHub secrets | `TELEGRAM_BOT_TOKEN`, `AZURE_*` credentials, `ConnectionStrings__DefaultConnection` |
+| 8 | Render deployment | Terraform deploy — see [docs/render-terraform-deploy.md](render-terraform-deploy.md) |
 
 ---
 

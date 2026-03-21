@@ -34,6 +34,10 @@ npm test         # Vitest
 ```bash
 docker compose up -d sqlserver keycloak   # hybrid dev (recommended)
 docker compose up --build                 # full docker
+
+# Terraform (Render deployment)
+cd infra/terraform
+terraform init && terraform plan && terraform apply
 ```
 
 ## Architecture
@@ -50,11 +54,7 @@ Strict layer isolation with inward-only dependencies:
 DTOs use explicit `operator` conversions instead of AutoMapper. `ICurrentUserService` extracts the authenticated user from the JWT claim. Add new features as a command/query + handler pair in Application, then expose via a thin controller action.
 
 ### Frontend — Feature-Sliced Design (FSD)
-Strict top-down layer hierarchy (upper layers may only import from lower):
-```
-app → pages → widgets → features → entities → shared
-```
-Server state lives in **React Query** (TanStack). Client-only state (auth, UI flags) lives in **Zustand**. HTTP calls go through an Axios instance that injects the Bearer token (via `authAdapter.getToken()`) and handles 401 via `authAdapter.refreshToken()`.
+Strict top-down layer hierarchy (`app → pages → widgets → features → entities → shared`). Server state: React Query. Client state: Zustand. Axios injects Bearer token and handles 401. See [frontend/fintrackpro-ui/README.md](frontend/fintrackpro-ui/README.md) for details.
 
 ### Auth
 The IAM provider is selected by a single config key: `IdentityProvider:Provider = "keycloak" | "auth0"` (backend) and `VITE_AUTH_PROVIDER=keycloak|auth0` (frontend). Both providers issue JWT Bearer tokens; the backend and frontend use provider-specific adapters behind a shared interface.
@@ -104,10 +104,12 @@ dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrac
 
 ## Docs
 - `docs/architecture.md` — layer descriptions and design decisions
-- `docs/dev-setup.md` — hybrid vs full-Docker setup
-- `docs/auth-setup.md` — IAM provider setup (Keycloak manual config, Auth0 dashboard, switching providers)
+- `docs/dev-setup.md` — hybrid vs full-Docker setup, Azure SQL, Render deployment
+- `docs/render-terraform-deploy.md` — Render deploy guide (Terraform primary + render.yaml fallback + migration strategies)
+- `docs/auth-setup.md` — IAM provider setup (Keycloak, Auth0, switching providers)
+- `docs/auth0-config-as-code-plan.md` — plan for Auth0 CLI deploy (not yet implemented)
 - `docs/api-spec.md` — REST endpoints and schemas
-- `docs/database.md` — schema, tables, relationships
+- `docs/database.md` — schema, tables, relationships, migration commands
 
 ## Documentation Sync Rules
 

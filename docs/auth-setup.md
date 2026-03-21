@@ -342,6 +342,25 @@ docker compose -f docker-compose.yml -f docker-compose.auth0.yml down -v
 
 ---
 
+## Render Deployment — Allowed URLs
+
+When deploying to Render, Auth0 must be updated to allow the Render-assigned URLs for both services.
+
+In the Auth0 dashboard → **Applications** → `fintrackpro-spa` → **Settings** tab, add the Render URLs to the existing localhost entries:
+
+| Field | Add |
+|---|---|
+| **Allowed Callback URLs** | `https://fintrackpro-ui.onrender.com, https://fintrackpro-ui.onrender.com/callback` |
+| **Allowed Logout URLs** | `https://fintrackpro-ui.onrender.com` |
+| **Allowed Web Origins** | `https://fintrackpro-ui.onrender.com` |
+
+> Replace `fintrackpro-ui.onrender.com` with the actual URL assigned by Render after first deploy.
+> If you configure a custom domain, add that URL too (comma-separated).
+
+Click **Save Changes**. No backend or code changes are needed.
+
+---
+
 ## Switching Providers
 
 Set both keys to the same value:

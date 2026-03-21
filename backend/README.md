@@ -65,22 +65,7 @@ dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-pro
 
 ## Configuration
 
-Key sections in `appsettings.json` / environment variables:
-
-| Key | Description |
-|---|---|
-| `ConnectionStrings__DefaultConnection` | SQL Server connection string |
-| `IdentityProvider__Provider` | Active IAM provider: `"keycloak"` (default) or `"auth0"` |
-| `IdentityProvider__Audience` | JWT audience — `https://api.fintrackpro.dev` (URI convention) |
-| `IdentityProvider__AdminClientId` | M2M client ID for the active IAM provider's admin API |
-| `IdentityProvider__AdminClientSecret` | M2M client secret — set via `appsettings.Development.json` or env var |
-| `Keycloak__Authority` | Keycloak realm URL, e.g. `http://localhost:8080/realms/fintrackpro` |
-| `Auth0__Domain` | Auth0 tenant domain, e.g. `your-tenant.auth0.com` |
-| `Telegram__BotToken` | Telegram Bot API token — **never commit this value** |
-| `CoinGecko__ApiKey` | CoinGecko Demo API key — required for `/market/trending` endpoint; get a free key at coingecko.com/en/api |
-| `Cors__Origins` | Allowed CORS origins, e.g. `http://localhost:5173` |
-
-Override any key via environment variables using double-underscore notation:
+See the [Key Configuration table in root CLAUDE.md](../../CLAUDE.md#key-configuration) for the full variable reference. Override any key via environment variables using double-underscore notation:
 ```bash
 export Telegram__BotToken="your-token-here"
 ```
