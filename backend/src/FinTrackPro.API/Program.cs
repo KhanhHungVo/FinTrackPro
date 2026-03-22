@@ -3,7 +3,6 @@ using FinTrackPro.API.Middleware;
 using FinTrackPro.Application;
 using FinTrackPro.BackgroundJobs.Jobs;
 using FinTrackPro.Infrastructure.Auth;
-using FinTrackPro.Domain.Constants;
 using FinTrackPro.Infrastructure;
 using Hangfire;
 using Hangfire.SqlServer;
@@ -119,10 +118,10 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
 
-// Hangfire Dashboard — restricted to Admin role
+// Hangfire Dashboard — Basic Auth
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
-    Authorization = [new HangfireRoleFilter(UserRole.Admin)]
+    Authorization = [new HangfireBasicAuthFilter(app.Configuration)]
 });
 
 // Register recurring jobs

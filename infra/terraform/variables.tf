@@ -53,6 +53,12 @@ variable "telegram_bot_token" {
   description = "Telegram bot token — optional, notifications silently skipped if empty"
 }
 
+variable "hangfire_dashboard_password" {
+  type        = string
+  sensitive   = true
+  description = "Password for the Hangfire dashboard Basic Auth (username: hangfire-admin)"
+}
+
 # ── Frontend build-time vars (VITE_*) ─────────────────────────────────────────
 variable "vite_api_base_url" {
   type        = string

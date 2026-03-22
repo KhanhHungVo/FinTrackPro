@@ -34,6 +34,7 @@ resource "render_web_service" "api" {
     Cors__Origins                        = { value = var.cors_origins }
     CoinGecko__ApiKey                    = { value = var.coingecko_api_key }
     Telegram__BotToken                   = { value = var.telegram_bot_token }
+    Hangfire__Password                   = { value = var.hangfire_dashboard_password }
   }
 }
 

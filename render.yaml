@@ -70,6 +70,10 @@ services:
       - key: Telegram__BotToken
         sync: false
 
+      # Hangfire dashboard Basic Auth — enter a strong password in the Render dashboard.
+      - key: Hangfire__Password
+        sync: false
+
   # ── Frontend Static Site ─────────────────────────────────────────────────────
   - type: web
     name: fintrackpro-ui

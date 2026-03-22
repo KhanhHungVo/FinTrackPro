@@ -248,7 +248,7 @@ Same as Mode B Step 4 — no changes needed.
 | Keycloak | both | http://localhost:8080 |
 | SQL Server | both | localhost:1433 |
 | Scalar API docs | both | `<api-url>/scalar` |
-| Hangfire dashboard | both | `<api-url>/hangfire` |
+| Hangfire dashboard | both | `<api-url>/hangfire` (Basic Auth: `hangfire-admin` / `Dev-Hangfire@1234!`) |
 
 ---
 
