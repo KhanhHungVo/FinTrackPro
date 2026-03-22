@@ -47,6 +47,16 @@ public class ExceptionHandlingMiddleware
                 HttpStatusCode.NotFound,
                 nfe.Message,
                 (object)new Dictionary<string, string[]>()),
+            // Malformed JSON body or unrecognised enum string value — binding fails before the pipeline
+            JsonException => (
+                HttpStatusCode.BadRequest,
+                "Invalid request format.",
+                (object)new Dictionary<string, string[]>()),
+            // Null body — model binding produces null for positional records; MediatR null-guards before the pipeline
+            ArgumentNullException { ParamName: "request" } => (
+                HttpStatusCode.BadRequest,
+                "Request body is required.",
+                (object)new Dictionary<string, string[]>()),
             _ => (
                 HttpStatusCode.InternalServerError,
                 "An unexpected error occurred.",

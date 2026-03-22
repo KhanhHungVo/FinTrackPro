@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using FluentAssertions;
 using Tests.Common;
 using Tests.Common.Builders;
@@ -106,5 +107,26 @@ public class TransactionsTests : IAsyncLifetime
         var response = await unauthClient.PostAsJsonAsync("/api/transactions", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_InvalidEnumType_Returns400()
+    {
+        var json = """{"type":"InvalidType","amount":100,"category":"Food","note":null,"budgetMonth":"2026-03"}""";
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/api/transactions", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_InvalidBudgetMonthFormat_Returns400()
+    {
+        var request = TransactionRequestBuilder.Build(budgetMonth: "26-3");
+
+        var response = await _client.PostAsJsonAsync("/api/transactions", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

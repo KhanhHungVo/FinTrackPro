@@ -6,6 +6,7 @@ using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure;
 using Hangfire;
 using Hangfire.SqlServer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
@@ -21,8 +22,46 @@ builder.Host.UseSerilog((ctx, lc) => lc
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// Controllers
-builder.Services.AddControllers();
+// RFC 7807 Problem Details support (used by InvalidModelStateResponseFactory and ExceptionHandlingMiddleware)
+builder.Services.AddProblemDetails();
+
+// Controllers — API layer handles binding failures via InvalidModelStateResponseFactory (logged at [WRN]).
+// Business-rule validation flows through ValidationBehavior → ExceptionHandlingMiddleware.
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(o =>
+    {
+        o.InvalidModelStateResponseFactory = ctx =>
+        {
+            var logger = ctx.HttpContext.RequestServices
+                .GetRequiredService<ILogger<Program>>();
+
+            var errors = ctx.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    e => e.Key,
+                    e => e.Value!.Errors.Select(x => x.ErrorMessage).ToArray());
+
+            logger.LogWarning(
+                "Model binding failed for {Method} {Path}: {@Errors}",
+                ctx.HttpContext.Request.Method,
+                ctx.HttpContext.Request.Path,
+                errors);
+
+            // Return sanitized Problem Details — full detail is in the log; client gets a clean message.
+            return new BadRequestObjectResult(new ValidationProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title  = "Invalid request.",
+                Detail = "The request body is malformed or contains invalid values.",
+                Type   = "about:blank"
+            })
+            {
+                ContentTypes = { "application/problem+json" }
+            };
+        };
+    })
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(
+        new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 // OpenAPI (built-in .NET 10)
 builder.Services.AddOpenApi();

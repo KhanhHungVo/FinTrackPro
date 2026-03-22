@@ -68,4 +68,12 @@ public class WatchedSymbolsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task AddWatchedSymbol_EmptySymbol_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/watchedsymbols", new { symbol = "" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

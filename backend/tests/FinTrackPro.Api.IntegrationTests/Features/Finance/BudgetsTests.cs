@@ -72,4 +72,12 @@ public class BudgetsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task GetBudgets_InvalidMonthFormat_Returns400()
+    {
+        var response = await _client.GetAsync("/api/budgets/not-a-month");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

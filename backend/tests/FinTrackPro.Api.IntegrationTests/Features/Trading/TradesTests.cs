@@ -79,4 +79,24 @@ public class TradesTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task CreateTrade_ZeroEntryPrice_Returns400()
+    {
+        var request = TradeRequestBuilder.Build(entryPrice: 0m);
+
+        var response = await _client.PostAsJsonAsync("/api/trades", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateTrade_EmptySymbol_Returns400()
+    {
+        var request = TradeRequestBuilder.Build(symbol: "");
+
+        var response = await _client.PostAsJsonAsync("/api/trades", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }
