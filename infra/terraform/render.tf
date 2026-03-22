@@ -1,7 +1,7 @@
 # ── Backend API — Docker Web Service ──────────────────────────────────────────
 resource "render_web_service" "api" {
   name   = "fintrackpro-api"
-  plan   = "starter"
+  plan   = "free"
   region = "oregon"
 
   runtime_source = {
@@ -15,6 +15,10 @@ resource "render_web_service" "api" {
   }
 
   health_check_path = "/health"
+
+  lifecycle {
+    ignore_changes = [maintenance_mode]
+  }
 
   env_vars = {
     ASPNETCORE_ENVIRONMENT = { value = "Production" }

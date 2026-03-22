@@ -52,13 +52,13 @@ builder.Services.AddAuthentication("Bearer")
         }
         else // keycloak (default)
         {
-            var authority       = builder.Configuration["Keycloak:Authority"];
+            var authority       = builder.Configuration["Keycloak:Authority"] ?? throw new InvalidOperationException("Keycloak:Authority is required");
             var metadataAddress = builder.Configuration["Keycloak:MetadataAddress"];
             // Authority validates the `iss` claim in tokens (always the public URL).
             // MetadataAddress is where the API fetches signing keys — differs in Docker
             // (uses container hostname) vs hybrid dev (same as Authority base URL).
             options.Authority            = authority;
-            options.MetadataAddress      = metadataAddress;
+            options.MetadataAddress      = metadataAddress ?? authority;
             options.Audience             = audience;
             options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
             // Preserve original claim names from the JWT (e.g. "sub", "realm_access")
