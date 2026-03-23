@@ -76,7 +76,16 @@ jobs:
 
       - name: Start SQL Server + Keycloak
         working-directory: .
-        run: docker compose up -d --wait sqlserver keycloak
+        run: |
+          docker compose up -d sqlserver keycloak
+          echo "Waiting for Keycloak to become ready…"
+          for i in $(seq 1 36); do
+            curl -sf http://localhost:8080/realms/fintrackpro && echo "Keycloak ready" && break
+            echo "  attempt $i/36 — sleeping 5s"
+            sleep 5
+          done
+          curl -sf http://localhost:8080/realms/fintrackpro \
+            || { echo "Keycloak failed to start within 180s"; docker compose logs keycloak; exit 1; }
 
       - name: Start API
         working-directory: .
