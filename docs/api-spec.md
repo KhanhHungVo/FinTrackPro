@@ -100,6 +100,27 @@ Create a budget for a category and month.
 
 ---
 
+### `PATCH /api/budgets/{id}`
+Update the limit amount of an existing budget (owner only).
+
+**Body:**
+```json
+{
+  "limitAmount": 750.00
+}
+```
+
+**Response 204** on success. **404** if not found. **400** if not owner or invalid amount.
+
+---
+
+### `DELETE /api/budgets/{id}`
+Delete a budget (owner only).
+
+**Response 204** on success. **404** if not found. **400** if not owner.
+
+---
+
 ## Trades
 
 ### `GET /api/trades`

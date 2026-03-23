@@ -80,4 +80,53 @@ public class BudgetsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task UpdateBudget_ValidRequest_Returns204()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/budgets", BudgetRequestBuilder.Build());
+        var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var response = await _client.PatchAsJsonAsync($"/api/budgets/{id}", new { limitAmount = 999m });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task UpdateBudget_ZeroLimit_Returns400()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/budgets", BudgetRequestBuilder.Build());
+        var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var response = await _client.PatchAsJsonAsync($"/api/budgets/{id}", new { limitAmount = 0m });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateBudget_NotFound_Returns404()
+    {
+        var response = await _client.PatchAsJsonAsync($"/api/budgets/{Guid.NewGuid()}", new { limitAmount = 500m });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteBudget_OwnedBudget_Returns204()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/budgets", BudgetRequestBuilder.Build());
+        var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var response = await _client.DeleteAsync($"/api/budgets/{id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task DeleteBudget_NotFound_Returns404()
+    {
+        var response = await _client.DeleteAsync($"/api/budgets/{Guid.NewGuid()}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 }

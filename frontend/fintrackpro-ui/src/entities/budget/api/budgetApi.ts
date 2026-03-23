@@ -20,3 +20,20 @@ export function useCreateBudget() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
   })
 }
+
+export function useUpdateBudget() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, limitAmount }: { id: string; limitAmount: number }) =>
+      apiClient.patch(`/api/budgets/${id}`, { limitAmount }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+  })
+}
+
+export function useDeleteBudget() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/api/budgets/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+  })
+}

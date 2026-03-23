@@ -31,6 +31,59 @@ Both providers issue JWT Bearer tokens. All RBAC rules, controllers, and handler
 
 ---
 
+## Auth Flow
+
+### Login & API Request
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SPA as React SPA
+    participant IAM as Keycloak / Auth0
+    participant API as .NET API
+    participant DB as SQL Server
+
+    User->>SPA: Click login
+    SPA->>IAM: Redirect (OIDC authorization code flow)
+    IAM-->>User: Login page
+    User->>IAM: Credentials
+    IAM-->>SPA: Access token (JWT with roles)
+    SPA->>SPA: Store token in Zustand (authStore)
+
+    Note over SPA,API: Every subsequent API request
+
+    SPA->>API: HTTP request + Authorization: Bearer <token>
+    API->>IAM: Fetch JWKS (cached) — validate token signature & expiry
+    API->>API: ClaimsTransformer maps provider roles → ClaimTypes.Role
+    API->>API: EnsureUserBehavior — AppUser row exists?
+    alt First login (no AppUser row)
+        API->>DB: INSERT AppUser (ExternalUserId, Email, Provider)
+    end
+    API->>API: Execute handler (business logic)
+    API-->>SPA: Response (200 / 201 / 204 / 4xx)
+```
+
+### Nightly IAM User Sync
+
+```mermaid
+sequenceDiagram
+    participant Hangfire
+    participant Job as IamUserSyncJob
+    participant IAM as IAM Admin API
+    participant DB as SQL Server
+
+    Hangfire->>Job: Trigger (daily)
+    Job->>IAM: List all active users (client-credentials M2M token)
+    IAM-->>Job: User list
+    Job->>DB: Load all active AppUser rows
+    loop each AppUser not in IAM list
+        Job->>DB: AppUser.Deactivate() → IsActive = false
+    end
+    Job->>DB: SaveChangesAsync
+```
+
+---
+
 ## Keycloak (local / Docker)
 
 ### Automatic provisioning

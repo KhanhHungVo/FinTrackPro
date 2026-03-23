@@ -1,2 +1,2 @@
 export type { Budget } from './model/types'
-export { useBudgets, useCreateBudget } from './api/budgetApi'
+export { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget } from './api/budgetApi'

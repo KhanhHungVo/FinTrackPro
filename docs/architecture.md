@@ -14,6 +14,39 @@ Clean Architecture with CQRS. Dependencies point inward — outer layers depend 
   [ Infrastructure ]  (implements interfaces defined in Domain/Application)
 ```
 
+## System Context
+
+```mermaid
+graph TD
+    Browser["Browser"]
+    SPA["React SPA\n(Vite + FSD)"]
+    API[".NET 10 API\n(ASP.NET Core)"]
+    DB["SQL Server\n(Azure SQL in prod)"]
+    IAM["Keycloak / Auth0\n(OIDC + JWKS)"]
+    Binance["Binance API\n(klines, tickers)"]
+    CoinGecko["CoinGecko API\n(trending coins)"]
+    FearGreed["Fear & Greed Index\n(market sentiment)"]
+    Telegram["Telegram Bot\n(push notifications)"]
+    Hangfire["Hangfire Jobs\n(MarketSignal · BudgetOverrun · IamSync)"]
+    Render["Render\n(cloud hosting)"]
+    Terraform["Terraform\n(infra as code)"]
+
+    Browser -->|loads| SPA
+    SPA -->|"REST + Bearer JWT"| API
+    API -->|EF Core| DB
+    API -->|"JWKS validation"| IAM
+    SPA -->|"OIDC login redirect"| IAM
+    API -->|market data| Binance
+    API -->|trending coins| CoinGecko
+    API -->|sentiment index| FearGreed
+    Hangfire -->|alerts| Telegram
+    Hangfire -->|user sync| IAM
+    API -->|schedules jobs| Hangfire
+    Terraform -->|provisions| Render
+    Render -->|hosts| API
+    Render -->|hosts| SPA
+```
+
 ## Layer Responsibilities
 
 ### Domain (`FinTrackPro.Domain`)
@@ -53,6 +86,8 @@ Clean Architecture with CQRS. Dependencies point inward — outer layers depend 
 - `MarketSignalJob` — every 4h: RSI + volume spike signals via Skender + Binance
 - `BudgetOverrunJob` — daily: checks category spending vs budget limits
 - `IamUserSyncJob` — daily: diffs active IAM provider users against `AppUser` table; deactivates rows for deleted or disabled accounts
+
+See [background-jobs.md](background-jobs.md) for detailed sequence diagrams of each job.
 
 ## Frontend Architecture (FSD)
 
