@@ -101,6 +101,34 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "fintrackpro-e2e",
+      "name": "FinTrackPro E2E Test Client",
+      "description": "Dedicated client for Playwright/Newman CI — direct access grants only, no browser flows",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "protocolMappers": [
+        {
+          "name": "fintrackpro-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "https://api.fintrackpro.dev",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
     }
   ]
 }

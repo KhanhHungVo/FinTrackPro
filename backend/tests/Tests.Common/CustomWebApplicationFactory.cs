@@ -1,5 +1,6 @@
 using System.Text;
 using FinTrackPro.Application.Common.Interfaces;
+using Microsoft.Extensions.Configuration;
 using FinTrackPro.Application.Common.Models;
 using FinTrackPro.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,6 +22,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Override connection string so Hangfire reads the Testcontainers DB, not appsettings.json
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString()
+            });
+        });
+
         builder.ConfigureServices(services =>
         {
             // Replace real DbContext with Testcontainers connection

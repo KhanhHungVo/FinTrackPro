@@ -1,0 +1,597 @@
+{
+  "info": {
+    "name": "FinTrackPro API",
+    "description": "End-to-end API test collection for FinTrackPro. Run against a locally running API (`http://localhost:5018`) with a valid JWT in the `bearerToken` environment variable.\n\n**Setup:**\n1. Start the API: `dotnet run --project backend/src/FinTrackPro.API`\n2. Import `FinTrackPro.postman_environment.json` into Postman\n3. Set `bearerToken` to a valid JWT (copy from browser devtools after login)\n4. Run the collection — IDs are captured automatically between requests\n\n**CI automation:**\n```bash\nnewman run FinTrackPro.postman_collection.json \\\n  -e FinTrackPro.postman_environment.json \\\n  --env-var \"baseUrl=http://localhost:5018\" \\\n  --env-var \"bearerToken=<jwt>\"\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Unauthenticated request returns 401",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401 when no token provided', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Budgets",
+      "item": [
+        {
+          "name": "Create Budget",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/budgets",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Food\",\n  \"limitAmount\": 500.00,\n  \"month\": \"2026-03\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Returns a GUID', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('budgetId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Budgets",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/budgets/2026-03"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.be.an('array');",
+                  "  pm.expect(body.length).to.be.greaterThan(0);",
+                  "});",
+                  "pm.test('Budget has expected fields', () => {",
+                  "  const budget = pm.response.json()[0];",
+                  "  pm.expect(budget).to.have.property('id');",
+                  "  pm.expect(budget).to.have.property('category');",
+                  "  pm.expect(budget).to.have.property('limitAmount');",
+                  "  pm.expect(budget).to.have.property('month');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Budget",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/budgets/{{budgetId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"limitAmount\": 750.00\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Budget - Validation error (zero amount)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/budgets",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Food\",\n  \"limitAmount\": 0,\n  \"month\": \"2026-03\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for zero limit', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Budget",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/budgets/{{budgetId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Create Transaction",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 120.50,\n  \"category\": \"Food\",\n  \"note\": \"Grocery run\",\n  \"budgetMonth\": \"2026-03\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Returns a GUID', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('transactionId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Transactions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions?month=2026-03",
+              "query": [{ "key": "month", "value": "2026-03" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('Transaction has expected fields', () => {",
+                  "  const tx = pm.response.json()[0];",
+                  "  pm.expect(tx).to.have.property('id');",
+                  "  pm.expect(tx).to.have.property('amount');",
+                  "  pm.expect(tx).to.have.property('category');",
+                  "  pm.expect(tx).to.have.property('budgetMonth');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction - Validation error (missing category)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 50,\n  \"category\": \"\",\n  \"budgetMonth\": \"2026-03\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for missing category', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/transactions/{{transactionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Trades",
+      "item": [
+        {
+          "name": "Create Trade",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/trades",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 60000.0,\n  \"exitPrice\": 65000.0,\n  \"positionSize\": 0.1,\n  \"fees\": 5.0,\n  \"notes\": \"Breakout trade\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Returns a GUID', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('tradeId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Trades",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('Trade has expected fields', () => {",
+                  "  const trade = pm.response.json()[0];",
+                  "  pm.expect(trade).to.have.property('id');",
+                  "  pm.expect(trade).to.have.property('symbol');",
+                  "  pm.expect(trade).to.have.property('direction');",
+                  "  pm.expect(trade).to.have.property('result');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Trade - Invalid symbol",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/trades",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"NOTAPAIR\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 100.0,\n  \"exitPrice\": 110.0,\n  \"positionSize\": 1.0,\n  \"fees\": 0.5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for invalid symbol', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Trade",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/trades/{{tradeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Watched Symbols",
+      "item": [
+        {
+          "name": "Add Watched Symbol",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/watchedsymbols",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BNBUSDT\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Returns a GUID', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('watchedSymbolId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Watched Symbols",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/watchedsymbols"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('Symbol has expected fields', () => {",
+                  "  const symbol = pm.response.json()[0];",
+                  "  pm.expect(symbol).to.have.property('id');",
+                  "  pm.expect(symbol).to.have.property('symbol');",
+                  "  pm.expect(symbol).to.have.property('createdAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Watched Symbol",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/watchedsymbols/{{watchedSymbolId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Signals",
+      "item": [
+        {
+          "name": "Get Signals (default count)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/signals"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Signals (custom count)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signals?count=5",
+              "query": [{ "key": "count", "value": "5" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns at most 5 signals', () => {",
+                  "  pm.expect(pm.response.json().length).to.be.at.most(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get Preferences (none set)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/notifications/preferences"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Preferences",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/notifications/preferences",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telegramChatId\": \"123456789\",\n  \"isEnabled\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Preferences (after save)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/notifications/preferences"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns saved preference', () => {",
+                  "  const pref = pm.response.json();",
+                  "  if (pref !== null) {",
+                  "    pm.expect(pref).to.have.property('telegramChatId');",
+                  "    pm.expect(pref).to.have.property('isEnabled');",
+                  "    pm.expect(pref).to.have.property('channel');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Market",
+      "item": [
+        {
+          "name": "Get Fear & Greed Index",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/market/fear-greed"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has required fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('value');",
+                  "  pm.expect(body).to.have.property('label');",
+                  "  pm.expect(body).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Trending Coins",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/market/trending"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

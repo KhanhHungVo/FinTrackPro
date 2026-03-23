@@ -8,15 +8,17 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Inject the current access token on every request
+// Inject the current access token on every request.
+// Falls back to the Zustand store token when the adapter is not initialized
+// (e.g. degraded mode — Keycloak/Auth0 down but a cached JWT is available).
 apiClient.interceptors.request.use(async (config) => {
+  let token: string | null = null
   try {
-    const token = await authAdapter.getToken()
-    config.headers.Authorization = `Bearer ${token}`
+    token = await authAdapter.getToken()
   } catch {
-    // Not authenticated — let the request proceed without a token
-    // (API will return 401 which triggers the response interceptor below)
+    token = useAuthStore.getState().accessToken
   }
+  if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 

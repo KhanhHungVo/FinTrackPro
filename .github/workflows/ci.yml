@@ -52,7 +52,79 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Unit Tests
+        run: npm test
+
       - name: Build
         run: npm run build
         env:
           VITE_API_BASE_URL: https://api.fintrackpro.example.com
+          VITE_AUTH_PROVIDER: keycloak
+          VITE_KEYCLOAK_URL: http://localhost:8080
+          VITE_KEYCLOAK_REALM: fintrackpro
+          VITE_KEYCLOAK_CLIENT_ID: fintrackpro-spa
+
+  e2e:
+    name: Frontend — E2E (Playwright)
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/fintrackpro-ui
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start SQL Server + Keycloak
+        working-directory: .
+        run: docker compose up -d --wait sqlserver keycloak
+
+      - name: Start API
+        working-directory: .
+        run: |
+          docker compose up -d api
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5018/health && break || sleep 3
+          done
+
+      - name: Mint E2E token
+        working-directory: .
+        run: |
+          TOKEN=$(curl -sf -X POST \
+            http://localhost:8080/realms/fintrackpro/protocol/openid-connect/token \
+            -d "grant_type=password" \
+            -d "client_id=fintrackpro-e2e" \
+            -d "username=admin@fintrackpro.dev" \
+            -d "password=Admin1234!" \
+            | sed 's/.*"access_token":"\([^"]*\)".*/\1/')
+          echo "E2E_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/fintrackpro-ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        env:
+          E2E_TOKEN: ${{ env.E2E_TOKEN }}
+          E2E_BASE_URL: http://localhost:5173
+          VITE_API_BASE_URL: http://localhost:5018
+          VITE_AUTH_PROVIDER: keycloak
+          VITE_KEYCLOAK_URL: http://localhost:8080
+          VITE_KEYCLOAK_REALM: fintrackpro
+          VITE_KEYCLOAK_CLIENT_ID: fintrackpro-spa
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/fintrackpro-ui/playwright-report/
+          retention-days: 7

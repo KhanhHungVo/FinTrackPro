@@ -12,6 +12,7 @@ Two ways to run the full stack locally. **Hybrid mode** is recommended for day-t
   - [Step 3 — Run the API](#step-3--run-the-api)
   - [Step 4 — Run the frontend](#step-4--run-the-frontend)
 - [Mode C — Hybrid dev against Azure SQL](#mode-c--hybrid-dev-against-azure-sql)
+- [Mode E — Running Playwright E2E Tests Locally](#mode-e--running-playwright-e2e-tests-locally)
 - [Port Reference](#port-reference)
 - [Verifying the Stack](#verifying-the-stack)
 - [Stopping the Stack](#stopping-the-stack)
@@ -272,6 +273,74 @@ docker compose down
 # To also delete the SQL Server data volume (full reset)
 docker compose down -v
 ```
+
+---
+
+## Mode E — Running Playwright E2E Tests Locally
+
+The Playwright suite (`frontend/fintrackpro-ui/tests/e2e/`) requires a valid JWT to bypass the
+Keycloak login redirect. A helper script at the repo root handles token minting and test execution.
+
+### Prerequisites
+
+- Docker running with `sqlserver` and `keycloak` containers up
+- API running on `http://localhost:5018`
+- Frontend dev server running on `http://localhost:5173` (`npm run dev`)
+- `curl` and `grep -P` available (Git Bash / WSL / Linux — no `jq` or Node required)
+
+### Run the tests
+
+Use the script that matches your terminal:
+
+```bash
+# Git Bash / WSL / Linux
+bash scripts/e2e-local.sh
+```
+
+```powershell
+# PowerShell
+.\scripts\e2e-local.ps1
+```
+
+The script:
+1. Mints a short-lived JWT from the `fintrackpro-e2e` Keycloak client (direct access grant)
+2. Passes it as `E2E_TOKEN` to Playwright
+3. Playwright's `auth.setup.ts` injects `localStorage['access_token']` and `localStorage['e2e_bypass'] = '1'` via `addInitScript` before each spec
+4. `AuthProvider` detects the `e2e_bypass` flag and skips the Keycloak SDK init entirely, using the cached token in degraded mode
+
+> **Why `e2e_bypass`?** Keycloak's `onLoad: 'login-required'` redirects the browser before any JS
+> catch handler fires — the degraded-mode path is unreachable when Keycloak is accessible. The
+> `e2e_bypass` flag is an explicit opt-in that is never set by the app itself; real users are
+> unaffected. The backend still validates every JWT independently.
+
+### Pass Playwright flags
+
+Any extra arguments are forwarded to `playwright test`:
+
+```bash
+bash scripts/e2e-local.sh --ui                          # Playwright UI mode
+bash scripts/e2e-local.sh --debug                       # step through with inspector
+bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts     # single spec
+```
+
+```powershell
+.\scripts\e2e-local.ps1 --ui
+.\scripts\e2e-local.ps1 tests/e2e/budgets.spec.ts
+```
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `invalid_client` from curl | `fintrackpro-e2e` client not in realm | `docker compose restart keycloak` (re-imports realm JSON) |
+| Token is empty / curl fails | Keycloak not ready | Wait ~30s after `docker compose up` and retry |
+| Keycloak login page appears in test | `e2e_bypass` flag not set | Check `auth.setup.ts` — both `access_token` and `e2e_bypass` must be in `addInitScript` |
+| API 401 errors in tests | Store fallback not working | Check `client.ts` interceptor catch reads `useAuthStore.getState().accessToken` |
+
+### CI (GitHub Actions)
+
+The `e2e` job in `.github/workflows/ci.yml` mints the token inline using the same
+`fintrackpro-e2e` client and injects it as `E2E_TOKEN`. No changes to the script are needed for CI.
 
 ---
 

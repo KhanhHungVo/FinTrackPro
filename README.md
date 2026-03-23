@@ -73,6 +73,9 @@ FinTrackPro/
 │   ├── docker/
 │   │   └── keycloak-realm.json         # Auto-imported on first `docker compose up`
 │   └── terraform/                      # Terraform IaC — Render API + frontend (TF Cloud state)
+├── scripts/
+│   ├── e2e-local.sh                    # Mint E2E token + run Playwright (Git Bash / WSL)
+│   └── e2e-local.ps1                   # Mint E2E token + run Playwright (PowerShell)
 ├── docs/                               # Reference documentation
 ├── .github/workflows/ci.yml            # CI pipeline
 └── docker-compose.yml
@@ -124,3 +127,12 @@ cd backend
 dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
 ```
 See [docs/database.md](docs/database.md) for adding new migrations.
+
+**Playwright E2E tests** — requires Docker (Keycloak + SQL Server), the API, and the frontend dev server running. Then:
+```bash
+bash scripts/e2e-local.sh      # Git Bash / WSL
+```
+```powershell
+.\scripts\e2e-local.ps1        # PowerShell
+```
+See [docs/dev-setup.md — Mode E](docs/dev-setup.md#mode-e--running-playwright-e2e-tests-locally) for full steps and troubleshooting.

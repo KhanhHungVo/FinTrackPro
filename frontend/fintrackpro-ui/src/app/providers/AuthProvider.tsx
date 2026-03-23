@@ -65,6 +65,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setProfile = useAuthStore((s) => s.setProfile)
 
   function runInit() {
+    // E2E bypass: Playwright injects localStorage['e2e_bypass'] = '1' alongside
+    // a pre-issued JWT. This skips the provider SDK init (which would redirect
+    // to the login page) and goes straight to degraded mode using the cached
+    // token. Real users never have this flag set — the app never writes it.
+    // The backend still validates the JWT on every request independently.
+    if (localStorage.getItem('e2e_bypass') === '1') {
+      const cached = getCachedToken()
+      if (cached) {
+        const payload = parseJwtPayload(cached.token)!
+        setToken(cached.token)
+        setProfile(
+          (payload.name as string) ??
+            (payload.preferred_username as string) ??
+            '',
+          (payload.email as string) ?? '',
+        )
+        setDegraded({ expiresAt: cached.expiresAt })
+        setInitialized(true)
+        return
+      }
+    }
+
     authAdapter
       .init()
       .then((profile) => {

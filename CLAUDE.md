@@ -27,8 +27,27 @@ npm install
 npm run dev      # dev server with HMR
 npm run build    # type-check + production build
 npm run lint     # ESLint
-npm test         # Vitest
+npm test         # Vitest unit tests
+npm run test:e2e # Playwright E2E (requires E2E_TOKEN — use scripts/e2e-local.sh instead)
 ```
+
+### E2E tests (Playwright)
+```bash
+# Git Bash / WSL — mints token from local Keycloak and runs all Playwright specs
+bash scripts/e2e-local.sh
+bash scripts/e2e-local.sh --ui                             # UI mode
+bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts        # single spec
+```
+```powershell
+# PowerShell
+.\scripts\e2e-local.ps1
+.\scripts\e2e-local.ps1 --ui
+.\scripts\e2e-local.ps1 tests/e2e/budgets.spec.ts
+```
+
+Prerequisites: Docker up (`sqlserver` + `keycloak`), API on :5018, frontend dev server on :5173.
+The `fintrackpro-e2e` Keycloak client is included in `infra/docker/keycloak-realm.json` and
+auto-imported on first `docker compose up`.
 
 ### Infrastructure
 ```bash

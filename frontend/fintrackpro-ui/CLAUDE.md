@@ -10,11 +10,19 @@ npm run build      # Type-check + production build
 npm run preview    # Preview production build
 npm run lint       # Run ESLint
 npm test           # Run Vitest unit tests
+npm run test:e2e   # Run Playwright E2E tests (requires E2E_TOKEN — use scripts/e2e-local.sh)
 ```
 
-Run a single test file:
+Run a single Vitest file:
 ```bash
 npx vitest run src/path/to/file.test.ts
+```
+
+Run E2E tests (from repo root — mints token automatically):
+```bash
+bash scripts/e2e-local.sh
+bash scripts/e2e-local.sh --ui                          # Playwright UI mode
+bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts     # single spec
 ```
 
 ## Environment Setup
