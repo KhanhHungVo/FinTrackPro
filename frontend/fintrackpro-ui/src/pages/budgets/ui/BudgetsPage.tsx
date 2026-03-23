@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useBudgets } from '@/entities/budget'
+import { useBudgets, useDeleteBudget, useUpdateBudget } from '@/entities/budget'
 import { useTransactions } from '@/entities/transaction'
 import { AddBudgetForm } from '@/features/add-budget'
 import { cn } from '@/shared/lib/cn'
@@ -12,8 +12,26 @@ function monthsBack(n: number): string {
 
 export function BudgetsPage() {
   const [month, setMonth] = useState(monthsBack(0))
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editLimit, setEditLimit] = useState('')
   const { data: budgets, isLoading } = useBudgets(month)
   const { data: transactions } = useTransactions(month)
+  const { mutate: deleteBudget, isPending: isDeleting, variables: deletingId } = useDeleteBudget()
+  const { mutate: updateBudget, isPending: isSaving } = useUpdateBudget()
+
+  function startEdit(id: string, current: number) {
+    setEditingId(id)
+    setEditLimit(String(current))
+  }
+
+  function commitEdit(id: string) {
+    const val = parseFloat(editLimit)
+    if (!isNaN(val) && val > 0) {
+      updateBudget({ id, limitAmount: val }, { onSuccess: () => setEditingId(null) })
+    } else {
+      setEditingId(null)
+    }
+  }
   const monthOptions = Array.from({ length: 6 }, (_, i) => monthsBack(i))
 
   // Calculate spending per category from transactions
@@ -62,17 +80,54 @@ export function BudgetsPage() {
               <li key={budget.id} className="rounded-lg border p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="font-medium">{budget.category}</p>
-                  <span
-                    className={cn(
-                      'text-sm font-semibold',
-                      overrun ? 'text-red-600' : 'text-gray-700',
+                  <div className="flex items-center gap-2">
+                    {editingId === budget.id ? (
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editLimit}
+                        onChange={(e) => setEditLimit(e.target.value)}
+                        onBlur={() => commitEdit(budget.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitEdit(budget.id)
+                          if (e.key === 'Escape') setEditingId(null)
+                        }}
+                        disabled={isSaving}
+                        className="w-24 rounded border px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        autoFocus
+                      />
+                    ) : (
+                      <span
+                        className={cn(
+                          'text-sm font-semibold',
+                          overrun ? 'text-red-600' : 'text-gray-700',
+                        )}
+                      >
+                        ${spent.toFixed(2)}
+                        <span className="font-normal text-gray-400">
+                          {' '}/ ${budget.limitAmount.toFixed(2)}
+                        </span>
+                      </span>
                     )}
-                  >
-                    ${spent.toFixed(2)}
-                    <span className="font-normal text-gray-400">
-                      {' '}/ ${budget.limitAmount.toFixed(2)}
-                    </span>
-                  </span>
+                    <button
+                      onClick={() => startEdit(budget.id, budget.limitAmount)}
+                      className="text-gray-400 hover:text-blue-500 transition-colors text-sm"
+                      aria-label="Edit limit"
+                      title="Edit limit"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => deleteBudget(budget.id)}
+                      disabled={isDeleting && deletingId === budget.id}
+                      className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                      aria-label="Delete budget"
+                      title="Delete budget"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
 
                 {/* Progress bar */}
