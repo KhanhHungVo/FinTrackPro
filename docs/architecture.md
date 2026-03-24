@@ -76,7 +76,7 @@ graph TD
 
 ### API (`FinTrackPro.API`)
 - Thin controllers — delegate to `Mediator.Send()`
-- `ExceptionHandlingMiddleware` maps exceptions to HTTP status codes
+- `ExceptionHandlingMiddleware` maps exceptions to RFC 7807 Problem Details responses (400, 403, 404, 409, 500)
 - JWT Bearer authentication — provider-conditional: Keycloak (Authority + MetadataAddress) or Auth0 (Authority only)
 - Hangfire dashboard + recurring job registration
 - Scalar API UI (`/scalar`)

@@ -66,16 +66,18 @@ The active claims transformer (`KeycloakClaimsTransformer` or `Auth0ClaimsTransf
 
 ## Exception Handling
 
-`ExceptionHandlingMiddleware` maps to HTTP codes:
+`ExceptionHandlingMiddleware` returns RFC 7807 Problem Details (`application/problem+json`) and maps exceptions to HTTP codes:
 
-| Exception | HTTP |
-|---|---|
-| `ValidationException` | 400 |
-| `DomainException` | 400 |
-| `NotFoundException` | 404 |
-| Unhandled | 500 |
+| Exception | HTTP | When to use |
+|---|---|---|
+| `ValidationException` | 400 | Thrown by `ValidationBehavior` (FluentValidation failures) |
+| `DomainException` | 400 | Business-rule violations inside domain entities |
+| `AuthorizationException` | 403 | Ownership checks in handlers (inherits `DomainException`) |
+| `NotFoundException` | 404 | Required resource missing |
+| `ConflictException` | 409 | State conflicts — e.g., duplicate entry (inherits `DomainException`) |
+| Unhandled | 500 | Unexpected errors (detail shown only in Development) |
 
-Throw `DomainException` for business-rule violations inside domain entities. Throw `NotFoundException` from handlers when a required resource is missing.
+Exception hierarchy: `DomainException` ← `AuthorizationException`, `ConflictException`. The middleware matches subclasses first (order matters in the switch expression).
 
 ## Current User
 

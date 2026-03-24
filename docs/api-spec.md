@@ -297,11 +297,14 @@ Save (create or update) notification preferences.
 
 ## Error Response Shape
 
-All errors follow this envelope:
+All errors use RFC 7807 Problem Details (`application/problem+json`):
 
 ```json
 {
+  "status": 400,
   "title": "Validation failed",
+  "instance": "/api/budgets",
+  "traceId": "0HN9Q...",
   "errors": {
     "amount": ["Amount must be greater than zero."],
     "category": ["Category is required."]
@@ -309,9 +312,13 @@ All errors follow this envelope:
 }
 ```
 
+The `errors` field is only present for validation failures. The `traceId` field correlates with server logs.
+
 | HTTP Status | Cause |
 |---|---|
-| 400 | Validation failure or `DomainException` |
+| 400 | Validation failure (`ValidationException`) or domain validation (`DomainException`) |
+| 403 | Ownership check failed (`AuthorizationException`) |
+| 404 | Entity not found (`NotFoundException`) |
+| 409 | State conflict (`ConflictException`) |
 | 401 | Missing or invalid JWT |
-| 404 | Entity not found |
 | 500 | Unhandled server error |

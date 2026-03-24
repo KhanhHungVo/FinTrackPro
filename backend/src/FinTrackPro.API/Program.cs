@@ -47,14 +47,15 @@ builder.Services.AddControllers()
                 ctx.HttpContext.Request.Path,
                 errors);
 
-            // Return sanitized Problem Details — full detail is in the log; client gets a clean message.
-            return new BadRequestObjectResult(new ValidationProblemDetails
+            var problem = new ValidationProblemDetails(errors)
             {
                 Status = StatusCodes.Status400BadRequest,
-                Title  = "Invalid request.",
-                Detail = "The request body is malformed or contains invalid values.",
-                Type   = "about:blank"
-            })
+                Title  = "Validation failed",
+                Instance = ctx.HttpContext.Request.Path
+            };
+            problem.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier;
+
+            return new BadRequestObjectResult(problem)
             {
                 ContentTypes = { "application/problem+json" }
             };

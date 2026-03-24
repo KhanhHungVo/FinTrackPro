@@ -67,7 +67,7 @@ Strict layer isolation with inward-only dependencies:
 - **Domain** (`FinTrackPro.Domain`) — entities, value objects, repository interfaces. No external dependencies.
 - **Application** (`FinTrackPro.Application`) — CQRS via MediatR (commands/queries/handlers), DTOs, FluentValidation validators, MediatR pipeline behaviors: `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login).
 - **Infrastructure** (`FinTrackPro.Infrastructure`) — EF Core (Code-First, migrations here), repository implementations, IAM provider abstraction (`IIamProviderService` / `IClaimsTransformation` — selected via `IdentityProvider:Provider` config: `"keycloak"` uses `KeycloakAdminService` + `KeycloakClaimsTransformer`; `"auth0"` uses `Auth0ManagementService` + `Auth0ClaimsTransformer`), Telegram.Bot, Skender.Stock.Indicators.
-- **API** (`FinTrackPro.API`) — ASP.NET Core controllers, DI registration, middleware (exception handling → maps domain exceptions to HTTP codes), Scalar API docs.
+- **API** (`FinTrackPro.API`) — ASP.NET Core controllers, DI registration, middleware (exception handling → maps domain exceptions to RFC 7807 Problem Details: 400/403/404/409/500), Scalar API docs.
 - **BackgroundJobs** (`FinTrackPro.BackgroundJobs`) — Hangfire job definitions: `MarketSignalJob` (every 4h), `BudgetOverrunJob` (daily), `IamUserSyncJob` (daily — deactivates deleted/disabled users from the active IAM provider in the local DB).
 
 DTOs use explicit `operator` conversions instead of AutoMapper. `ICurrentUserService` extracts the authenticated user from the JWT claim. Add new features as a command/query + handler pair in Application, then expose via a thin controller action.
