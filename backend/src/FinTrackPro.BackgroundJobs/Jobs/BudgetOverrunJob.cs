@@ -10,27 +10,16 @@ namespace FinTrackPro.BackgroundJobs.Jobs;
 /// Runs daily. Checks each user's budgets for the current month.
 /// Fires a Telegram alert once per category per month on first breach.
 /// </summary>
-public class BudgetOverrunJob
+public class BudgetOverrunJob(
+    IApplicationDbContext context,
+    INotificationService notificationService,
+    ILogger<BudgetOverrunJob> logger)
 {
-    private readonly IApplicationDbContext _context;
-    private readonly INotificationService _notificationService;
-    private readonly ILogger<BudgetOverrunJob> _logger;
-
-    public BudgetOverrunJob(
-        IApplicationDbContext context,
-        INotificationService notificationService,
-        ILogger<BudgetOverrunJob> logger)
-    {
-        _context = context;
-        _notificationService = notificationService;
-        _logger = logger;
-    }
-
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var currentMonth = DateTime.UtcNow.ToString("yyyy-MM");
 
-        var budgets = await _context.Budgets
+        var budgets = await context.Budgets
             .Where(b => b.Month == currentMonth)
             .ToListAsync(cancellationToken);
 
@@ -38,7 +27,7 @@ public class BudgetOverrunJob
         {
             try
             {
-                var spent = await _context.Transactions
+                var spent = await context.Transactions
                     .Where(t => t.UserId == budget.UserId
                              && t.Type == TransactionType.Expense
                              && t.Category == budget.Category
@@ -48,7 +37,7 @@ public class BudgetOverrunJob
                 if (spent <= budget.LimitAmount) continue;
 
                 // Check if already notified this month for this budget
-                var alreadyAlerted = await _context.Signals
+                var alreadyAlerted = await context.Signals
                     .AnyAsync(s => s.UserId == budget.UserId
                                && s.Symbol == $"BUDGET:{budget.Category}"
                                && s.SignalType == SignalType.FundingRate  // reused as budget overrun marker
@@ -64,16 +53,16 @@ public class BudgetOverrunJob
                 var overage = spent - budget.LimitAmount;
                 var message = $"Budget overrun: '{budget.Category}' spent {spent:C} of {budget.LimitAmount:C} limit ({overage:C} over).";
 
-                await _notificationService.NotifyAsync(
+                await notificationService.NotifyAsync(
                     budget.UserId, $"Budget Alert: {budget.Category}", message, cancellationToken);
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Budget overrun alert sent for user {UserId} / category {Category}",
                     budget.UserId, budget.Category);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking budget overrun for budget {BudgetId}", budget.Id);
+                logger.LogError(ex, "Error checking budget overrun for budget {BudgetId}", budget.Id);
             }
         }
     }

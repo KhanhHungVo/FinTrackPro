@@ -4,26 +4,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinTrackPro.Infrastructure.Persistence.Repositories;
 
-public class BudgetRepository : IBudgetRepository
+public class BudgetRepository(ApplicationDbContext context) : IBudgetRepository
 {
-    private readonly ApplicationDbContext _context;
-    public BudgetRepository(ApplicationDbContext context) => _context = context;
-
     public async Task<IEnumerable<Budget>> GetByUserAndMonthAsync(
         Guid userId, string month, CancellationToken cancellationToken = default) =>
-        await _context.Budgets
+        await context.Budgets
             .Where(b => b.UserId == userId && b.Month == month)
             .ToListAsync(cancellationToken);
 
     public Task<Budget?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        _context.Budgets.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+        context.Budgets.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
 
     public Task<Budget?> GetByUserCategoryMonthAsync(
         Guid userId, string category, string month, CancellationToken cancellationToken = default) =>
-        _context.Budgets.FirstOrDefaultAsync(
+        context.Budgets.FirstOrDefaultAsync(
             b => b.UserId == userId && b.Category == category && b.Month == month,
             cancellationToken);
 
-    public void Add(Budget budget) => _context.Budgets.Add(budget);
-    public void Remove(Budget budget) => _context.Budgets.Remove(budget);
+    public void Add(Budget budget) => context.Budgets.Add(budget);
+    public void Remove(Budget budget) => context.Budgets.Remove(budget);
 }

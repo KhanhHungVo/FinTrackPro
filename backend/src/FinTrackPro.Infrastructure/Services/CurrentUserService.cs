@@ -5,18 +5,11 @@ using Microsoft.Extensions.Configuration;
 
 namespace FinTrackPro.Infrastructure.Services;
 
-public class CurrentUserService : ICurrentUserService
+public class CurrentUserService(
+    IHttpContextAccessor httpContextAccessor,
+    IConfiguration configuration) : ICurrentUserService
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IConfiguration _configuration;
-
-    public CurrentUserService(IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _configuration = configuration;
-    }
-
-    private ClaimsPrincipal? User => _httpContextAccessor.HttpContext?.User;
+    private ClaimsPrincipal? User => httpContextAccessor.HttpContext?.User;
 
     public string? ExternalUserId => User?.FindFirstValue("sub");
     public string? Email => User?.FindFirstValue(ClaimTypes.Email)
@@ -24,5 +17,5 @@ public class CurrentUserService : ICurrentUserService
     public string? DisplayName => User?.FindFirstValue("name")
                                ?? User?.FindFirstValue(ClaimTypes.Name);
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;
-    public string ProviderName => _configuration["IdentityProvider:Provider"] ?? "keycloak";
+    public string ProviderName => configuration["IdentityProvider:Provider"] ?? "keycloak";
 }

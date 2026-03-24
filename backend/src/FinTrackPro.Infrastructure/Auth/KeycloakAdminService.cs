@@ -14,28 +14,17 @@ namespace FinTrackPro.Infrastructure.Auth;
 ///   IdentityProvider:AdminClientId   — e.g. fintrackpro-api
 ///   IdentityProvider:AdminClientSecret — client secret from Keycloak Credentials tab
 /// </summary>
-public class KeycloakAdminService : IIamProviderService
+public class KeycloakAdminService(
+    HttpClient http,
+    IConfiguration configuration,
+    ILogger<KeycloakAdminService> logger) : IIamProviderService
 {
-    private readonly HttpClient _http;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<KeycloakAdminService> _logger;
-
-    public KeycloakAdminService(
-        HttpClient http,
-        IConfiguration configuration,
-        ILogger<KeycloakAdminService> logger)
-    {
-        _http = http;
-        _configuration = configuration;
-        _logger = logger;
-    }
-
     public async Task<List<IamUserInfo>> GetAllUsersAsync(CancellationToken cancellationToken = default)
     {
         var token = await GetAdminTokenAsync(cancellationToken);
         if (token is null) return [];
 
-        var authority = _configuration["Keycloak:Authority"]!; // e.g. http://localhost:8080/realms/fintrackpro
+        var authority = configuration["Keycloak:Authority"]!; // e.g. http://localhost:8080/realms/fintrackpro
         var realmBase = authority[..authority.LastIndexOf("/realms/", StringComparison.Ordinal)]; // http://localhost:8080
         var realm = authority[(authority.LastIndexOf('/') + 1)..]; // fintrackpro
 
@@ -49,10 +38,10 @@ public class KeycloakAdminService : IIamProviderService
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization = new("Bearer", token);
 
-            var response = await _http.SendAsync(request, cancellationToken);
+            var response = await http.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Keycloak Admin API returned {StatusCode} for users list", response.StatusCode);
+                logger.LogWarning("Keycloak Admin API returned {StatusCode} for users list", response.StatusCode);
                 break;
             }
 
@@ -70,13 +59,13 @@ public class KeycloakAdminService : IIamProviderService
 
     private async Task<string?> GetAdminTokenAsync(CancellationToken cancellationToken)
     {
-        var authority = _configuration["Keycloak:Authority"]!;
-        var clientId = _configuration["IdentityProvider:AdminClientId"];
-        var clientSecret = _configuration["IdentityProvider:AdminClientSecret"];
+        var authority = configuration["Keycloak:Authority"]!;
+        var clientId = configuration["IdentityProvider:AdminClientId"];
+        var clientSecret = configuration["IdentityProvider:AdminClientSecret"];
 
         if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
         {
-            _logger.LogWarning("IdentityProvider:AdminClientId or IdentityProvider:AdminClientSecret not configured — skipping user sync");
+            logger.LogWarning("IdentityProvider:AdminClientId or IdentityProvider:AdminClientSecret not configured — skipping user sync");
             return null;
         }
 
@@ -88,10 +77,10 @@ public class KeycloakAdminService : IIamProviderService
             ["client_secret"] = clientSecret
         };
 
-        var response = await _http.PostAsync(tokenUrl, new FormUrlEncodedContent(form), cancellationToken);
+        var response = await http.PostAsync(tokenUrl, new FormUrlEncodedContent(form), cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogWarning("Failed to obtain Keycloak admin token: {StatusCode}", response.StatusCode);
+            logger.LogWarning("Failed to obtain Keycloak admin token: {StatusCode}", response.StatusCode);
             return null;
         }
 

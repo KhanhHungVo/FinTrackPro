@@ -16,28 +16,17 @@ namespace FinTrackPro.Infrastructure.Auth;
 /// Rate limit note: Auth0 free tier allows 1,000 Management API requests/day.
 /// This service paginates with 100 users/page and adds a 200 ms delay between pages.
 /// </summary>
-public class Auth0ManagementService : IIamProviderService
+public class Auth0ManagementService(
+    HttpClient http,
+    IConfiguration configuration,
+    ILogger<Auth0ManagementService> logger) : IIamProviderService
 {
-    private readonly HttpClient _http;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<Auth0ManagementService> _logger;
-
-    public Auth0ManagementService(
-        HttpClient http,
-        IConfiguration configuration,
-        ILogger<Auth0ManagementService> logger)
-    {
-        _http = http;
-        _configuration = configuration;
-        _logger = logger;
-    }
-
     public async Task<List<IamUserInfo>> GetAllUsersAsync(CancellationToken cancellationToken = default)
     {
         var token = await GetManagementTokenAsync(cancellationToken);
         if (token is null) return [];
 
-        var domain = _configuration["Auth0:Domain"]!;
+        var domain = configuration["Auth0:Domain"]!;
         var result = new List<IamUserInfo>();
         const int pageSize = 100;
         var page = 0;
@@ -48,15 +37,15 @@ public class Auth0ManagementService : IIamProviderService
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization = new("Bearer", token);
 
-            var response = await _http.SendAsync(request, cancellationToken);
+            var response = await http.SendAsync(request, cancellationToken);
             if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
             {
-                _logger.LogWarning("Auth0 Management API rate limit hit — aborting user sync to preserve daily quota");
+                logger.LogWarning("Auth0 Management API rate limit hit — aborting user sync to preserve daily quota");
                 break;
             }
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Auth0 Management API returned {StatusCode} for users list", response.StatusCode);
+                logger.LogWarning("Auth0 Management API returned {StatusCode} for users list", response.StatusCode);
                 break;
             }
 
@@ -77,13 +66,13 @@ public class Auth0ManagementService : IIamProviderService
 
     private async Task<string?> GetManagementTokenAsync(CancellationToken cancellationToken)
     {
-        var domain = _configuration["Auth0:Domain"];
-        var clientId = _configuration["IdentityProvider:AdminClientId"];
-        var clientSecret = _configuration["IdentityProvider:AdminClientSecret"];
+        var domain = configuration["Auth0:Domain"];
+        var clientId = configuration["IdentityProvider:AdminClientId"];
+        var clientSecret = configuration["IdentityProvider:AdminClientSecret"];
 
         if (string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
         {
-            _logger.LogWarning("IdentityProvider:AdminClientId or IdentityProvider:AdminClientSecret not configured — skipping user sync");
+            logger.LogWarning("IdentityProvider:AdminClientId or IdentityProvider:AdminClientSecret not configured — skipping user sync");
             return null;
         }
 
@@ -96,10 +85,10 @@ public class Auth0ManagementService : IIamProviderService
             ["audience"] = $"https://{domain}/api/v2/"
         };
 
-        var response = await _http.PostAsync(tokenUrl, new FormUrlEncodedContent(form), cancellationToken);
+        var response = await http.PostAsync(tokenUrl, new FormUrlEncodedContent(form), cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogWarning("Failed to obtain Auth0 management token: {StatusCode}", response.StatusCode);
+            logger.LogWarning("Failed to obtain Auth0 management token: {StatusCode}", response.StatusCode);
             return null;
         }
 

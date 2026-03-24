@@ -7,28 +7,21 @@ using Microsoft.Extensions.Logging;
 
 namespace FinTrackPro.Infrastructure.ExternalServices;
 
-public class CoinGeckoService : ICoinGeckoService
+public class CoinGeckoService(
+    HttpClient httpClient,
+    IMemoryCache cache,
+    ILogger<CoinGeckoService> logger) : ICoinGeckoService
 {
-    private readonly HttpClient _httpClient;
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<CoinGeckoService> _logger;
     private const string CacheKey = "coingecko_trending";
-
-    public CoinGeckoService(HttpClient httpClient, IMemoryCache cache, ILogger<CoinGeckoService> logger)
-    {
-        _httpClient = httpClient;
-        _cache = cache;
-        _logger = logger;
-    }
 
     public async Task<IEnumerable<TrendingCoinDto>> GetTrendingCoinsAsync(CancellationToken cancellationToken = default)
     {
-        if (_cache.TryGetValue(CacheKey, out IEnumerable<TrendingCoinDto>? cached) && cached is not null)
+        if (cache.TryGetValue(CacheKey, out IEnumerable<TrendingCoinDto>? cached) && cached is not null)
             return cached;
 
         try
         {
-            var raw = await _httpClient.GetFromJsonAsync<JsonElement>(
+            var raw = await httpClient.GetFromJsonAsync<JsonElement>(
                 "/api/v3/search/trending", cancellationToken);
 
             var coins = raw.GetProperty("coins")
@@ -48,12 +41,12 @@ public class CoinGeckoService : ICoinGeckoService
                 })
                 .ToList();
 
-            _cache.Set(CacheKey, coins, TimeSpan.FromMinutes(15));
+            cache.Set(CacheKey, coins, TimeSpan.FromMinutes(15));
             return coins;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch CoinGecko trending coins");
+            logger.LogWarning(ex, "Failed to fetch CoinGecko trending coins");
             return [];
         }
     }

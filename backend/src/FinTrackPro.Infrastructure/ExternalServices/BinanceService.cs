@@ -7,19 +7,12 @@ using Microsoft.Extensions.Logging;
 
 namespace FinTrackPro.Infrastructure.ExternalServices;
 
-public class BinanceService : IBinanceService
+public class BinanceService(
+    HttpClient httpClient,
+    IMemoryCache cache,
+    ILogger<BinanceService> logger) : IBinanceService
 {
-    private readonly HttpClient _httpClient;
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<BinanceService> _logger;
     private const string ExchangeInfoCacheKey = "binance_exchange_info";
-
-    public BinanceService(HttpClient httpClient, IMemoryCache cache, ILogger<BinanceService> logger)
-    {
-        _httpClient = httpClient;
-        _cache = cache;
-        _logger = logger;
-    }
 
     public async Task<bool> IsValidSymbolAsync(string symbol, CancellationToken cancellationToken = default)
     {
@@ -31,7 +24,7 @@ public class BinanceService : IBinanceService
         string symbol, string interval, int limit, CancellationToken cancellationToken = default)
     {
         var url = $"/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}";
-        var raw = await _httpClient.GetFromJsonAsync<JsonElement[][]>(url, cancellationToken);
+        var raw = await httpClient.GetFromJsonAsync<JsonElement[][]>(url, cancellationToken);
         if (raw is null) return [];
 
         return raw.Select(k => new KlineDto(
@@ -49,7 +42,7 @@ public class BinanceService : IBinanceService
         var url = $"/api/v3/ticker/24hr?symbol={symbol}";
         try
         {
-            var raw = await _httpClient.GetFromJsonAsync<JsonElement>(url, cancellationToken);
+            var raw = await httpClient.GetFromJsonAsync<JsonElement>(url, cancellationToken);
             return new TickerDto(
                 Symbol: raw.GetProperty("symbol").GetString()!,
                 Volume: decimal.Parse(raw.GetProperty("volume").GetString()!),
@@ -58,23 +51,23 @@ public class BinanceService : IBinanceService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch 24hr ticker for {Symbol}", symbol);
+            logger.LogWarning(ex, "Failed to fetch 24hr ticker for {Symbol}", symbol);
             return null;
         }
     }
 
     private async Task<HashSet<string>> GetValidSymbolsAsync(CancellationToken cancellationToken)
     {
-        if (_cache.TryGetValue(ExchangeInfoCacheKey, out HashSet<string>? cached) && cached is not null)
+        if (cache.TryGetValue(ExchangeInfoCacheKey, out HashSet<string>? cached) && cached is not null)
             return cached;
 
-        var raw = await _httpClient.GetFromJsonAsync<JsonElement>("/api/v3/exchangeInfo", cancellationToken);
+        var raw = await httpClient.GetFromJsonAsync<JsonElement>("/api/v3/exchangeInfo", cancellationToken);
         var symbols = raw.GetProperty("symbols")
             .EnumerateArray()
             .Select(s => s.GetProperty("symbol").GetString()!)
             .ToHashSet();
 
-        _cache.Set(ExchangeInfoCacheKey, symbols, TimeSpan.FromHours(24));
+        cache.Set(ExchangeInfoCacheKey, symbols, TimeSpan.FromHours(24));
         return symbols;
     }
 }

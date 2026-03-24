@@ -11,34 +11,17 @@ namespace FinTrackPro.BackgroundJobs.Jobs;
 /// Runs every 4 hours. Fetches klines for all watched symbols,
 /// computes RSI and volume spike signals, stores them, and sends Telegram notifications.
 /// </summary>
-public class MarketSignalJob
+public class MarketSignalJob(
+    IWatchedSymbolRepository watchedSymbols,
+    ISignalRepository signalRepository,
+    IApplicationDbContext context,
+    IBinanceService binanceService,
+    INotificationService notificationService,
+    ILogger<MarketSignalJob> logger)
 {
-    private readonly IWatchedSymbolRepository _watchedSymbols;
-    private readonly ISignalRepository _signalRepository;
-    private readonly IApplicationDbContext _context;
-    private readonly IBinanceService _binanceService;
-    private readonly INotificationService _notificationService;
-    private readonly ILogger<MarketSignalJob> _logger;
-
-    public MarketSignalJob(
-        IWatchedSymbolRepository watchedSymbols,
-        ISignalRepository signalRepository,
-        IApplicationDbContext context,
-        IBinanceService binanceService,
-        INotificationService notificationService,
-        ILogger<MarketSignalJob> logger)
-    {
-        _watchedSymbols = watchedSymbols;
-        _signalRepository = signalRepository;
-        _context = context;
-        _binanceService = binanceService;
-        _notificationService = notificationService;
-        _logger = logger;
-    }
-
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        var allWatched = await _watchedSymbols.GetAllAsync(cancellationToken);
+        var allWatched = await watchedSymbols.GetAllAsync(cancellationToken);
 
         foreach (var watched in allWatched)
         {
@@ -48,17 +31,17 @@ public class MarketSignalJob
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing signal for {Symbol} / user {UserId}",
+                logger.LogError(ex, "Error processing signal for {Symbol} / user {UserId}",
                     watched.Symbol, watched.UserId);
             }
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private async Task ProcessSymbolAsync(WatchedSymbol watched, CancellationToken cancellationToken)
     {
-        var klines = (await _binanceService.GetKlinesAsync(
+        var klines = (await binanceService.GetKlinesAsync(
             watched.Symbol, "1w", 14, cancellationToken)).ToList();
 
         if (klines.Count < 14) return;
@@ -94,7 +77,7 @@ public class MarketSignalJob
 
         if (signalType is null) return;
 
-        var alreadyNotified = await _signalRepository.ExistsRecentAsync(
+        var alreadyNotified = await signalRepository.ExistsRecentAsync(
             watched.UserId, watched.Symbol, signalType.Value,
             TimeSpan.FromHours(24), cancellationToken);
 
@@ -106,19 +89,19 @@ public class MarketSignalJob
 
         var signal = Signal.Create(watched.UserId, watched.Symbol, signalType.Value, message, value, timeframe);
         signal.MarkNotified();
-        _signalRepository.Add(signal);
+        signalRepository.Add(signal);
 
-        await _notificationService.NotifyAsync(
+        await notificationService.NotifyAsync(
             watched.UserId, $"RSI Alert: {watched.Symbol}", message, cancellationToken);
     }
 
     private async Task CheckVolumeSpikeAsync(WatchedSymbol watched, CancellationToken cancellationToken)
     {
-        var ticker = await _binanceService.Get24HrTickerAsync(watched.Symbol, cancellationToken);
+        var ticker = await binanceService.Get24HrTickerAsync(watched.Symbol, cancellationToken);
         if (ticker is null) return;
 
         // Volume spike: compare current volume to an estimated baseline from klines
-        var klines = (await _binanceService.GetKlinesAsync(
+        var klines = (await binanceService.GetKlinesAsync(
             watched.Symbol, "1d", 7, cancellationToken)).ToList();
 
         if (klines.Count < 7) return;
@@ -129,7 +112,7 @@ public class MarketSignalJob
         var spikeRatio = (double)ticker.Volume / avgVolume;
         if (spikeRatio < 2.0) return;
 
-        var alreadyNotified = await _signalRepository.ExistsRecentAsync(
+        var alreadyNotified = await signalRepository.ExistsRecentAsync(
             watched.UserId, watched.Symbol, SignalType.VolumeSpike,
             TimeSpan.FromHours(24), cancellationToken);
 
@@ -139,9 +122,9 @@ public class MarketSignalJob
         var signal = Signal.Create(watched.UserId, watched.Symbol, SignalType.VolumeSpike,
             message, (decimal)spikeRatio, "1D");
         signal.MarkNotified();
-        _signalRepository.Add(signal);
+        signalRepository.Add(signal);
 
-        await _notificationService.NotifyAsync(
+        await notificationService.NotifyAsync(
             watched.UserId, $"Volume Spike: {watched.Symbol}", message, cancellationToken);
     }
 }

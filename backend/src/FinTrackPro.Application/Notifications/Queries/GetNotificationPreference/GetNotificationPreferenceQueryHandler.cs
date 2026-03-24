@@ -6,31 +6,20 @@ using MediatR;
 
 namespace FinTrackPro.Application.Notifications.Queries.GetNotificationPreference;
 
-public class GetNotificationPreferenceQueryHandler
+public class GetNotificationPreferenceQueryHandler(
+    IUserRepository userRepository,
+    INotificationPreferenceRepository preferenceRepository,
+    ICurrentUserService currentUser)
     : IRequestHandler<GetNotificationPreferenceQuery, NotificationPreferenceDto?>
 {
-    private readonly IUserRepository _userRepository;
-    private readonly INotificationPreferenceRepository _preferenceRepository;
-    private readonly ICurrentUserService _currentUser;
-
-    public GetNotificationPreferenceQueryHandler(
-        IUserRepository userRepository,
-        INotificationPreferenceRepository preferenceRepository,
-        ICurrentUserService currentUser)
-    {
-        _userRepository = userRepository;
-        _preferenceRepository = preferenceRepository;
-        _currentUser = currentUser;
-    }
-
     public async Task<NotificationPreferenceDto?> Handle(
         GetNotificationPreferenceQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByExternalIdAsync(
-            _currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
+        var user = await userRepository.GetByExternalIdAsync(
+            currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
 
-        var pref = await _preferenceRepository.GetByUserAsync(user.Id, cancellationToken);
+        var pref = await preferenceRepository.GetByUserAsync(user.Id, cancellationToken);
         return pref is null ? null : (NotificationPreferenceDto)pref;
     }
 }

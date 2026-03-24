@@ -6,32 +6,21 @@ using MediatR;
 
 namespace FinTrackPro.Application.Finance.Commands.CreateBudget;
 
-public class CreateBudgetCommandHandler : IRequestHandler<CreateBudgetCommand, Guid>
+public class CreateBudgetCommandHandler(
+    IApplicationDbContext context,
+    ICurrentUserService currentUser,
+    IUserRepository userRepository) : IRequestHandler<CreateBudgetCommand, Guid>
 {
-    private readonly IApplicationDbContext _context;
-    private readonly ICurrentUserService _currentUser;
-    private readonly IUserRepository _userRepository;
-
-    public CreateBudgetCommandHandler(
-        IApplicationDbContext context,
-        ICurrentUserService currentUser,
-        IUserRepository userRepository)
-    {
-        _context = context;
-        _currentUser = currentUser;
-        _userRepository = userRepository;
-    }
-
     public async Task<Guid> Handle(CreateBudgetCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByExternalIdAsync(
-            _currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
+        var user = await userRepository.GetByExternalIdAsync(
+            currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
 
         var budget = Budget.Create(user.Id, request.Category, request.LimitAmount, request.Month);
 
-        _context.Budgets.Add(budget);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Budgets.Add(budget);
+        await context.SaveChangesAsync(cancellationToken);
 
         return budget.Id;
     }

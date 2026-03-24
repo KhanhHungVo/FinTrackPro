@@ -6,30 +6,19 @@ using MediatR;
 
 namespace FinTrackPro.Application.Finance.Queries.GetBudgets;
 
-public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, IEnumerable<BudgetDto>>
+public class GetBudgetsQueryHandler(
+    IUserRepository userRepository,
+    IBudgetRepository budgetRepository,
+    ICurrentUserService currentUser) : IRequestHandler<GetBudgetsQuery, IEnumerable<BudgetDto>>
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IBudgetRepository _budgetRepository;
-    private readonly ICurrentUserService _currentUser;
-
-    public GetBudgetsQueryHandler(
-        IUserRepository userRepository,
-        IBudgetRepository budgetRepository,
-        ICurrentUserService currentUser)
-    {
-        _userRepository = userRepository;
-        _budgetRepository = budgetRepository;
-        _currentUser = currentUser;
-    }
-
     public async Task<IEnumerable<BudgetDto>> Handle(
         GetBudgetsQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByExternalIdAsync(
-            _currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
+        var user = await userRepository.GetByExternalIdAsync(
+            currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
 
-        var budgets = await _budgetRepository.GetByUserAndMonthAsync(user.Id, request.Month, cancellationToken);
+        var budgets = await budgetRepository.GetByUserAndMonthAsync(user.Id, request.Month, cancellationToken);
         return budgets.Select(b => (BudgetDto)b);
     }
 }

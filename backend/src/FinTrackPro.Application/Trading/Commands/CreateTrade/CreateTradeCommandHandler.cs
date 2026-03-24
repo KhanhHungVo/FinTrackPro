@@ -6,32 +6,19 @@ using MediatR;
 
 namespace FinTrackPro.Application.Trading.Commands.CreateTrade;
 
-public class CreateTradeCommandHandler : IRequestHandler<CreateTradeCommand, Guid>
+public class CreateTradeCommandHandler(
+    IApplicationDbContext context,
+    ICurrentUserService currentUser,
+    IUserRepository userRepository,
+    IBinanceService binanceService) : IRequestHandler<CreateTradeCommand, Guid>
 {
-    private readonly IApplicationDbContext _context;
-    private readonly ICurrentUserService _currentUser;
-    private readonly IUserRepository _userRepository;
-    private readonly IBinanceService _binanceService;
-
-    public CreateTradeCommandHandler(
-        IApplicationDbContext context,
-        ICurrentUserService currentUser,
-        IUserRepository userRepository,
-        IBinanceService binanceService)
-    {
-        _context = context;
-        _currentUser = currentUser;
-        _userRepository = userRepository;
-        _binanceService = binanceService;
-    }
-
     public async Task<Guid> Handle(CreateTradeCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByExternalIdAsync(
-            _currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
+        var user = await userRepository.GetByExternalIdAsync(
+            currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
 
-        var isValid = await _binanceService.IsValidSymbolAsync(request.Symbol, cancellationToken);
+        var isValid = await binanceService.IsValidSymbolAsync(request.Symbol, cancellationToken);
         if (!isValid)
             throw new DomainException($"Symbol '{request.Symbol}' is not a valid Binance trading pair.");
 
@@ -40,8 +27,8 @@ public class CreateTradeCommandHandler : IRequestHandler<CreateTradeCommand, Gui
             request.EntryPrice, request.ExitPrice,
             request.PositionSize, request.Fees, request.Notes);
 
-        _context.Trades.Add(trade);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Trades.Add(trade);
+        await context.SaveChangesAsync(cancellationToken);
 
         return trade.Id;
     }

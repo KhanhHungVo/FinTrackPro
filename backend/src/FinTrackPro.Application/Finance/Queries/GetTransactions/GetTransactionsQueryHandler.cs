@@ -6,30 +6,19 @@ using MediatR;
 
 namespace FinTrackPro.Application.Finance.Queries.GetTransactions;
 
-public class GetTransactionsQueryHandler : IRequestHandler<GetTransactionsQuery, IEnumerable<TransactionDto>>
+public class GetTransactionsQueryHandler(
+    IUserRepository userRepository,
+    ITransactionRepository transactionRepository,
+    ICurrentUserService currentUser) : IRequestHandler<GetTransactionsQuery, IEnumerable<TransactionDto>>
 {
-    private readonly IUserRepository _userRepository;
-    private readonly ITransactionRepository _transactionRepository;
-    private readonly ICurrentUserService _currentUser;
-
-    public GetTransactionsQueryHandler(
-        IUserRepository userRepository,
-        ITransactionRepository transactionRepository,
-        ICurrentUserService currentUser)
-    {
-        _userRepository = userRepository;
-        _transactionRepository = transactionRepository;
-        _currentUser = currentUser;
-    }
-
     public async Task<IEnumerable<TransactionDto>> Handle(
         GetTransactionsQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByExternalIdAsync(
-            _currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), _currentUser.ExternalUserId!);
+        var user = await userRepository.GetByExternalIdAsync(
+            currentUser.ExternalUserId!, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
 
-        var transactions = await _transactionRepository.GetByUserAsync(user.Id, cancellationToken);
+        var transactions = await transactionRepository.GetByUserAsync(user.Id, cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(request.Month))
             transactions = transactions.Where(t => t.BudgetMonth == request.Month);

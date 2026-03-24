@@ -4,31 +4,20 @@ using Microsoft.Extensions.Logging;
 
 namespace FinTrackPro.Infrastructure.Services;
 
-public class NotificationService : INotificationService
+public class NotificationService(
+    INotificationPreferenceRepository preferenceRepository,
+    INotificationChannel telegramChannel,
+    ILogger<NotificationService> logger) : INotificationService
 {
-    private readonly INotificationPreferenceRepository _preferenceRepository;
-    private readonly INotificationChannel _telegramChannel;
-    private readonly ILogger<NotificationService> _logger;
-
-    public NotificationService(
-        INotificationPreferenceRepository preferenceRepository,
-        INotificationChannel telegramChannel,
-        ILogger<NotificationService> logger)
-    {
-        _preferenceRepository = preferenceRepository;
-        _telegramChannel = telegramChannel;
-        _logger = logger;
-    }
-
     public async Task NotifyAsync(Guid userId, string title, string body, CancellationToken cancellationToken = default)
     {
-        var pref = await _preferenceRepository.GetByUserAsync(userId, cancellationToken);
+        var pref = await preferenceRepository.GetByUserAsync(userId, cancellationToken);
         if (pref is null || !pref.IsEnabled || string.IsNullOrWhiteSpace(pref.TelegramChatId))
         {
-            _logger.LogDebug("Notification skipped for user {UserId} — no active preference.", userId);
+            logger.LogDebug("Notification skipped for user {UserId} — no active preference.", userId);
             return;
         }
 
-        await _telegramChannel.SendAsync(pref.TelegramChatId, title, body, cancellationToken);
+        await telegramChannel.SendAsync(pref.TelegramChatId, title, body, cancellationToken);
     }
 }
