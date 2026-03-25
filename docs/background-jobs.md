@@ -1,6 +1,6 @@
 # Background Jobs
 
-FinTrackPro runs three Hangfire recurring jobs. All jobs are registered in `Program.cs` and use SQL Server as the Hangfire storage backend.
+FinTrackPro runs three Hangfire recurring jobs. All jobs are registered in `Program.cs`. Hangfire storage uses the active database provider — PostgreSQL (`Hangfire.PostgreSql`) in production on Render, SQL Server (`Hangfire.SqlServer`) for local Docker dev.
 
 | Job | Schedule | Purpose |
 |---|---|---|

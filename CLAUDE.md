@@ -107,7 +107,7 @@ Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
 
 **Local dev secrets:** use `dotnet user-secrets` (Development environment only) to store sensitive values outside the repo. Secrets override `appsettings.Development.json` at runtime:
 ```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<azure-sql-string>" --project backend/src/FinTrackPro.API
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string>" --project backend/src/FinTrackPro.API
 dotnet user-secrets set "IdentityProvider:AdminClientSecret" "<secret>" --project backend/src/FinTrackPro.API
 dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrackPro.API
 ```
@@ -119,11 +119,12 @@ dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrac
 | Frontend (Vite) | 5173 |
 | Keycloak | 8080 |
 | SQL Server | 1433 |
+| PostgreSQL | 5432 |
 | API (Docker) | 5000 |
 
 ## Docs
 - `docs/architecture.md` — layer descriptions and design decisions
-- `docs/dev-setup.md` — hybrid vs full-Docker setup, Azure SQL, Render deployment
+- `docs/dev-setup.md` — hybrid vs full-Docker setup, local PostgreSQL, Render deployment
 - `docs/render-terraform-deploy.md` — Render deploy guide (Terraform primary + render.yaml fallback + migration strategies)
 - `docs/auth-setup.md` — IAM provider setup (Keycloak, Auth0, switching providers)
 - `docs/auth0-config-as-code-plan.md` — plan for Auth0 CLI deploy (not yet implemented)

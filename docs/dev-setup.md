@@ -11,7 +11,8 @@ Two ways to run the full stack locally. **Hybrid mode** is recommended for day-t
   - [Step 2 — Database migration](#step-2--create-and-apply-database-migration-first-time-only)
   - [Step 3 — Run the API](#step-3--run-the-api)
   - [Step 4 — Run the frontend](#step-4--run-the-frontend)
-- [Mode C — Hybrid dev against Azure SQL](#mode-c--hybrid-dev-against-azure-sql)
+- [Mode C — Hybrid dev against local PostgreSQL](#mode-c--hybrid-dev-against-local-postgresql)
+- [Mode D — Hybrid dev against Render PostgreSQL](#mode-d--hybrid-dev-against-render-postgresql-production-db)
 - [Mode E — Running Playwright E2E Tests Locally](#mode-e--running-playwright-e2e-tests-locally)
 - [Port Reference](#port-reference)
 - [Verifying the Stack](#verifying-the-stack)
@@ -209,60 +210,98 @@ Frontend runs at **http://localhost:5173**.
 
 ---
 
-## Mode C — Hybrid dev against Azure SQL
+## Mode C — Hybrid dev against local PostgreSQL
 
-Run the API locally but target Azure SQL instead of the local Docker SQL Server container. Useful when working across multiple machines or when you want to test against the production database schema.
+Run the API locally using the `postgres` Docker service instead of SQL Server. Useful when you want a local environment that matches the production provider.
 
 ### Prerequisites
 
-- Azure SQL database provisioned (see [Azure Portal setup](../docs/auth-setup.md) or the portal checklist in the project plan)
-- Your machine's IP added to the Azure SQL firewall rules (`sql-fintrackpro` → **Security → Networking → Firewall rules**)
-- The ADO.NET connection string copied from the Azure portal (**FinTrackPro database → Connection strings → ADO.NET**)
+- Docker Desktop running
 
-### Step 1 — Set the connection string
+### Step 1 — Start PostgreSQL and Keycloak
 
-Add `DefaultConnection` to `appsettings.Development.json` (this file is gitignored — safe for secrets):
+```bash
+docker compose up -d postgres keycloak
+```
+
+Wait ~10 seconds for PostgreSQL to be ready.
+
+### Step 2 — Set the provider and connection string
+
+Add to `backend/src/FinTrackPro.API/appsettings.Development.json` (gitignored — edit directly):
 
 ```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=tcp:<your-server>.database.windows.net,1433;Initial Catalog=FinTrackPro;Persist Security Info=False;User ID=<admin-login>;Password=<your-password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+{
+  "DatabaseProvider": {
+    "Provider": "postgresql"
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=FinTrackPro;Username=postgres;Password=YourStrong@Passw0rd;"
+  }
 }
 ```
 
-Replace `<your-server>`, `<admin-login>`, and `<your-password>` with the values from the portal.
+### Step 3 — Regenerate and apply migrations
 
-Alternatively, set it as an environment variable for the current shell session only (never committed):
-
-```powershell
-# PowerShell
-$env:ConnectionStrings__DefaultConnection = "Server=tcp:<your-server>.database.windows.net,1433;..."
-```
-
-### Step 2 — Apply migrations
+The existing migration was generated with the SQL Server provider. Before applying to PostgreSQL you must remove it and regenerate so EF emits PostgreSQL-compatible DDL (`uuid`, `text`, `timestamp`, `boolean` instead of SQL Server types).
 
 ```bash
 cd backend
+
+# Remove the SQL Server migration
+dotnet ef migrations remove \
+  --project src/FinTrackPro.Infrastructure \
+  --startup-project src/FinTrackPro.API
+
+# Regenerate with the PostgreSQL provider active
+dotnet ef migrations add InitialCreate \
+  --project src/FinTrackPro.Infrastructure \
+  --startup-project src/FinTrackPro.API
+
+# Apply to the local PostgreSQL database
 dotnet ef database update \
   --project src/FinTrackPro.Infrastructure \
   --startup-project src/FinTrackPro.API
 ```
 
-This applies the `InitialCreate` migration to the Azure database (idempotent — safe to run again if already applied).
+> **Skip the remove/add steps** if the `Migrations/` folder is already empty or was already generated against PostgreSQL.
+
+### Step 4 — Run the API and frontend
+
+Same as Mode B Steps 3 and 4.
+
+---
+
+## Mode D — Hybrid dev against Render PostgreSQL (production DB)
+
+Run the API locally but target the Render production database. Useful when debugging production schema issues.
+
+### Prerequisites
+
+- Terraform applied (`terraform apply` completed)
+
+### Step 1 — Get the external DB URL
+
+```bash
+cd infra/terraform
+terraform output -raw db_external_url
+```
+
+### Step 2 — Set the provider and connection string
+
+```bash
+export DatabaseProvider__Provider=postgresql
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<external-url>" --project backend/src/FinTrackPro.API
+```
 
 ### Step 3 — Run the API
-
-No Docker required — skip `docker compose up` entirely.
 
 ```bash
 cd backend
 dotnet run --project src/FinTrackPro.API --launch-profile http
 ```
 
-### Step 4 — Run the frontend
-
-Same as Mode B Step 4 — no changes needed.
-
-> **Multi-device note:** If you switch networks (home, office, VPN), your public IP changes. Add each new IP in the Azure portal under `sql-fintrackpro` → **Security → Networking → Firewall rules**, or add a `0.0.0.0–255.255.255.255` rule to allow all IPs during development.
+> Avoid running migrations against production unless intentional — the Render DB is shared with live traffic.
 
 ---
 
@@ -274,7 +313,8 @@ Same as Mode B Step 4 — no changes needed.
 | API (local) | hybrid | http://localhost:5018 |
 | API (Docker) | full Docker | http://localhost:5018 |
 | Keycloak | both | http://localhost:8080 |
-| SQL Server | both | localhost:1433 |
+| SQL Server | both (default) | localhost:1433 |
+| PostgreSQL | Mode C (local) | localhost:5432 |
 | Scalar API docs | both | `<api-url>/scalar` |
 | Hangfire dashboard | both | `<api-url>/hangfire` (Basic Auth: `hangfire-admin` / `Dev-Hangfire@1234!`) |
 
@@ -284,7 +324,7 @@ Same as Mode B Step 4 — no changes needed.
 
 Run these checks in order after starting everything:
 
-1. **`<api-url>/scalar`** loads → API is up and connected to SQL Server
+1. **`<api-url>/scalar`** loads → API is up and connected to the database
 2. **http://localhost:8080** shows the Keycloak login page → Auth service is ready
 3. **http://localhost:5173** redirects to the Keycloak login page → Full E2E path is working
 4. Log in as `admin@fintrackpro.dev` / `Admin1234!` → Token is issued and accepted by the API

@@ -21,7 +21,7 @@ graph TD
     Browser["Browser"]
     SPA["React SPA\n(Vite + FSD)"]
     API[".NET 10 API\n(ASP.NET Core)"]
-    DB["SQL Server\n(Azure SQL in prod)"]
+    DB["PostgreSQL\n(Render in prod)"]
     IAM["Keycloak / Auth0\n(OIDC + JWKS)"]
     Binance["Binance API\n(klines, tickers)"]
     CoinGecko["CoinGecko API\n(trending coins)"]
@@ -114,11 +114,11 @@ app → pages → widgets → features → entities → shared
 
 | Decision | Choice | Reason |
 |---|---|---|
-| ORM | EF Core 10 + SQL Server (local Docker) / Azure SQL (production) | Type-safe migrations, Clean Arch compatible; same provider targets both |
+| ORM | EF Core 10 + SQL Server (local Docker) / PostgreSQL (Render production) | Provider-agnostic migrations; active provider selected via `DatabaseProvider:Provider` config key |
 | CQRS | MediatR 12 | Decoupled handlers, pipeline behaviors |
 | Validation | FluentValidation 11 | Declarative, auto-wired via DI |
 | Auth | Keycloak / Auth0 + JWT Bearer | Swappable IAM providers via `IdentityProvider:Provider` config. Roles (`User`/`Admin`) live in the IAM provider only; the active claims transformer maps them to ASP.NET Core `ClaimTypes.Role`. Local `AppUser` stores `ExternalUserId` (JWT `sub`) + `Provider` field; profile is synced on every login via `EnsureUserBehavior`; orphans are soft-deleted nightly by `IamUserSyncJob`. |
-| Background jobs | Hangfire + SQL Server storage | Persistent job history, retry policy |
+| Background jobs | Hangfire + provider-matched storage (PostgreSQL in prod, SQL Server locally) | Persistent job history, retry policy |
 | Indicators | Skender.Stock.Indicators | Free, NuGet, covers RSI/EMA/BB |
 | Notifications | Telegram Bot | No cost, no email infra |
 | Caching | IMemoryCache (in-process) | Single instance — swap to Redis when scaling |
@@ -134,7 +134,9 @@ State is stored in **Terraform Cloud** (free tier). See [render-terraform-deploy
 
 | Resource | Type | Description |
 |---|---|---|
-| `render_web_service.api` | Docker Web Service | .NET 10 API — Starter plan, Oregon region |
+| `render_project.fintrackpro` | Project | Groups all services under the `fintrackpro` project with a `Production` environment |
+| `render_postgres.db` | PostgreSQL Database | Free-tier PostgreSQL 18, Oregon — lifecycle-guarded (never updated/destroyed by Terraform) |
+| `render_web_service.api` | Docker Web Service | .NET 10 API — free plan, Oregon region |
 | `render_static_site.frontend` | Static Site | React/Vite SPA — CDN-distributed globally |
 
 All secrets are stored as sensitive Terraform Cloud workspace variables — never committed to source.
@@ -152,4 +154,4 @@ The `render.yaml` Blueprint at the repo root is retained as a **fallback** for m
 | `FinTrackPro.Domain.UnitTests` | Domain | Pure unit — no mocks needed |
 | `FinTrackPro.Application.UnitTests` | Application | NSubstitute for repositories |
 | `FinTrackPro.Infrastructure.UnitTests` | Infrastructure | NSubstitute + `MockHttpMessageHandler` for typed `HttpClient` |
-| `FinTrackPro.Api.IntegrationTests` | API | Testcontainers (SQL Server), `WebApplicationFactory`, real EF Core |
+| `FinTrackPro.Api.IntegrationTests` | API | Testcontainers (SQL Server), `WebApplicationFactory`, real EF Core — uses SQL Server provider locally |

@@ -1,6 +1,6 @@
 # FinTrackPro — Backend
 
-.NET 10 REST API following Clean Architecture. Authentication via Keycloak JWT, background jobs via Hangfire, persistence via EF Core + SQL Server.
+.NET 10 REST API following Clean Architecture. Authentication via Keycloak JWT, background jobs via Hangfire, persistence via EF Core + SQL Server (local) / PostgreSQL (production).
 
 ## Stack
 
@@ -17,7 +17,9 @@
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- SQL Server 2022 on port 1433 — `docker compose up -d sqlserver` (local dev) **or** Azure SQL (cloud dev, see [Mode C](../docs/dev-setup.md#mode-c--hybrid-dev-against-azure-sql))
+- SQL Server 2022 on port 1433 — `docker compose up -d sqlserver` (local dev, default)
+- **or** PostgreSQL on port 5432 — `docker compose up -d postgres` (local dev with PostgreSQL, set `DatabaseProvider__Provider=postgresql`)
+- **or** Render PostgreSQL (production — auto-provisioned by Terraform, external URL via `terraform output -raw db_external_url`)
 - Keycloak 24 on port 8080 — `docker compose up -d keycloak` *(only when `IdentityProvider:Provider = "keycloak"`; Auth0 requires no local container)*
 
 ## Commands
@@ -79,7 +81,7 @@ Use [.NET User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/a
 dotnet user-secrets init --project src/FinTrackPro.API
 
 # Set secrets
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<azure-sql-connection-string>" --project src/FinTrackPro.API
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string>" --project src/FinTrackPro.API
 dotnet user-secrets set "IdentityProvider:AdminClientSecret" "<your-secret>" --project src/FinTrackPro.API
 dotnet user-secrets set "CoinGecko:ApiKey" "<your-api-key>" --project src/FinTrackPro.API
 

@@ -10,7 +10,7 @@ Personal finance tracking application with budgeting, expense management, and Te
 
 ## Architecture
 
-Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server (local) / Azure SQL (production), with Keycloak or Auth0 for authentication and Hangfire for background jobs. See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
+Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server (local) / PostgreSQL (Render production), with Keycloak or Auth0 for authentication and Hangfire for background jobs. See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
 
 ## Prerequisites
 
@@ -19,7 +19,6 @@ Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server (loca
 | Docker Desktop | Latest | Required for local SQL Server + Keycloak containers |
 | .NET SDK | 10.0 | |
 | Node.js | 22+ | |
-| Azure subscription | — | Required for Azure SQL (production) |
 
 ## Quick Start
 
@@ -47,7 +46,7 @@ cd frontend/fintrackpro-ui && npm install && npm run dev
 
 Open `http://localhost:5173`. Keycloak is provisioned automatically — log in with `admin@fintrackpro.dev` / `Admin1234!`.
 
-See [docs/dev-setup.md](docs/dev-setup.md) for all modes including Azure SQL and Render deployment.
+See [docs/dev-setup.md](docs/dev-setup.md) for all modes including local PostgreSQL and Render deployment.
 
 ## Repository Structure
 
@@ -93,7 +92,7 @@ See [docs/render-terraform-deploy.md](docs/render-terraform-deploy.md) for the f
 
 | Document | Description |
 |---|---|
-| [docs/dev-setup.md](docs/dev-setup.md) | End-to-end dev setup — Docker, hybrid, Azure SQL, Render |
+| [docs/dev-setup.md](docs/dev-setup.md) | End-to-end dev setup — Docker, hybrid, local PostgreSQL, Render |
 | [docs/render-terraform-deploy.md](docs/render-terraform-deploy.md) | Render deployment — Terraform (primary) + render.yaml (fallback) + migration strategies |
 | [docs/auth-setup.md](docs/auth-setup.md) | IAM provider setup — Keycloak and Auth0, switching providers |
 | [docs/architecture.md](docs/architecture.md) | System architecture, layers, data flow, infrastructure |
@@ -119,8 +118,6 @@ dotnet user-secrets set "Telegram:BotToken" "your-token" --project backend/src/F
 
 **Auth0** — requires one-time dashboard setup (API, SPA app, M2M app, roles, post-login Action). See [docs/auth-setup.md](docs/auth-setup.md#auth0-cloud-iam). Switch with `IdentityProvider:Provider = "auth0"` and `VITE_AUTH_PROVIDER=auth0`.
 
-**Azure SQL** — requires portal provisioning and firewall configuration. See [docs/dev-setup.md — Mode C](docs/dev-setup.md#mode-c--hybrid-dev-against-azure-sql).
-
 **EF Core migrations** — Full Docker runs them automatically via the `migrator` init container. For all other modes, run manually:
 ```bash
 cd backend
@@ -128,7 +125,7 @@ dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-pro
 ```
 See [docs/database.md](docs/database.md) for adding new migrations.
 
-**Playwright E2E tests** — requires Docker (Keycloak + SQL Server), the API, and the frontend dev server running. Then:
+**Playwright E2E tests** — requires Docker (Keycloak + SQL Server for local dev), the API, and the frontend dev server running. Then:
 ```bash
 bash scripts/e2e-local.sh      # Git Bash / WSL
 ```

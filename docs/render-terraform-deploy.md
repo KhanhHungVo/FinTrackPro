@@ -12,7 +12,7 @@ The `render.yaml` Blueprint remains in the repo as a fallback for manual one-cli
 - [Terraform CLI >= 1.7](https://developer.hashicorp.com/terraform/install) installed
 - A [Render account](https://render.com) with the repo connected
 - Auth0 tenant configured — see [auth-setup.md](auth-setup.md)
-- Azure SQL database provisioned and connection string ready
+- **No external database required** — PostgreSQL is provisioned by Terraform on Render free tier
 
 ---
 
@@ -26,7 +26,7 @@ In [infra/terraform/render.tf](../infra/terraform/render.tf), replace both place
 repo_url = "https://github.com/your-org/FinTrackPro"
 ```
 
-with your actual GitHub repo URL. There are two occurrences — one per resource.
+with your actual GitHub repo URL. There are two occurrences — one per service resource.
 
 ### Step 2 — Create Terraform Cloud org and workspace
 
@@ -42,18 +42,21 @@ In workspace → **Variables** tab, add each as a **Terraform variable**.
 |---|---|---|
 | `render_api_key` | Render → Account → API Keys | Yes |
 | `render_owner_id` | Run `curl` command below to get `tea-...` / `usr-...` ID | No |
-| `db_connection_string` | Azure SQL ADO.NET connection string | Yes |
 | `auth0_domain` | `dev-xxxx.us.auth0.com` | No |
 | `auth0_m2m_client_id` | Auth0 M2M app client ID | No |
 | `auth0_m2m_client_secret` | Auth0 M2M app client secret | Yes |
 | `cors_origins` | `https://fintrackpro-ui.onrender.com` (update after first deploy) | No |
 | `coingecko_api_key` | CoinGecko Demo or Pro API key | Yes |
 | `telegram_bot_token` | Telegram bot token — leave `""` if unused | Yes |
+| `hangfire_dashboard_password` | Strong password for Hangfire Basic Auth | Yes |
 | `vite_api_base_url` | `https://fintrackpro-api.onrender.com` (update after first deploy) | No |
 | `vite_auth0_domain` | Same as `auth0_domain` | No |
 | `vite_auth0_client_id` | Auth0 SPA app client ID | No |
 
-**Finding your `render_owner_id`:** Render's Account Settings page doesn't show it directly. Fetch it via API:
+> `db_connection_string` is no longer required — the PostgreSQL instance is provisioned by
+> Terraform and its internal connection string is auto-injected into the API.
+
+**Finding your `render_owner_id`:**
 
 ```bash
 curl -s -H "Authorization: Bearer <your_render_api_key>" \
@@ -68,8 +71,8 @@ terraform login                  # one-time — opens browser to generate API to
 
 cd infra/terraform
 terraform init                   # downloads render-oss/render provider, connects to TF Cloud
-terraform plan                   # preview: should show 2 resources to create
-terraform apply                  # type "yes" — deploys both services
+terraform plan                   # preview: should show 4 resources to create
+terraform apply                  # type "yes" — deploys project, DB, API, and frontend
 ```
 
 Terraform outputs the deployed URLs:
@@ -79,7 +82,30 @@ api_url      = "https://fintrackpro-api.onrender.com"
 frontend_url = "https://fintrackpro-ui.onrender.com"
 ```
 
-### Step 5 — Post-deploy wiring
+### Step 5 — Run database migrations
+
+The Render PostgreSQL instance is empty after provisioning. Apply migrations from your local machine using the external DB URL:
+
+```bash
+# Retrieve the external DB URL (sensitive — not shown in plan output)
+cd infra/terraform
+terraform output -raw db_external_url
+
+# DatabaseProvider:Provider is not sensitive — set as env var
+export DatabaseProvider__Provider=postgresql
+
+# Connection string contains credentials — use user-secrets
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<external-url>" \
+  --project backend/src/FinTrackPro.API
+
+# Run migrations
+cd backend
+dotnet ef database update \
+  --project src/FinTrackPro.Infrastructure \
+  --startup-project src/FinTrackPro.API
+```
+
+### Step 6 — Post-deploy wiring
 
 **Update CORS and frontend API URL** — go back to TF Cloud workspace variables:
 
@@ -107,27 +133,26 @@ Use this if you prefer a one-click Render dashboard deploy without Terraform.
 ### Prerequisites
 
 - Auth0 configured (see [auth-setup.md](auth-setup.md))
-- Azure SQL provisioned with firewall rules open to Azure services
 - `render.yaml` committed to `main`
 
 ### Deploy steps
 
 1. Push to `main`
 2. Render dashboard → **New** → **Blueprint** → connect the repo
-3. Render detects both services (`fintrackpro-api`, `fintrackpro-ui`)
-4. Enter all `sync: false` secret values when prompted:
-
-   **API service**
+3. Render detects the `databases:` section and both services
+4. The `fintrackpro-db` PostgreSQL instance is created automatically
+5. `ConnectionStrings__DefaultConnection` is wired from the database via `fromDatabase`
+6. Enter all `sync: false` secret values when prompted:
 
    | Variable | Value |
    |---|---|
-   | `ConnectionStrings__DefaultConnection` | Azure SQL connection string |
    | `IdentityProvider__AdminClientId` | Auth0 M2M app client ID |
    | `IdentityProvider__AdminClientSecret` | Auth0 M2M app client secret |
    | `Auth0__Domain` | e.g. `dev-abc123.us.auth0.com` |
    | `Cors__Origins` | Frontend URL — set after first deploy |
    | `CoinGecko__ApiKey` | Demo or Pro API key |
    | `Telegram__BotToken` | Optional |
+   | `Hangfire__Password` | Strong password |
 
    **Frontend service** (`VITE_*` are build-time — must be set before `npm run build` runs)
 
@@ -137,8 +162,9 @@ Use this if you prefer a one-click Render dashboard deploy without Terraform.
    | `VITE_AUTH0_DOMAIN` | e.g. `dev-abc123.us.auth0.com` |
    | `VITE_AUTH0_CLIENT_ID` | Auth0 SPA client ID |
 
-5. Click **Apply** — both services build in parallel (~3–5 min for .NET Docker build)
-6. After deploy: copy the frontend URL → update `Cors__Origins` → redeploy API
+7. Click **Apply** — all resources build in parallel (~3–5 min for .NET Docker build)
+8. After deploy: copy the frontend URL → update `Cors__Origins` → redeploy API
+9. Run migrations (see Step 5 above using `db_external_url` from the Render dashboard → Database → Connections)
 
 ---
 
@@ -147,8 +173,8 @@ Use this if you prefer a one-click Render dashboard deploy without Terraform.
 The API Docker image (`aspnet:10.0`) has no .NET SDK — `dotnet ef` cannot run in the container. Apply migrations **from your local machine** before any schema-changing deploy:
 
 ```bash
-# Point to production DB via user-secrets or env var (never commit)
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<prod-string>" \
+export DatabaseProvider__Provider=postgresql
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<external-url>" \
   --project backend/src/FinTrackPro.API
 
 cd backend
@@ -157,11 +183,26 @@ dotnet ef database update \
   --startup-project src/FinTrackPro.API
 ```
 
+The external PostgreSQL URL is available via:
+- **Terraform**: `terraform output -raw db_external_url`
+- **Render dashboard**: Database → `fintrackpro-db` → Connections → External Database URL
+
 | Strategy | When to use |
 |---|---|
 | **Manual** (above) | Current approach — simple, full control |
 | **Startup migration** (`db.Database.Migrate()` in `Program.cs`) | Zero-touch PaaS pattern; idempotent but couples migration to app boot |
-| **GitHub Actions** | Best for teams — migration runs in CI before Render deploys, secrets stay in GitHub |
+| **GitHub Actions** | Best for teams — migration runs in CI before Render deploys |
+
+---
+
+## Render Free-Tier PostgreSQL Constraints
+
+| Constraint | Impact |
+|---|---|
+| DB expires after 90 days unless upgraded | Render emails a warning; upgrade or recreate before expiry |
+| 256 MB RAM, 1 GB storage | Suitable for dev / low-traffic prod |
+| No high availability | Acceptable for free tier |
+| Internal URL only reachable within Render | Use external URL for local `dotnet ef` migrations |
 
 ---
 
