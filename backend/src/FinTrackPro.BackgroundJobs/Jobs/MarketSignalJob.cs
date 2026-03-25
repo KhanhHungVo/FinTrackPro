@@ -54,6 +54,8 @@ public class MarketSignalJob(
         });
 
         var rsiResults = quotes.GetRsi(14).ToList();
+        logger.LogInformation("Computed RSI for {Symbol}: latest RSI = {Rsi}",
+            watched.Symbol, rsiResults.LastOrDefault()?.Rsi);
         var latestRsi = rsiResults.LastOrDefault()?.Rsi;
 
         if (latestRsi.HasValue)

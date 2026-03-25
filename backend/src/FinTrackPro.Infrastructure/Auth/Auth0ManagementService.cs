@@ -37,7 +37,7 @@ public class Auth0ManagementService(
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization = new("Bearer", token);
 
-            var response = await http.SendAsync(request, cancellationToken);
+            using var response = await http.SendAsync(request, cancellationToken);
             if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
             {
                 logger.LogWarning("Auth0 Management API rate limit hit — aborting user sync to preserve daily quota");
@@ -85,7 +85,7 @@ public class Auth0ManagementService(
             ["audience"] = $"https://{domain}/api/v2/"
         };
 
-        var response = await http.PostAsync(tokenUrl, new FormUrlEncodedContent(form), cancellationToken);
+        using var response = await http.PostAsync(tokenUrl, new FormUrlEncodedContent(form), cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             logger.LogWarning("Failed to obtain Auth0 management token: {StatusCode}", response.StatusCode);

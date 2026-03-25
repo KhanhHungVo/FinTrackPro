@@ -123,6 +123,33 @@ API listens on **http://localhost:5018** (defined in `Properties/launchSettings.
 The dev `IdentityProvider:AdminClientSecret` is already set in `appsettings.Development.json` so the nightly
 `IamUserSyncJob` works without any extra environment variables.
 
+**HTTP resilience and logging** — defaults in `appsettings.json` are production-safe. Override in
+`appsettings.Development.json` to tune for local dev (e.g., disable masking to see raw payloads):
+
+```json
+{
+  "HttpLogging": {
+    "MaskSensitiveData": false
+  },
+  "HttpResilience": {
+    "RetryCount": 1,
+    "RetryBaseDelayMs": 200,
+    "TimeoutSeconds": 10
+  }
+}
+```
+
+| Key | Default | Purpose |
+|---|---|---|
+| `HttpLogging:MaskSensitiveData` | `true` | Redact sensitive headers/body fields before logging |
+| `HttpResilience:RetryCount` | `3` | Max retry attempts on transient failures |
+| `HttpResilience:RetryBaseDelayMs` | `500` | Base exponential back-off delay (ms) |
+| `HttpResilience:TimeoutSeconds` | `30` | Total request timeout covering all retries |
+| `HttpResilience:CircuitBreakerFailureRatio` | `50` | % failure threshold that opens the circuit |
+| `HttpResilience:CircuitBreakerBreakDurationSeconds` | `30` | How long the circuit stays open |
+| `HttpResilience:CircuitBreakerSamplingDurationSeconds` | `60` | Sliding window for failure ratio measurement |
+| `HttpResilience:CircuitBreakerMinimumThroughput` | `5` | Min requests before circuit can open |
+
 Optional — set environment variables before starting if you need Telegram notifications or CoinGecko data:
 
 ```bash

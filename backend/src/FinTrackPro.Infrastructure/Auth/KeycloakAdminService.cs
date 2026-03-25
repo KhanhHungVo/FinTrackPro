@@ -38,7 +38,7 @@ public class KeycloakAdminService(
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization = new("Bearer", token);
 
-            var response = await http.SendAsync(request, cancellationToken);
+            using var response = await http.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("Keycloak Admin API returned {StatusCode} for users list", response.StatusCode);
@@ -77,7 +77,7 @@ public class KeycloakAdminService(
             ["client_secret"] = clientSecret
         };
 
-        var response = await http.PostAsync(tokenUrl, new FormUrlEncodedContent(form), cancellationToken);
+        using var response = await http.PostAsync(tokenUrl, new FormUrlEncodedContent(form), cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             logger.LogWarning("Failed to obtain Keycloak admin token: {StatusCode}", response.StatusCode);
