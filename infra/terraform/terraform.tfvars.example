@@ -12,6 +12,11 @@ auth0_domain         = "dev-xxxx.us.auth0.com"
 auth0_m2m_client_id  = "your-m2m-client-id"
 
 # ── App ────────────────────────────────────────────────────────────────────────
+# Database connection string is NOT required here — the PostgreSQL instance is
+# provisioned by Terraform (render_postgres.db) and its internal URL is auto-injected
+# into the API service. Retrieve the external URL for local migrations with:
+#   terraform output -raw db_external_url
+
 # Set cors_origins to the frontend URL after first deploy.
 # Re-run `terraform apply` once you have the URL.
 cors_origins = "https://fintrackpro-ui.onrender.com"
@@ -22,7 +27,7 @@ vite_api_base_url    = "https://fintrackpro-api.onrender.com"
 vite_auth0_domain    = "dev-xxxx.us.auth0.com"
 vite_auth0_client_id = "your-spa-client-id"
 
-# Sensitive variables (render_api_key, db_connection_string,
-# auth0_m2m_client_secret, coingecko_api_key, telegram_bot_token)
+# Sensitive variables (render_api_key, auth0_m2m_client_secret, coingecko_api_key,
+# telegram_bot_token, hangfire_dashboard_password)
 # should be set as sensitive Terraform Cloud workspace variables,
 # NOT stored here.

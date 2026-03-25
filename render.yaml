@@ -14,6 +14,12 @@
 #     --startup-project src/FinTrackPro.API
 # See docs/render-migration-strategies.md for automated options.
 
+databases:
+  # ── PostgreSQL (free tier) ────────────────────────────────────────────────────
+  - name: fintrackpro-db
+    plan: free
+    ipAllowList: []
+
 services:
   # ── Backend API ──────────────────────────────────────────────────────────────
   - type: web
@@ -35,9 +41,13 @@ services:
       - key: ASPNETCORE_URLS
         value: http://+:8080
 
-      # Azure SQL connection string — enter in Render dashboard.
       - key: ConnectionStrings__DefaultConnection
-        sync: false
+        fromDatabase:
+          name: fintrackpro-db
+          property: connectionString
+
+      - key: DatabaseProvider__Provider
+        value: postgresql
 
       - key: IdentityProvider__Provider
         value: auth0

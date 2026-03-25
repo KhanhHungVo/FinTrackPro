@@ -10,13 +10,6 @@ variable "render_owner_id" {
   description = "Render owner ID — Render dashboard → Account → ID (usr-...)"
 }
 
-# ── Database ───────────────────────────────────────────────────────────────────
-variable "db_connection_string" {
-  type        = string
-  sensitive   = true
-  description = "Azure SQL ADO.NET connection string"
-}
-
 # ── Auth0 ──────────────────────────────────────────────────────────────────────
 variable "auth0_domain" {
   type        = string
