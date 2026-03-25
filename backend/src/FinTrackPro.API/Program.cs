@@ -1,12 +1,11 @@
 using FinTrackPro.API.Infrastructure;
 using FinTrackPro.API.Middleware;
 using FinTrackPro.Application;
+using FinTrackPro.BackgroundJobs;
 using FinTrackPro.BackgroundJobs.Jobs;
 using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure;
 using Hangfire;
-using Hangfire.PostgreSql;
-using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -121,37 +120,8 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
-// Hangfire
-var dbProvider = builder.Configuration["DatabaseProvider:Provider"] ?? "sqlserver";
-builder.Services.AddHangfire(config =>
-{
-    config
-        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings();
-
-    if (dbProvider == "postgresql")
-        config.UsePostgreSqlStorage(c =>
-            c.UseNpgsqlConnection(
-                builder.Configuration.GetConnectionString("DefaultConnection")));
-    else
-        config.UseSqlServerStorage(
-            builder.Configuration.GetConnectionString("DefaultConnection"),
-            new SqlServerStorageOptions
-            {
-                CommandBatchMaxTimeout       = TimeSpan.FromMinutes(5),
-                SlidingInvisibilityTimeout   = TimeSpan.FromMinutes(5),
-                QueuePollInterval            = TimeSpan.Zero,
-                UseRecommendedIsolationLevel = true,
-                DisableGlobalLocks           = true
-            });
-});
-builder.Services.AddHangfireServer();
-
-// Background job classes
-builder.Services.AddScoped<MarketSignalJob>();
-builder.Services.AddScoped<BudgetOverrunJob>();
-builder.Services.AddScoped<IamUserSyncJob>();
+// Background jobs
+builder.Services.AddBackgroundJobServices();
 
 var app = builder.Build();
 
@@ -168,7 +138,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 // Hangfire Dashboard — Basic Auth
 app.UseHangfireDashboard("/hangfire", new DashboardOptions

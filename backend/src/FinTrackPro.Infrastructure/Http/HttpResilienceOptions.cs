@@ -14,7 +14,7 @@ internal sealed class HttpResilienceOptions
     public int TimeoutSeconds { get; init; } = 30;
 
     /// <summary>Percentage of failures (0–100) within the sampling window that opens the circuit.</summary>
-    public int CircuitBreakerFailureRatio { get; init; } = 50;
+    public int CircuitBreakerFailurePercent { get; init; } = 50;
 
     /// <summary>How long (seconds) the circuit stays open before allowing a probe request.</summary>
     public int CircuitBreakerBreakDurationSeconds { get; init; } = 30;
