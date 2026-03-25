@@ -7,7 +7,7 @@
 | `FinTrackPro.Domain.UnitTests` | Unit tests | Every commit | No |
 | `FinTrackPro.Application.UnitTests` | Unit tests | Every commit | No |
 | `FinTrackPro.Api.IntegrationTests` | Integration tests | Pull request + nightly | Yes |
-| `FinTrackPro.Infrastructure.Tests` | (placeholder) | — | — |
+| `FinTrackPro.Infrastructure.UnitTests` | Unit tests | Every commit | No |
 | `Tests.Common` | Shared fixtures | — | — |
 
 ## Running Tests
@@ -36,6 +36,7 @@ Integration tests use:
 
 - Domain logic tests → `FinTrackPro.Domain.UnitTests/<Feature>/`
 - Application handler tests → `FinTrackPro.Application.UnitTests/<Feature>/` (use NSubstitute for repositories)
+- Infrastructure service tests → `FinTrackPro.Infrastructure.UnitTests/<Layer>/` (use NSubstitute + MockHttpMessageHandler for HttpClient)
 - API endpoint tests → `FinTrackPro.Api.IntegrationTests/Features/<Feature>/`
 
 All integration test classes must be decorated with:

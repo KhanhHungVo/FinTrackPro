@@ -144,3 +144,12 @@ See [infra/terraform/variables.tf](../infra/terraform/variables.tf) for the full
 ### render.yaml
 
 The `render.yaml` Blueprint at the repo root is retained as a **fallback** for manual one-click Render dashboard deploys. Terraform is the authoritative deployment tool.
+
+## Test Projects
+
+| Project | Layer | Type |
+|---|---|---|
+| `FinTrackPro.Domain.UnitTests` | Domain | Pure unit — no mocks needed |
+| `FinTrackPro.Application.UnitTests` | Application | NSubstitute for repositories |
+| `FinTrackPro.Infrastructure.UnitTests` | Infrastructure | NSubstitute + `MockHttpMessageHandler` for typed `HttpClient` |
+| `FinTrackPro.Api.IntegrationTests` | API | Testcontainers (SQL Server), `WebApplicationFactory`, real EF Core |
