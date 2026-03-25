@@ -99,9 +99,9 @@ All external HTTP clients are registered as typed `HttpClient` factories in `Add
 | `IBinanceService` | Spot market data |
 | `ICoinGeckoService` | Crypto prices & metadata |
 | `IFearGreedService` | Fear & Greed index sentiment |
-| `ITelegramBotClient` | Push notifications |
+| `ITelegramBotClient` | Push notifications when Telegram is configured |
 
-`Telegram__BotToken` must be set via environment variable — never in `appsettings.json`.
+`Telegram__BotToken` is optional. If it is not set, the app registers a no-op notification channel and startup still succeeds.
 
 ## Key Configuration
 

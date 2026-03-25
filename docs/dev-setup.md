@@ -146,12 +146,12 @@ The dev `IdentityProvider:AdminClientSecret` is already set in `appsettings.Deve
 | `HttpResilience:RetryCount` | `3` | Max retry attempts on transient failures |
 | `HttpResilience:RetryBaseDelayMs` | `500` | Base exponential back-off delay (ms) |
 | `HttpResilience:TimeoutSeconds` | `30` | Total request timeout covering all retries |
-| `HttpResilience:CircuitBreakerFailureRatio` | `50` | % failure threshold that opens the circuit |
+| `HttpResilience:CircuitBreakerFailurePercent` | `50` | % failure threshold that opens the circuit |
 | `HttpResilience:CircuitBreakerBreakDurationSeconds` | `30` | How long the circuit stays open |
 | `HttpResilience:CircuitBreakerSamplingDurationSeconds` | `60` | Sliding window for failure ratio measurement |
 | `HttpResilience:CircuitBreakerMinimumThroughput` | `5` | Min requests before circuit can open |
 
-Optional — set environment variables before starting if you need Telegram notifications or CoinGecko data:
+Optional — set environment variables before starting if you need Telegram notifications or CoinGecko data. `Telegram__BotToken` is optional; without it, notifications are skipped instead of failing startup:
 
 ```bash
 export Telegram__BotToken="your-token-here"
