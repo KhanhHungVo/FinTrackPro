@@ -12,13 +12,20 @@ public class TelegramNotificationChannel(
     {
         var message = $"*{EscapeMarkdown(title)}*\n{EscapeMarkdown(body)}";
 
-        await botClient.SendMessage(
-            chatId: recipient,
-            text: message,
-            parseMode: Telegram.Bot.Types.Enums.ParseMode.MarkdownV2,
-            cancellationToken: cancellationToken);
+        try
+        {
+            await botClient.SendMessage(
+                chatId: recipient,
+                text: message,
+                parseMode: Telegram.Bot.Types.Enums.ParseMode.MarkdownV2,
+                cancellationToken: cancellationToken);
 
-        logger.LogInformation("Telegram notification sent to chat {ChatId}", recipient);
+            logger.LogInformation("Telegram notification sent to chat {ChatId}", recipient);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to send Telegram notification to chat {ChatId}", recipient);
+        }
     }
 
     private static string EscapeMarkdown(string text) =>

@@ -24,6 +24,12 @@ public class CoinGeckoService(
             var raw = await httpClient.GetFromJsonAsync<JsonElement>(
                 "/api/v3/search/trending", cancellationToken);
 
+            if (raw.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            {
+                logger.LogWarning("Unexpected empty response from CoinGecko trending");
+                return [];
+            }
+
             var coins = raw.GetProperty("coins")
                 .EnumerateArray()
                 .Take(7)

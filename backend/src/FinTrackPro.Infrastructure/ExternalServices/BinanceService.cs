@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FinTrackPro.Application.Common.Interfaces;
@@ -27,14 +28,23 @@ public class BinanceService(
         var raw = await httpClient.GetFromJsonAsync<JsonElement[][]>(url, cancellationToken);
         if (raw is null) return [];
 
-        return raw.Select(k => new KlineDto(
-            OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(k[0].GetInt64()).UtcDateTime,
-            Open: decimal.Parse(k[1].GetString()!),
-            High: decimal.Parse(k[2].GetString()!),
-            Low: decimal.Parse(k[3].GetString()!),
-            Close: decimal.Parse(k[4].GetString()!),
-            Volume: decimal.Parse(k[5].GetString()!)
-        ));
+        var result = new List<KlineDto>(raw.Length);
+        foreach (var k in raw)
+        {
+            if (!decimal.TryParse(k[1].GetString(), CultureInfo.InvariantCulture, out var o) ||
+                !decimal.TryParse(k[2].GetString(), CultureInfo.InvariantCulture, out var h) ||
+                !decimal.TryParse(k[3].GetString(), CultureInfo.InvariantCulture, out var l) ||
+                !decimal.TryParse(k[4].GetString(), CultureInfo.InvariantCulture, out var c) ||
+                !decimal.TryParse(k[5].GetString(), CultureInfo.InvariantCulture, out var v))
+            {
+                logger.LogWarning("Malformed kline data from Binance for {Symbol}, skipping record", symbol);
+                continue;
+            }
+            result.Add(new KlineDto(
+                OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(k[0].GetInt64()).UtcDateTime,
+                Open: o, High: h, Low: l, Close: c, Volume: v));
+        }
+        return result;
     }
 
     public async Task<TickerDto?> Get24HrTickerAsync(string symbol, CancellationToken cancellationToken = default)
@@ -43,13 +53,25 @@ public class BinanceService(
         try
         {
             var raw = await httpClient.GetFromJsonAsync<JsonElement>(url, cancellationToken);
+            if (raw.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            {
+                logger.LogWarning("Unexpected empty response from Binance 24hr ticker for {Symbol}", symbol);
+                return null;
+            }
+
+            if (!decimal.TryParse(raw.GetProperty("volume").GetString(), CultureInfo.InvariantCulture, out var vol) ||
+                !decimal.TryParse(raw.GetProperty("quoteVolume").GetString(), CultureInfo.InvariantCulture, out var qvol))
+            {
+                logger.LogWarning("Malformed numeric fields in Binance 24hr ticker for {Symbol}", symbol);
+                return null;
+            }
+
             return new TickerDto(
                 Symbol: raw.GetProperty("symbol").GetString()!,
-                Volume: decimal.Parse(raw.GetProperty("volume").GetString()!),
-                QuoteVolume: decimal.Parse(raw.GetProperty("quoteVolume").GetString()!)
-            );
+                Volume: vol,
+                QuoteVolume: qvol);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Failed to fetch 24hr ticker for {Symbol}", symbol);
             return null;
@@ -62,6 +84,12 @@ public class BinanceService(
             return cached;
 
         var raw = await httpClient.GetFromJsonAsync<JsonElement>("/api/v3/exchangeInfo", cancellationToken);
+        if (raw.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            logger.LogWarning("Unexpected empty response from Binance exchangeInfo");
+            return [];
+        }
+
         var symbols = raw.GetProperty("symbols")
             .EnumerateArray()
             .Select(s => s.GetProperty("symbol").GetString()!)

@@ -24,7 +24,20 @@ public class FearGreedService(
             var raw = await httpClient.GetFromJsonAsync<JsonElement>(
                 "/fng/?limit=1", cancellationToken);
 
-            var data = raw.GetProperty("data")[0];
+            if (raw.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            {
+                logger.LogWarning("Unexpected empty response from Fear & Greed API");
+                return null;
+            }
+
+            var dataArray = raw.GetProperty("data");
+            if (dataArray.GetArrayLength() == 0)
+            {
+                logger.LogWarning("Fear & Greed API returned empty data array");
+                return null;
+            }
+
+            var data = dataArray[0];
             var value = int.Parse(data.GetProperty("value").GetString()!);
             var label = data.GetProperty("value_classification").GetString()!;
             var ts = DateTimeOffset.FromUnixTimeSeconds(

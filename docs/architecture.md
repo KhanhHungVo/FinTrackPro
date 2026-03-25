@@ -73,6 +73,10 @@ graph TD
   - `KeycloakAdminService` (`IIamProviderService`) — calls Keycloak Admin REST API via client-credentials
   - `Auth0ManagementService` (`IIamProviderService`) — calls Auth0 Management API v2 via client-credentials
 - `IMemoryCache` for external API responses
+- **Cancellation semantics** — all infrastructure services let `OperationCanceledException` propagate
+  (via `catch (Exception ex) when (ex is not OperationCanceledException)`). This ensures Hangfire
+  shutdown tokens held by background jobs (e.g., `MarketSignalJob`) can cancel in-flight work cleanly.
+  Non-cancellation exceptions are caught, logged, and suppressed at the service boundary.
 
 ### API (`FinTrackPro.API`)
 - Thin controllers — delegate to `Mediator.Send()`

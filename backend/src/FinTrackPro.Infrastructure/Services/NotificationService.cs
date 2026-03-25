@@ -18,6 +18,13 @@ public class NotificationService(
             return;
         }
 
-        await telegramChannel.SendAsync(pref.TelegramChatId, title, body, cancellationToken);
+        try
+        {
+            await telegramChannel.SendAsync(pref.TelegramChatId, title, body, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Notification channel failed for user {UserId}", userId);
+        }
     }
 }
