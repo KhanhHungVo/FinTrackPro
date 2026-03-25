@@ -11,10 +11,10 @@ public class TradeConfiguration : IEntityTypeConfiguration<Trade>
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Symbol).HasMaxLength(20).IsRequired();
         builder.Property(t => t.Direction).IsRequired();
-        builder.Property(t => t.EntryPrice).HasColumnType("decimal(18,8)").IsRequired();
-        builder.Property(t => t.ExitPrice).HasColumnType("decimal(18,8)").IsRequired();
-        builder.Property(t => t.PositionSize).HasColumnType("decimal(18,8)").IsRequired();
-        builder.Property(t => t.Fees).HasColumnType("decimal(18,8)").IsRequired();
+        builder.Property(t => t.EntryPrice).HasPrecision(18, 8).IsRequired();
+        builder.Property(t => t.ExitPrice).HasPrecision(18, 8).IsRequired();
+        builder.Property(t => t.PositionSize).HasPrecision(18, 8).IsRequired();
+        builder.Property(t => t.Fees).HasPrecision(18, 8).IsRequired();
         builder.Property(t => t.Notes).HasMaxLength(1000);
 
         // Result is a computed property — not stored in DB

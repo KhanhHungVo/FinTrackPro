@@ -22,10 +22,18 @@ public static class DependencyInjection
         this IServiceCollection services, IConfiguration configuration)
     {
         // Database
+        var dbProvider = configuration["DatabaseProvider:Provider"] ?? "sqlserver";
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+        {
+            if (dbProvider == "postgresql")
+                options.UseNpgsql(
+                    configuration.GetConnectionString("DefaultConnection"),
+                    b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
+            else
+                options.UseSqlServer(
+                    configuration.GetConnectionString("DefaultConnection"),
+                    b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
+        });
 
         services.AddScoped<IApplicationDbContext>(p =>
             p.GetRequiredService<ApplicationDbContext>());

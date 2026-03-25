@@ -5,6 +5,7 @@ using FinTrackPro.BackgroundJobs.Jobs;
 using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure;
 using Hangfire;
+using Hangfire.PostgreSql;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -121,19 +122,30 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()));
 
 // Hangfire
-builder.Services.AddHangfire(config => config
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-    .UseSimpleAssemblyNameTypeSerializer()
-    .UseRecommendedSerializerSettings()
-    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"),
-        new SqlServerStorageOptions
-        {
-            CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-            SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-            QueuePollInterval = TimeSpan.Zero,
-            UseRecommendedIsolationLevel = true,
-            DisableGlobalLocks = true
-        }));
+var dbProvider = builder.Configuration["DatabaseProvider:Provider"] ?? "sqlserver";
+builder.Services.AddHangfire(config =>
+{
+    config
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings();
+
+    if (dbProvider == "postgresql")
+        config.UsePostgreSqlStorage(c =>
+            c.UseNpgsqlConnection(
+                builder.Configuration.GetConnectionString("DefaultConnection")));
+    else
+        config.UseSqlServerStorage(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            new SqlServerStorageOptions
+            {
+                CommandBatchMaxTimeout       = TimeSpan.FromMinutes(5),
+                SlidingInvisibilityTimeout   = TimeSpan.FromMinutes(5),
+                QueuePollInterval            = TimeSpan.Zero,
+                UseRecommendedIsolationLevel = true,
+                DisableGlobalLocks           = true
+            });
+});
 builder.Services.AddHangfireServer();
 
 // Background job classes

@@ -12,7 +12,7 @@ public class SignalConfiguration : IEntityTypeConfiguration<Signal>
         builder.Property(s => s.Symbol).HasMaxLength(20).IsRequired();
         builder.Property(s => s.SignalType).IsRequired();
         builder.Property(s => s.Message).HasMaxLength(500).IsRequired();
-        builder.Property(s => s.Value).HasColumnType("decimal(18,8)");
+        builder.Property(s => s.Value).HasPrecision(18, 8);
         builder.Property(s => s.Timeframe).HasMaxLength(10);
         builder.HasIndex(s => new { s.UserId, s.CreatedAt });
 

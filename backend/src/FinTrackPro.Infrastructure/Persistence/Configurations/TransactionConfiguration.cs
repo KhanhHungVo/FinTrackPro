@@ -9,7 +9,7 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
         builder.HasKey(t => t.Id);
-        builder.Property(t => t.Amount).HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(t => t.Amount).HasPrecision(18, 2).IsRequired();
         builder.Property(t => t.Category).HasMaxLength(100).IsRequired();
         builder.Property(t => t.Note).HasMaxLength(500);
         builder.Property(t => t.BudgetMonth).HasMaxLength(7).IsRequired();
