@@ -10,6 +10,20 @@ jobs:
   backend:
     name: Backend — Build & Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: fintrackpro_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: YourStrong@Passw0rd
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +42,8 @@ jobs:
         run: dotnet test backend/FinTrackPro.slnx --no-build -c Release --filter "Category!=Integration" --logger "trx;LogFileName=unit-test-results.trx"
 
       - name: Integration Tests
+        env:
+          TEST_DB_CONNECTION_STRING: "Host=localhost;Port=5432;Database=fintrackpro_test;Username=postgres;Password=YourStrong@Passw0rd"
         run: dotnet test backend/FinTrackPro.slnx --no-build -c Release --filter "Category=Integration" --logger "trx;LogFileName=integration-test-results.trx"
 
       - name: Docker Build
@@ -74,10 +90,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start SQL Server + Keycloak
+      - name: Start PostgreSQL + Keycloak
         working-directory: .
         run: |
-          docker compose up -d sqlserver keycloak
+          docker compose up -d postgres keycloak
           echo "Waiting for Keycloak to become ready…"
           for i in $(seq 1 36); do
             curl -sf http://localhost:8080/realms/fintrackpro && echo "Keycloak ready" && break
