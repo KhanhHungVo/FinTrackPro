@@ -107,7 +107,7 @@ app → pages → widgets → features → entities → shared
 |---|---|
 | `app/` | QueryProvider, BrowserRouter + Outlet layout, global CSS |
 | `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage |
-| `widgets/` | Navbar, FearGreedWidget, SignalsList |
+| `widgets/` | Navbar, FearGreedWidget, SignalsList, TrendingCoinsWidget |
 | `features/` | AddTransactionForm, AddTradeForm, AddBudgetForm, NotificationSettingsForm, WatchlistManager, authStore (Zustand — `accessToken`, `displayName`, `email`, `isAuthenticated`) |
 | `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference — types + React Query hooks |
 | `shared/` | Axios client (Bearer injection + redirect on 401), `auth/` adapter (Keycloak or Auth0), env config, `cn()` |
