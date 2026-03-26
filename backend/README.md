@@ -1,6 +1,6 @@
 # FinTrackPro — Backend
 
-.NET 10 REST API following Clean Architecture. Authentication via Keycloak JWT, background jobs via Hangfire, persistence via EF Core + SQL Server (local) / PostgreSQL (production).
+.NET 10 REST API following Clean Architecture. Authentication via Keycloak JWT, background jobs via Hangfire, persistence via EF Core + PostgreSQL.
 
 ## Stack
 
@@ -17,8 +17,8 @@
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- SQL Server 2022 on port 1433 — `docker compose up -d sqlserver` (local dev, default)
-- **or** PostgreSQL on port 5432 — `docker compose up -d postgres` (local dev with PostgreSQL, set `DatabaseProvider__Provider=postgresql`)
+- PostgreSQL on port 5432 — `docker compose up -d postgres`
+  (also required for integration tests — see [tests/README.md](tests/README.md))
 - **or** Render PostgreSQL (production — auto-provisioned by Terraform, external URL via `terraform output -raw db_external_url`)
 - Keycloak 24 on port 8080 — `docker compose up -d keycloak` *(only when `IdentityProvider:Provider = "keycloak"`; Auth0 requires no local container)*
 
@@ -43,17 +43,15 @@ API listens on `http://localhost:5018`.
 ### Run tests
 
 ```bash
-# Unit tests only (fast, no Docker)
+# Unit tests only (fast, no external dependencies)
 dotnet test --filter "Category!=Integration"
 
-# Integration tests (requires Docker — SQL Server spun up via Testcontainers)
+# Integration tests (requires local PostgreSQL — see tests/README.md)
 dotnet test --filter "Category=Integration"
 
 # All tests
 dotnet test
 ```
-
-> Integration tests pull `mcr.microsoft.com/mssql/server:2022-latest` automatically via Testcontainers. Docker must be running.
 
 ## EF Core Migrations
 

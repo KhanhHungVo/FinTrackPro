@@ -11,8 +11,8 @@ dotnet restore
 dotnet build
 dotnet run --project src/FinTrackPro.API
 dotnet test                                           # all tests
-dotnet test --filter "Category!=Integration"          # unit tests only (no Docker)
-dotnet test --filter "Category=Integration"           # integration tests (Docker required)
+dotnet test --filter "Category!=Integration"          # unit tests only (no external dependencies)
+dotnet test --filter "Category=Integration"           # integration tests (requires local PostgreSQL — set TEST_DB_CONNECTION_STRING)
 dotnet test --filter "FullyQualifiedName~<Test>"      # single test
 
 # EF Core migrations
