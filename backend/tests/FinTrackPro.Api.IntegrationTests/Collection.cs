@@ -6,5 +6,5 @@ namespace FinTrackPro.Api.IntegrationTests;
 public class IntegrationTestCollection : ICollectionFixture<DatabaseFixture>
 {
     // Marker class. Wires DatabaseFixture as a shared fixture for all integration test classes.
-    // One Testcontainers SQL Server instance is created for the entire test run.
+    // One PostgreSQL DatabaseFixture is shared across the entire test run.
 }

@@ -8,38 +8,45 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Testcontainers.MsSql;
 
 namespace Tests.Common;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly MsSqlContainer _dbContainer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
-        .Build();
+    public string ConnectionString { get; } = ResolveConnectionString();
 
-    public string ConnectionString => _dbContainer.GetConnectionString();
+    private static string ResolveConnectionString()
+    {
+        if (Environment.GetEnvironmentVariable("TEST_DB_CONNECTION_STRING") is { } cs)
+            return cs;
+
+        return new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "testsettings.json"))
+            .Build()
+            .GetConnectionString("DefaultConnection")!;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Override connection string so Hangfire reads the Testcontainers DB, not appsettings.json
+        // Override connection string so Hangfire and the app read the test DB, not appsettings.json
         builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString()
+                ["ConnectionStrings:DefaultConnection"] = ConnectionString
             });
         });
 
         builder.ConfigureServices(services =>
         {
-            // Replace real DbContext with Testcontainers connection
+            // Replace real DbContext with the test PostgreSQL connection
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
             if (descriptor is not null)
                 services.Remove(descriptor);
 
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(_dbContainer.GetConnectionString()));
+                options.UseNpgsql(ConnectionString));
 
             // Replace IBinanceService with a stub that accepts all symbols
             var binanceDescriptor = services.SingleOrDefault(
@@ -75,15 +82,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     public async Task InitializeAsync()
     {
-        await _dbContainer.StartAsync();
-
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await db.Database.EnsureDeletedAsync();
         await db.Database.MigrateAsync();
     }
 
-    public new async Task DisposeAsync()
-    {
-        await _dbContainer.StopAsync();
-    }
+    public new Task DisposeAsync() => Task.CompletedTask;
 }
