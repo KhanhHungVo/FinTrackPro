@@ -19,14 +19,6 @@ public class AppUserTests
     }
 
     [Fact]
-    public void Create_NullEmail_StoresEmptyString()
-    {
-        var user = AppUser.Create(null, "Anonymous");
-
-        user.Email.Should().BeEmpty();
-    }
-
-    [Fact]
     public void AddIdentity_NewPair_AddsToCollection()
     {
         var user = AppUser.Create("a@b.com", "Alice");

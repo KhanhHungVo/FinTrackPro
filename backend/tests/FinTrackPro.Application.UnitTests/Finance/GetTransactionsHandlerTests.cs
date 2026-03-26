@@ -30,6 +30,10 @@ public class GetTransactionsHandlerTests
         var older = Transaction.Create(TestUser.Id, TransactionType.Expense, 10m, "Food", null, "2026-02");
         var newer = Transaction.Create(TestUser.Id, TransactionType.Income, 200m, "Salary", null, "2026-03");
 
+        // Force distinct timestamps so OrderByDescending is deterministic
+        SetCreatedAt(older, DateTime.UtcNow.AddMinutes(-1));
+        SetCreatedAt(newer, DateTime.UtcNow);
+
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _transactionRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
@@ -57,6 +61,10 @@ public class GetTransactionsHandlerTests
         result.Should().HaveCount(1);
         result.Single().BudgetMonth.Should().Be("2026-03");
     }
+
+    private static void SetCreatedAt(Transaction t, DateTime value) =>
+        typeof(Transaction).GetProperty(nameof(Transaction.CreatedAt))!
+            .SetValue(t, value);
 
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
