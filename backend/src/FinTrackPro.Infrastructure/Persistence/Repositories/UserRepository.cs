@@ -11,9 +11,11 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
         context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
     public Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
-        context.Users.FirstOrDefaultAsync(
-            u => u.Email == email.Trim().ToLowerInvariant(),
-            cancellationToken);
+        context.Users
+            .Include(u => u.Identities)
+            .FirstOrDefaultAsync(
+                u => u.Email == email.Trim().ToLowerInvariant(),
+                cancellationToken);
 
     public Task<List<AppUser>> GetAllAsync(CancellationToken cancellationToken = default) =>
         context.Users.ToListAsync(cancellationToken);
