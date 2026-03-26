@@ -11,6 +11,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         : base(options) { }
 
     public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<UserIdentity> UserIdentities => Set<UserIdentity>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<Trade> Trades => Set<Trade>();

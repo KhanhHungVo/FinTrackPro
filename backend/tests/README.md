@@ -28,9 +28,9 @@ dotnet test
 Integration tests use:
 - **Testcontainers.MsSql** — spins up a real SQL Server 2022 container per test run
 - **Respawn** — resets all tables to a clean state between each test class
-- **FakeCurrentUserService** — simulates `KeycloakUserId = "test-keycloak-id"` (the `EnsureUserBehavior` pipeline auto-provisions the `AppUser` on the first request)
+- **AuthTokenFactory** — issues local symmetric-key JWTs (with `sub`, `iss`, `email`, `email_verified` claims) accepted by the test API (Keycloak validation is replaced in `CustomWebApplicationFactory`)
+- **UserContextMiddleware + IdentityService** — auto-provisions the `AppUser` on the first authenticated request; no fake user service needed
 - **FakeBinanceService** — accepts all symbols as valid; avoids real Binance HTTP calls
-- **AuthTokenFactory** — issues local symmetric-key JWTs accepted by the test API (Keycloak validation is replaced in `CustomWebApplicationFactory`)
 
 ## Adding New Tests
 

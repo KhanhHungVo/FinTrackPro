@@ -11,16 +11,16 @@ namespace FinTrackPro.Application.UnitTests.Notifications;
 public class GetNotificationPreferenceHandlerTests
 {
     private readonly INotificationPreferenceRepository _preferenceRepository = Substitute.For<INotificationPreferenceRepository>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly GetNotificationPreferenceQueryHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public GetNotificationPreferenceHandlerTests()
     {
         _handler = new GetNotificationPreferenceQueryHandler(_userRepository, _preferenceRepository, _currentUser);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class GetNotificationPreferenceHandlerTests
     {
         var preference = NotificationPreference.CreateTelegram(TestUser.Id, "123456789");
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _preferenceRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(preference);
@@ -42,7 +42,7 @@ public class GetNotificationPreferenceHandlerTests
     [Fact]
     public async Task Handle_NoPreference_ReturnsNull()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _preferenceRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((NotificationPreference?)null);
@@ -55,7 +55,7 @@ public class GetNotificationPreferenceHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(new GetNotificationPreferenceQuery(), CancellationToken.None);

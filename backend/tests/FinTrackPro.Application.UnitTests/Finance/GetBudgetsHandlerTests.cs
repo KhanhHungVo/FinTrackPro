@@ -11,16 +11,16 @@ namespace FinTrackPro.Application.UnitTests.Finance;
 public class GetBudgetsHandlerTests
 {
     private readonly IBudgetRepository _budgetRepository = Substitute.For<IBudgetRepository>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly GetBudgetsQueryHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public GetBudgetsHandlerTests()
     {
         _handler = new GetBudgetsQueryHandler(_userRepository, _budgetRepository, _currentUser);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class GetBudgetsHandlerTests
             Budget.Create(TestUser.Id, "Transport", 200m, "2026-03"),
         };
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _budgetRepository.GetByUserAndMonthAsync(TestUser.Id, "2026-03", Arg.Any<CancellationToken>())
             .Returns(budgets);
@@ -45,7 +45,7 @@ public class GetBudgetsHandlerTests
     [Fact]
     public async Task Handle_NoBudgetsForMonth_ReturnsEmpty()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _budgetRepository.GetByUserAndMonthAsync(TestUser.Id, "2026-03", Arg.Any<CancellationToken>())
             .Returns(new List<Budget>());
@@ -58,7 +58,7 @@ public class GetBudgetsHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(new GetBudgetsQuery("2026-03"), CancellationToken.None);

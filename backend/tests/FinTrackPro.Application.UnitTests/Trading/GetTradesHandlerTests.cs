@@ -12,16 +12,16 @@ namespace FinTrackPro.Application.UnitTests.Trading;
 public class GetTradesHandlerTests
 {
     private readonly ITradeRepository _tradeRepository = Substitute.For<ITradeRepository>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly GetTradesQueryHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public GetTradesHandlerTests()
     {
         _handler = new GetTradesQueryHandler(_userRepository, _tradeRepository, _currentUser);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public class GetTradesHandlerTests
             Trade.Create(TestUser.Id, "ETHUSDT", TradeDirection.Short, 2000m, 1800m, 1m, 2m, null),
         };
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _tradeRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(trades);
@@ -46,7 +46,7 @@ public class GetTradesHandlerTests
     [Fact]
     public async Task Handle_NoTrades_ReturnsEmpty()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _tradeRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(new List<Trade>());
@@ -59,7 +59,7 @@ public class GetTradesHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(new GetTradesQuery(), CancellationToken.None);

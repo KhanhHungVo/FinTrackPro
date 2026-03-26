@@ -5,6 +5,7 @@ using FinTrackPro.BackgroundJobs;
 using FinTrackPro.BackgroundJobs.Jobs;
 using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure;
+using FinTrackPro.Infrastructure.Identity;
 using Hangfire;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -136,6 +137,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+app.UseMiddleware<UserContextMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();

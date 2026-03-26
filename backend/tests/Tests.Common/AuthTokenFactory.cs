@@ -15,14 +15,17 @@ public static class AuthTokenFactory
     public const string TestIssuer = "fintrackpro-test";
     public const string TestAudience = "fintrackpro-api-test";
 
-    public static string GenerateToken(string keycloakUserId, params string[] roles)
+    public static string GenerateToken(string userId, params string[] roles)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TestSigningKey));
 
         var claims = new List<Claim>
         {
-            new("sub", keycloakUserId),
-            new(ClaimTypes.NameIdentifier, keycloakUserId),
+            new("sub", userId),
+            new("iss", TestIssuer),
+            new(ClaimTypes.NameIdentifier, userId),
+            new("email", $"{userId}@test.fintrackpro.dev"),
+            new("email_verified", "true"),
         };
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 

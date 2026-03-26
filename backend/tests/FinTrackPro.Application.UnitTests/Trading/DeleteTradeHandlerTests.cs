@@ -13,16 +13,16 @@ public class DeleteTradeHandlerTests
 {
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly ITradeRepository _tradeRepository = Substitute.For<ITradeRepository>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly DeleteTradeCommandHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public DeleteTradeHandlerTests()
     {
         _handler = new DeleteTradeCommandHandler(_context, _tradeRepository, _currentUser, _userRepository);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
         _context.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
     }
 
@@ -31,7 +31,7 @@ public class DeleteTradeHandlerTests
     {
         var trade = Trade.Create(TestUser.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, null);
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _tradeRepository.GetByIdAsync(trade.Id, Arg.Any<CancellationToken>())
             .Returns(trade);
@@ -45,7 +45,7 @@ public class DeleteTradeHandlerTests
     [Fact]
     public async Task Handle_TradeNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _tradeRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((Trade?)null);
@@ -59,10 +59,10 @@ public class DeleteTradeHandlerTests
     [Fact]
     public async Task Handle_TradeOwnedByOtherUser_ThrowsDomainException()
     {
-        var otherUser = AppUser.Create("kc-other", "other@dev.com", "Other", "local");
+        var otherUser = AppUser.Create("other@dev.com", "Other");
         var trade = Trade.Create(otherUser.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, null);
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _tradeRepository.GetByIdAsync(trade.Id, Arg.Any<CancellationToken>())
             .Returns(trade);

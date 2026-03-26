@@ -12,16 +12,16 @@ public class UpdateBudgetHandlerTests
 {
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly IBudgetRepository _budgetRepository = Substitute.For<IBudgetRepository>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly UpdateBudgetCommandHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public UpdateBudgetHandlerTests()
     {
         _handler = new UpdateBudgetCommandHandler(_context, _budgetRepository, _currentUser, _userRepository);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
         _context.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
     }
 
@@ -30,7 +30,7 @@ public class UpdateBudgetHandlerTests
     {
         var budget = Budget.Create(TestUser.Id, "Food", 500m, "2026-03");
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _budgetRepository.GetByIdAsync(budget.Id, Arg.Any<CancellationToken>())
             .Returns(budget);
@@ -44,7 +44,7 @@ public class UpdateBudgetHandlerTests
     [Fact]
     public async Task Handle_BudgetNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _budgetRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((Budget?)null);
@@ -58,10 +58,10 @@ public class UpdateBudgetHandlerTests
     [Fact]
     public async Task Handle_BudgetOwnedByOtherUser_ThrowsDomainException()
     {
-        var otherUser = AppUser.Create("kc-other", "other@dev.com", "Other", "local");
+        var otherUser = AppUser.Create("other@dev.com", "Other");
         var budget = Budget.Create(otherUser.Id, "Food", 500m, "2026-03");
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _budgetRepository.GetByIdAsync(budget.Id, Arg.Any<CancellationToken>())
             .Returns(budget);
@@ -76,7 +76,7 @@ public class UpdateBudgetHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(

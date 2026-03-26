@@ -51,7 +51,8 @@ Follow this pattern for every new capability:
 Every command/query automatically passes through, in order:
 1. `ValidationBehavior` — runs all registered FluentValidation validators; throws `ValidationException` (→ HTTP 400) on failure.
 2. `LoggingBehavior` — logs request name and elapsed time.
-3. `EnsureUserBehavior` — if the caller has an external IAM ID and no `AppUser` row exists, creates one (auto-provisions on first login).
+
+User auto-provisioning is handled **before** MediatR by `UserContextMiddleware` (see below).
 
 ## Roles
 
@@ -81,12 +82,14 @@ Exception hierarchy: `DomainException` ← `AuthorizationException`, `ConflictEx
 
 ## Current User
 
-Inject `ICurrentUserService` to get the authenticated user's ID from the JWT claim. Available in Application layer handlers.
+`UserContextMiddleware` runs once per authenticated HTTP request: it calls `IIdentityService.ResolveAsync`, creates or links the local `AppUser`, and stores the result in `HttpContext.Items`.
+
+Inject `ICurrentUser` (exposes `Guid UserId`) in Application layer handlers to get the resolved user. `CurrentUserAccessor` (Infrastructure) implements it by reading from `HttpContext.Items`.
 
 ## Testing Conventions
 
 - **Domain.Tests** — pure unit tests, no mocks needed.
-- **Application.Tests** — mock repositories and `ICurrentUserService` with **NSubstitute**. Do not mock `MediatR` itself; test handlers directly.
+- **Application.Tests** — mock repositories and `ICurrentUser` with **NSubstitute**. Do not mock `MediatR` itself; test handlers directly.
 - **Infrastructure.Tests** — use real EF Core with an in-memory or SQLite provider; do not mock the database.
 - Assertions use **FluentAssertions** throughout.
 

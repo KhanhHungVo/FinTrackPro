@@ -21,6 +21,10 @@ public class Auth0ManagementService(
     IConfiguration configuration,
     ILogger<Auth0ManagementService> logger) : IIamProviderService
 {
+    /// <summary>Auth0 issuer URL matches <c>https://{domain}/</c> (trailing slash required).</summary>
+    public string ProviderIssuer =>
+        $"https://{configuration["Auth0:Domain"] ?? throw new InvalidOperationException("Auth0:Domain is required.")}/";
+
     public async Task<List<IamUserInfo>> GetAllUsersAsync(CancellationToken cancellationToken = default)
     {
         var token = await GetManagementTokenAsync(cancellationToken);

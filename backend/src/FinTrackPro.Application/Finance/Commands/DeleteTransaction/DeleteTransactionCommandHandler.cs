@@ -9,14 +9,13 @@ namespace FinTrackPro.Application.Finance.Commands.DeleteTransaction;
 public class DeleteTransactionCommandHandler(
     IApplicationDbContext context,
     ITransactionRepository transactionRepository,
-    ICurrentUserService currentUser,
+    ICurrentUser currentUser,
     IUserRepository userRepository) : IRequestHandler<DeleteTransactionCommand>
 {
     public async Task Handle(DeleteTransactionCommand request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var transaction = await transactionRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Transaction), request.Id);

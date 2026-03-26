@@ -9,15 +9,14 @@ namespace FinTrackPro.Application.Notifications.Queries.GetNotificationPreferenc
 public class GetNotificationPreferenceQueryHandler(
     IUserRepository userRepository,
     INotificationPreferenceRepository preferenceRepository,
-    ICurrentUserService currentUser)
+    ICurrentUser currentUser)
     : IRequestHandler<GetNotificationPreferenceQuery, NotificationPreferenceDto?>
 {
     public async Task<NotificationPreferenceDto?> Handle(
         GetNotificationPreferenceQuery request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var pref = await preferenceRepository.GetByUserAsync(user.Id, cancellationToken);
         return pref is null ? null : (NotificationPreferenceDto)pref;

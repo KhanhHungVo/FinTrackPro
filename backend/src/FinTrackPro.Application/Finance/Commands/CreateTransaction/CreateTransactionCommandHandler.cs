@@ -8,14 +8,13 @@ namespace FinTrackPro.Application.Finance.Commands.CreateTransaction;
 
 public class CreateTransactionCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUser,
+    ICurrentUser currentUser,
     IUserRepository userRepository) : IRequestHandler<CreateTransactionCommand, Guid>
 {
     public async Task<Guid> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var transaction = Transaction.Create(
             user.Id, request.Type, request.Amount,

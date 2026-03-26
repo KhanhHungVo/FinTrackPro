@@ -6,64 +6,90 @@ namespace FinTrackPro.Domain.UnitTests.Users;
 public class AppUserTests
 {
     [Fact]
-    public void Create_ValidArguments_ReturnsAppUser()
+    public void Create_ValidArguments_SetsAllFields()
     {
-        var user = AppUser.Create("kc-123", "Test@Example.com", "  Test User  ", "local");
+        var user = AppUser.Create("  Test@Example.com  ", "  Test User  ");
 
         user.Id.Should().NotBeEmpty();
-        user.ExternalUserId.Should().Be("kc-123");
-        user.Email.Should().Be("test@example.com");    // lowercased
-        user.DisplayName.Should().Be("Test User");     // trimmed
-        user.Provider.Should().Be("local");
+        user.Email.Should().Be("test@example.com");   // lowercased + trimmed
+        user.DisplayName.Should().Be("Test User");    // trimmed
         user.IsActive.Should().BeTrue();
+        user.Identities.Should().BeEmpty();
         user.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public void Create_NullEmail_StoresEmptyString()
+    {
+        var user = AppUser.Create(null, "Anonymous");
+
+        user.Email.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddIdentity_NewPair_AddsToCollection()
+    {
+        var user = AppUser.Create("a@b.com", "Alice");
+
+        user.AddIdentity("kc-1", "http://keycloak/realm");
+
+        user.Identities.Should().HaveCount(1);
+        user.Identities.Single().ExternalUserId.Should().Be("kc-1");
+        user.Identities.Single().Provider.Should().Be("http://keycloak/realm");
+    }
+
+    [Fact]
+    public void AddIdentity_DuplicatePair_IsIdempotent()
+    {
+        var user = AppUser.Create("a@b.com", "Alice");
+        user.AddIdentity("kc-1", "http://keycloak/realm");
+
+        user.AddIdentity("kc-1", "http://keycloak/realm");
+
+        user.Identities.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void UpdateProfile_ChangedValues_ReturnsTrueAndUpdatesFields()
+    {
+        var user = AppUser.Create("old@b.com", "Old Name");
+
+        var changed = user.UpdateProfile("NEW@EXAMPLE.COM", "  New Name  ");
+
+        changed.Should().BeTrue();
+        user.Email.Should().Be("new@example.com");
+        user.DisplayName.Should().Be("New Name");
+    }
+
+    [Fact]
+    public void UpdateProfile_UnchangedActiveUser_ReturnsFalse()
+    {
+        var user = AppUser.Create("a@b.com", "Alice");
+
+        var changed = user.UpdateProfile("a@b.com", "Alice");
+
+        changed.Should().BeFalse();
+    }
+
+    [Fact]
+    public void UpdateProfile_DeactivatedUser_ReactivatesAndReturnsTrue()
+    {
+        var user = AppUser.Create("a@b.com", "Alice");
+        user.Deactivate();
+
+        var changed = user.UpdateProfile("a@b.com", "Alice");
+
+        changed.Should().BeTrue();
+        user.IsActive.Should().BeTrue();
     }
 
     [Fact]
     public void Deactivate_SetsIsActiveToFalse()
     {
-        var user = AppUser.Create("kc-1", "a@b.com", "Alice", "local");
+        var user = AppUser.Create("a@b.com", "Alice");
 
         user.Deactivate();
 
         user.IsActive.Should().BeFalse();
-    }
-
-    [Fact]
-    public void Reactivate_SetsIsActiveToTrue()
-    {
-        var user = AppUser.Create("kc-1", "a@b.com", "Alice", "local");
-        user.Deactivate();
-
-        user.Reactivate();
-
-        user.IsActive.Should().BeTrue();
-    }
-
-    [Fact]
-    public void UpdateProfile_ChangesDisplayNameAndEmail()
-    {
-        var user = AppUser.Create("kc-1", "old@b.com", "Old Name", "local");
-
-        user.UpdateProfile("  New Name  ", "NEW@EXAMPLE.COM");
-
-        user.DisplayName.Should().Be("New Name");
-        user.Email.Should().Be("new@example.com");
-    }
-
-    [Fact]
-    public void SyncIdentity_UpdatesIdentityProviderProfileAndReactivatesUser()
-    {
-        var user = AppUser.Create("kc-1", "old@b.com", "Old Name", "local");
-        user.Deactivate();
-
-        var changed = user.SyncIdentity(" auth0-2 ", "NEW@EXAMPLE.COM", "  New Name  ", " auth0 ");
-
-        changed.Should().BeTrue();
-        user.ExternalUserId.Should().Be("auth0-2");
-        user.Email.Should().Be("new@example.com");
-        user.DisplayName.Should().Be("New Name");
-        user.Provider.Should().Be("auth0");
-        user.IsActive.Should().BeTrue();
     }
 }

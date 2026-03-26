@@ -8,15 +8,14 @@ namespace FinTrackPro.Application.Trading.Commands.CreateTrade;
 
 public class CreateTradeCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUser,
+    ICurrentUser currentUser,
     IUserRepository userRepository,
     IBinanceService binanceService) : IRequestHandler<CreateTradeCommand, Guid>
 {
     public async Task<Guid> Handle(CreateTradeCommand request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var isValid = await binanceService.IsValidSymbolAsync(request.Symbol, cancellationToken);
         if (!isValid)

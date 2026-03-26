@@ -14,12 +14,23 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Column | Type | Constraints |
 |---|---|---|
 | Id | uuid | PK |
-| ExternalUserId | character varying(200) | NOT NULL, UNIQUE INDEX |
-| Email | character varying(200) | NOT NULL, UNIQUE INDEX |
+| Email | character varying(200) | nullable, INDEX |
 | DisplayName | character varying(100) | NOT NULL |
-| Provider | character varying(50) | NOT NULL |
 | CreatedAt | timestamp | NOT NULL |
 | IsActive | boolean | NOT NULL, DEFAULT true |
+
+---
+
+### UserIdentities
+| Column | Type | Constraints |
+|---|---|---|
+| Id | uuid | PK |
+| ExternalUserId | character varying(200) | NOT NULL |
+| Provider | character varying(200) | NOT NULL |
+| UserId | uuid | FK → Users, CASCADE DELETE |
+| — | — | UNIQUE INDEX (ExternalUserId, Provider) |
+
+> One `AppUser` can have multiple `UserIdentity` rows — one per IAM provider (e.g., Keycloak + Auth0 Google). `UserContextMiddleware` resolves the local user via this table on every authenticated request.
 
 ---
 

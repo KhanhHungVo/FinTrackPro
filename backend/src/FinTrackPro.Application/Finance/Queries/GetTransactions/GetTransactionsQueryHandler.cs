@@ -9,14 +9,13 @@ namespace FinTrackPro.Application.Finance.Queries.GetTransactions;
 public class GetTransactionsQueryHandler(
     IUserRepository userRepository,
     ITransactionRepository transactionRepository,
-    ICurrentUserService currentUser) : IRequestHandler<GetTransactionsQuery, IEnumerable<TransactionDto>>
+    ICurrentUser currentUser) : IRequestHandler<GetTransactionsQuery, IEnumerable<TransactionDto>>
 {
     public async Task<IEnumerable<TransactionDto>> Handle(
         GetTransactionsQuery request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var transactions = await transactionRepository.GetByUserAsync(user.Id, cancellationToken);
 

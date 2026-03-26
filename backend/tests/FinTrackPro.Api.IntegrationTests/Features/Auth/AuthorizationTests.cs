@@ -48,10 +48,22 @@ public class AuthorizationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ValidToken_UserAutoProvisioned_Returns200()
+    {
+        var client = _fixture.Factory.CreateClient();
+        var token = AuthTokenFactory.GenerateToken("new-user-id", "User");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // First request auto-provisions the AppUser via UserContextMiddleware + IdentityService
+        var response = await client.GetAsync("/api/transactions");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task PostTransaction_ExpiredToken_Returns401()
     {
         var client = _fixture.Factory.CreateClient();
-        // Generate a token with negative expiry (already expired)
         var expiredToken = GenerateExpiredToken("test-keycloak-id", "User");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", expiredToken);
 
@@ -60,19 +72,15 @@ public class AuthorizationTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private static string GenerateExpiredToken(string keycloakUserId, params string[] roles)
+    private static string GenerateExpiredToken(string userId, params string[] roles)
     {
-        using var rsa = System.Security.Cryptography.RSA.Create(2048);
-        var key = new System.Text.StringBuilder();
-        // Use AuthTokenFactory but trick it with system clock — simplest: just pass wrong audience
-        // Actually: re-implement with past expiry
         using var hmac = new System.Security.Cryptography.HMACSHA256(
             System.Text.Encoding.UTF8.GetBytes(AuthTokenFactory.TestSigningKey));
 
         var header = Base64UrlEncode(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new { alg = "HS256", typ = "JWT" }));
         var payload = Base64UrlEncode(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
         {
-            sub = keycloakUserId,
+            sub = userId,
             iss = AuthTokenFactory.TestIssuer,
             aud = AuthTokenFactory.TestAudience,
             exp = DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds(),

@@ -13,17 +13,17 @@ namespace FinTrackPro.Application.UnitTests.Trading;
 public class CreateTradeHandlerTests
 {
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IBinanceService _binanceService = Substitute.For<IBinanceService>();
     private readonly CreateTradeCommandHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public CreateTradeHandlerTests()
     {
         _handler = new CreateTradeCommandHandler(_context, _currentUser, _userRepository, _binanceService);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
 
         var trades = Substitute.For<DbSet<Trade>>();
         _context.Trades.Returns(trades);
@@ -33,7 +33,7 @@ public class CreateTradeHandlerTests
     [Fact]
     public async Task Handle_ValidCommand_ReturnsNewGuid()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _binanceService.IsValidSymbolAsync("BTCUSDT", Arg.Any<CancellationToken>())
             .Returns(true);
@@ -50,7 +50,7 @@ public class CreateTradeHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(
@@ -63,7 +63,7 @@ public class CreateTradeHandlerTests
     [Fact]
     public async Task Handle_InvalidSymbol_ThrowsDomainException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _binanceService.IsValidSymbolAsync("FAKESYMBOL", Arg.Any<CancellationToken>())
             .Returns(false);

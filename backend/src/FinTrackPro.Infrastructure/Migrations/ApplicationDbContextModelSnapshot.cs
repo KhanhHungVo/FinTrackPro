@@ -37,12 +37,6 @@ namespace FinTrackPro.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("ExternalUserId")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
@@ -51,18 +45,9 @@ namespace FinTrackPro.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.HasIndex("ExternalUserId")
-                        .IsUnique();
+                    b.HasIndex("Email");
 
                     b.ToTable("Users");
                 });
@@ -266,6 +251,35 @@ namespace FinTrackPro.Infrastructure.Migrations
                     b.ToTable("Transactions");
                 });
 
+            modelBuilder.Entity("FinTrackPro.Domain.Entities.UserIdentity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExternalUserId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ExternalUserId", "Provider")
+                        .IsUnique();
+
+                    b.ToTable("UserIdentities");
+                });
+
             modelBuilder.Entity("FinTrackPro.Domain.Entities.WatchedSymbol", b =>
                 {
                     b.Property<Guid>("Id")
@@ -336,6 +350,17 @@ namespace FinTrackPro.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FinTrackPro.Domain.Entities.UserIdentity", b =>
+                {
+                    b.HasOne("FinTrackPro.Domain.Entities.AppUser", "User")
+                        .WithMany("Identities")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FinTrackPro.Domain.Entities.WatchedSymbol", b =>
                 {
                     b.HasOne("FinTrackPro.Domain.Entities.AppUser", null)
@@ -343,6 +368,11 @@ namespace FinTrackPro.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("FinTrackPro.Domain.Entities.AppUser", b =>
+                {
+                    b.Navigation("Identities");
                 });
 #pragma warning restore 612, 618
         }

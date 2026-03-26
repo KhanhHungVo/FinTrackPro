@@ -1,7 +1,6 @@
 using System.Text;
 using FinTrackPro.Application.Common.Interfaces;
 using Microsoft.Extensions.Configuration;
-using FinTrackPro.Application.Common.Models;
 using FinTrackPro.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
@@ -42,14 +41,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(_dbContainer.GetConnectionString()));
 
-            // Replace ICurrentUserService with controllable fake
-            var currentUserDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(ICurrentUserService));
-            if (currentUserDescriptor is not null)
-                services.Remove(currentUserDescriptor);
-
-            services.AddScoped<ICurrentUserService, FakeCurrentUserService>();
-
             // Replace IBinanceService with a stub that accepts all symbols
             var binanceDescriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(IBinanceService));
@@ -58,12 +49,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
             services.AddScoped<IBinanceService, FakeBinanceService>();
 
-            // Replace Keycloak JWT auth with local symmetric-key JWT for tests
+            // Replace Keycloak JWT auth with local symmetric-key JWT for tests.
+            // MapInboundClaims = false preserves the raw "iss" claim so UserContextMiddleware
+            // can read it from ClaimsPrincipal.
             services.PostConfigureAll<JwtBearerOptions>(options =>
             {
                 options.Authority = null;
                 options.RequireHttpsMetadata = false;
                 options.Audience = AuthTokenFactory.TestAudience;
+                options.MapInboundClaims = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

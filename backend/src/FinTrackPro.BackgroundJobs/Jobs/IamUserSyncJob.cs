@@ -10,7 +10,7 @@ namespace FinTrackPro.BackgroundJobs.Jobs;
 /// </summary>
 public class IamUserSyncJob(
     IIamProviderService iamProvider,
-    IUserRepository userRepository,
+    IUserIdentityRepository userIdentityRepository,
     IApplicationDbContext db,
     ILogger<IamUserSyncJob> logger)
 {
@@ -28,20 +28,22 @@ public class IamUserSyncJob(
         // Build a lookup: externalId → isEnabled
         var iamIndex = iamUsers.ToDictionary(u => u.ExternalId, u => u.IsEnabled);
 
-        var localUsers = await userRepository.GetAllAsync(cancellationToken);
+        var identities = await userIdentityRepository.GetByProviderAsync(
+            iamProvider.ProviderIssuer, cancellationToken);
+
         var deactivated = 0;
 
-        foreach (var user in localUsers)
+        foreach (var identity in identities)
         {
-            var existsAndEnabled = iamIndex.TryGetValue(user.ExternalUserId, out var enabled) && enabled;
+            var existsAndEnabled = iamIndex.TryGetValue(identity.ExternalUserId, out var enabled) && enabled;
 
-            if (!existsAndEnabled && user.IsActive)
+            if (!existsAndEnabled && identity.User.IsActive)
             {
-                user.Deactivate();
+                identity.User.Deactivate();
                 deactivated++;
                 logger.LogInformation(
-                    "Deactivated AppUser {UserId} (External ID: {ExternalId}) — deleted or disabled in IAM provider",
-                    user.Id, user.ExternalUserId);
+                    "Deactivated AppUser {UserId} (ExternalId: {ExternalId}, Provider: {Provider}) — deleted or disabled in IAM provider",
+                    identity.User.Id, identity.ExternalUserId, identity.Provider);
             }
         }
 

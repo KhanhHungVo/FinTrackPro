@@ -8,15 +8,14 @@ namespace FinTrackPro.Application.Notifications.Commands.SaveNotificationPrefere
 
 public class SaveNotificationPreferenceCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUser,
+    ICurrentUser currentUser,
     IUserRepository userRepository,
     INotificationPreferenceRepository preferenceRepository) : IRequestHandler<SaveNotificationPreferenceCommand>
 {
     public async Task Handle(SaveNotificationPreferenceCommand request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var existing = await preferenceRepository.GetByUserAsync(user.Id, cancellationToken);
         if (existing is null)

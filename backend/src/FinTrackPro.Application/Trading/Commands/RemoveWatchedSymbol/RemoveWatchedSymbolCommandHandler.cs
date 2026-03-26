@@ -9,14 +9,13 @@ namespace FinTrackPro.Application.Trading.Commands.RemoveWatchedSymbol;
 public class RemoveWatchedSymbolCommandHandler(
     IApplicationDbContext context,
     IWatchedSymbolRepository watchedSymbolRepository,
-    ICurrentUserService currentUser,
+    ICurrentUser currentUser,
     IUserRepository userRepository) : IRequestHandler<RemoveWatchedSymbolCommand>
 {
     public async Task Handle(RemoveWatchedSymbolCommand request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var symbol = await watchedSymbolRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(WatchedSymbol), request.Id);

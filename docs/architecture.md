@@ -57,16 +57,18 @@ graph TD
 ### Application (`FinTrackPro.Application`)
 - CQRS commands and queries via MediatR
 - FluentValidation validators
-- Service interfaces (`ICurrentUserService`, `INotificationService`, `IBinanceService`, etc.)
+- Service interfaces (`ICurrentUser`, `IIdentityService`, `INotificationService`, `IBinanceService`, etc.)
 - DTOs (explicit `operator` conversions, no AutoMapper)
-- Pipeline behaviors: `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login)
+- Pipeline behaviors: `ValidationBehavior` → `LoggingBehavior`
 
 ### Infrastructure (`FinTrackPro.Infrastructure`)
 - EF Core `ApplicationDbContext` + entity configurations
 - Repository implementations
 - External services: `BinanceService`, `FearGreedService`, `CoinGeckoService`
 - `TelegramNotificationChannel`, `NotificationService`
-- `CurrentUserService` (reads JWT claims via `IHttpContextAccessor`; also exposes `ProviderName` from config)
+- `UserContextMiddleware` — resolves and provisions the local `AppUser` once per authenticated request; stores result in `HttpContext.Items`
+- `IdentityService` — fast path (existing `UserIdentity`) + slow path (create or link); handles concurrent first-login races via `DbUpdateException` retry
+- `CurrentUserAccessor` (`ICurrentUser`) — reads resolved user from `HttpContext.Items`; injected into Application handlers
 - **IAM provider abstraction** — selected at startup via `IdentityProvider:Provider` config key:
   - `KeycloakClaimsTransformer` — flattens `realm_access.roles` into `ClaimTypes.Role` claims
   - `Auth0ClaimsTransformer` — reads `https://fintrackpro.dev/roles` custom claim (set by Auth0 post-login Action)
@@ -117,7 +119,7 @@ app → pages → widgets → features → entities → shared
 | ORM | EF Core 10 + SQL Server (local Docker) / PostgreSQL (Render production) | Provider-agnostic migrations; active provider selected via `DatabaseProvider:Provider` config key |
 | CQRS | MediatR 12 | Decoupled handlers, pipeline behaviors |
 | Validation | FluentValidation 11 | Declarative, auto-wired via DI |
-| Auth | Keycloak / Auth0 + JWT Bearer | Swappable IAM providers via `IdentityProvider:Provider` config. Roles (`User`/`Admin`) live in the IAM provider only; the active claims transformer maps them to ASP.NET Core `ClaimTypes.Role`. Local `AppUser` stores `ExternalUserId` (JWT `sub`) + `Provider` field; profile is synced on every login via `EnsureUserBehavior`; orphans are soft-deleted nightly by `IamUserSyncJob`. |
+| Auth | Keycloak / Auth0 + JWT Bearer | Swappable IAM providers via `IdentityProvider:Provider` config. Roles (`User`/`Admin`) live in the IAM provider only; the active claims transformer maps them to ASP.NET Core `ClaimTypes.Role`. Identity linking via `UserIdentity` join table (`ExternalUserId` + `Provider`); one `AppUser` can have identities from multiple providers. Profile synced on every login via `UserContextMiddleware`; orphans are soft-deleted nightly by `IamUserSyncJob`. |
 | Background jobs | Hangfire + provider-matched storage (PostgreSQL in prod, SQL Server locally) | Persistent job history, retry policy |
 | Indicators | Skender.Stock.Indicators | Free, NuGet, covers RSI/EMA/BB |
 | Notifications | Telegram Bot | No cost, no email infra |

@@ -8,14 +8,13 @@ namespace FinTrackPro.Application.Finance.Commands.CreateBudget;
 
 public class CreateBudgetCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUser,
+    ICurrentUser currentUser,
     IUserRepository userRepository) : IRequestHandler<CreateBudgetCommand, Guid>
 {
     public async Task<Guid> Handle(CreateBudgetCommand request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var budget = Budget.Create(user.Id, request.Category, request.LimitAmount, request.Month);
 

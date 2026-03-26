@@ -12,17 +12,17 @@ public class RemoveWatchedSymbolHandlerTests
 {
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly IWatchedSymbolRepository _watchedSymbolRepository = Substitute.For<IWatchedSymbolRepository>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly RemoveWatchedSymbolCommandHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public RemoveWatchedSymbolHandlerTests()
     {
         _handler = new RemoveWatchedSymbolCommandHandler(
             _context, _watchedSymbolRepository, _currentUser, _userRepository);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
         _context.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
     }
 
@@ -31,7 +31,7 @@ public class RemoveWatchedSymbolHandlerTests
     {
         var symbol = WatchedSymbol.Create(TestUser.Id, "BTCUSDT");
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _watchedSymbolRepository.GetByIdAsync(symbol.Id, Arg.Any<CancellationToken>())
             .Returns(symbol);
@@ -45,7 +45,7 @@ public class RemoveWatchedSymbolHandlerTests
     [Fact]
     public async Task Handle_SymbolNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _watchedSymbolRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((WatchedSymbol?)null);
@@ -59,10 +59,10 @@ public class RemoveWatchedSymbolHandlerTests
     [Fact]
     public async Task Handle_SymbolOwnedByOtherUser_ThrowsDomainException()
     {
-        var otherUser = AppUser.Create("kc-other", "other@dev.com", "Other", "local");
+        var otherUser = AppUser.Create("other@dev.com", "Other");
         var symbol = WatchedSymbol.Create(otherUser.Id, "BTCUSDT");
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _watchedSymbolRepository.GetByIdAsync(symbol.Id, Arg.Any<CancellationToken>())
             .Returns(symbol);
@@ -77,7 +77,7 @@ public class RemoveWatchedSymbolHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(

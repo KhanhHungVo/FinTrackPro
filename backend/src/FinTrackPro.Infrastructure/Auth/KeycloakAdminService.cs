@@ -19,6 +19,11 @@ public class KeycloakAdminService(
     IConfiguration configuration,
     ILogger<KeycloakAdminService> logger) : IIamProviderService
 {
+    /// <summary>Keycloak authority URL is the exact <c>iss</c> claim emitted in tokens.</summary>
+    public string ProviderIssuer =>
+        configuration["Keycloak:Authority"]
+        ?? throw new InvalidOperationException("Keycloak:Authority is required.");
+
     public async Task<List<IamUserInfo>> GetAllUsersAsync(CancellationToken cancellationToken = default)
     {
         var token = await GetAdminTokenAsync(cancellationToken);

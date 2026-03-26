@@ -8,16 +8,15 @@ namespace FinTrackPro.Application.Trading.Commands.AddWatchedSymbol;
 
 public class AddWatchedSymbolCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUser,
+    ICurrentUser currentUser,
     IUserRepository userRepository,
     IWatchedSymbolRepository watchedSymbolRepository,
     IBinanceService binanceService) : IRequestHandler<AddWatchedSymbolCommand, Guid>
 {
     public async Task<Guid> Handle(AddWatchedSymbolCommand request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByExternalIdAsync(
-            currentUser.ExternalUserId!, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.ExternalUserId!);
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
         var isValid = await binanceService.IsValidSymbolAsync(request.Symbol, cancellationToken);
         if (!isValid)

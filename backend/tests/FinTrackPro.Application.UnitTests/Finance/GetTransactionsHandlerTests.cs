@@ -13,15 +13,15 @@ public class GetTransactionsHandlerTests
 {
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly GetTransactionsQueryHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public GetTransactionsHandlerTests()
     {
         _handler = new GetTransactionsQueryHandler(_userRepository, _transactionRepository, _currentUser);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class GetTransactionsHandlerTests
         var older = Transaction.Create(TestUser.Id, TransactionType.Expense, 10m, "Food", null, "2026-02");
         var newer = Transaction.Create(TestUser.Id, TransactionType.Income, 200m, "Salary", null, "2026-03");
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _transactionRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(new[] { older, newer });
@@ -38,7 +38,6 @@ public class GetTransactionsHandlerTests
         var result = (await _handler.Handle(new GetTransactionsQuery(), CancellationToken.None)).ToList();
 
         result.Should().HaveCount(2);
-        // Ordered by CreatedAt descending — newer was created after older
         result.First().Amount.Should().Be(200m);
     }
 
@@ -46,9 +45,9 @@ public class GetTransactionsHandlerTests
     public async Task Handle_WithMonthFilter_ReturnsOnlyMatchingMonth()
     {
         var march = Transaction.Create(TestUser.Id, TransactionType.Expense, 50m, "Food", null, "2026-03");
-        var feb = Transaction.Create(TestUser.Id, TransactionType.Expense, 30m, "Transport", null, "2026-02");
+        var feb   = Transaction.Create(TestUser.Id, TransactionType.Expense, 30m, "Transport", null, "2026-02");
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _transactionRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(new[] { march, feb });
@@ -62,7 +61,7 @@ public class GetTransactionsHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(new GetTransactionsQuery(), CancellationToken.None);

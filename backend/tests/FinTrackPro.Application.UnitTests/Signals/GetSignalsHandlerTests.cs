@@ -12,16 +12,16 @@ namespace FinTrackPro.Application.UnitTests.Signals;
 public class GetSignalsHandlerTests
 {
     private readonly ISignalRepository _signalRepository = Substitute.For<ISignalRepository>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly GetSignalsQueryHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public GetSignalsHandlerTests()
     {
         _handler = new GetSignalsQueryHandler(_userRepository, _signalRepository, _currentUser);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public class GetSignalsHandlerTests
             Signal.Create(TestUser.Id, "ETHUSDT", SignalType.VolumeSpike, "Volume spike detected", 2.5m, "1D"),
         };
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _signalRepository.GetLatestByUserAsync(TestUser.Id, 20, Arg.Any<CancellationToken>())
             .Returns(signals);
@@ -46,7 +46,7 @@ public class GetSignalsHandlerTests
     [Fact]
     public async Task Handle_NoSignals_ReturnsEmpty()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _signalRepository.GetLatestByUserAsync(TestUser.Id, 20, Arg.Any<CancellationToken>())
             .Returns(new List<Signal>());
@@ -59,7 +59,7 @@ public class GetSignalsHandlerTests
     [Fact]
     public async Task Handle_CustomCount_PassesCountToRepository()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _signalRepository.GetLatestByUserAsync(TestUser.Id, 5, Arg.Any<CancellationToken>())
             .Returns(new List<Signal>());
@@ -72,7 +72,7 @@ public class GetSignalsHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(new GetSignalsQuery(20), CancellationToken.None);

@@ -4,60 +4,52 @@ namespace FinTrackPro.Domain.Entities;
 
 public class AppUser : AggregateRoot
 {
-    public string ExternalUserId { get; private set; } = string.Empty;
-    public string Email { get; private set; } = string.Empty;
+    private readonly List<UserIdentity> _identities = new();
+
+    public string? Email { get; private set; }
     public string DisplayName { get; private set; } = string.Empty;
-    public string Provider { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
+    public bool IsActive { get; private set; } = true;
+
+    public IReadOnlyCollection<UserIdentity> Identities => _identities.AsReadOnly();
 
     private AppUser() { }
 
-    public bool IsActive { get; private set; } = true;
-
-    public static AppUser Create(string externalUserId, string email, string displayName, string provider)
+    public static AppUser Create(string? email, string displayName)
     {
         return new AppUser
         {
             Id = Guid.NewGuid(),
-            ExternalUserId = externalUserId,
-            Email = email.Trim().ToLowerInvariant(),
+            Email = email?.Trim().ToLowerInvariant(),
             DisplayName = displayName.Trim(),
-            Provider = provider,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
     }
 
-    public void UpdateProfile(string displayName, string email)
+    public void AddIdentity(string externalId, string provider)
     {
-        DisplayName = displayName.Trim();
-        Email = email.Trim().ToLowerInvariant();
+        if (_identities.Any(x => x.ExternalUserId == externalId && x.Provider == provider))
+            return;
+        _identities.Add(new UserIdentity(externalId, provider, Id));
     }
 
-    public bool SyncIdentity(string externalUserId, string email, string displayName, string provider)
+    /// <summary>
+    /// Updates profile fields and reactivates the user if deactivated.
+    /// Returns true if anything changed (triggers a DB save).
+    /// </summary>
+    public bool UpdateProfile(string? email, string displayName)
     {
-        var normalizedExternalUserId = externalUserId.Trim();
-        var normalizedEmail = email.Trim().ToLowerInvariant();
-        var normalizedDisplayName = displayName.Trim();
-        var normalizedProvider = provider.Trim();
+        var normEmail = email?.Trim().ToLowerInvariant() ?? Email;
+        var normName  = displayName.Trim();
+        var changed   = Email != normEmail || DisplayName != normName || !IsActive;
 
-        var changed =
-            ExternalUserId != normalizedExternalUserId ||
-            Email != normalizedEmail ||
-            DisplayName != normalizedDisplayName ||
-            Provider != normalizedProvider ||
-            !IsActive;
-
-        ExternalUserId = normalizedExternalUserId;
-        Email = normalizedEmail;
-        DisplayName = normalizedDisplayName;
-        Provider = normalizedProvider;
-        IsActive = true;
+        Email       = normEmail;
+        DisplayName = normName;
+        IsActive    = true;
 
         return changed;
     }
 
     public void Deactivate() => IsActive = false;
-
-    public void Reactivate() => IsActive = true;
 }

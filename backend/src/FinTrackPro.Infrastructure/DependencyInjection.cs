@@ -3,6 +3,7 @@ using FinTrackPro.Domain.Repositories;
 using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure.ExternalServices;
 using FinTrackPro.Infrastructure.Http;
+using FinTrackPro.Infrastructure.Identity;
 using FinTrackPro.Infrastructure.Persistence;
 using FinTrackPro.Infrastructure.Persistence.Repositories;
 using FinTrackPro.Infrastructure.Services;
@@ -47,6 +48,7 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserIdentityRepository, UserIdentityRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IBudgetRepository, BudgetRepository>();
         services.AddScoped<ITradeRepository, TradeRepository>();
@@ -85,9 +87,12 @@ public static class DependencyInjection
                     .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
         }
 
-        // Infrastructure services
+        // Identity services
         services.AddHttpContextAccessor();
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<ICurrentUser, CurrentUserAccessor>();
+
+        // Infrastructure services
         services.AddScoped<INotificationService, NotificationService>();
 
         // Telegram Bot
@@ -195,7 +200,6 @@ public static class DependencyInjection
         var password = sep < 0 ? string.Empty : Uri.UnescapeDataString(uri.UserInfo[(sep + 1)..]);
 
         // Honour ?sslmode= if present in the URL; default to Require for cloud providers.
-        // Use Enum.TryParse so an unrecognised value falls back gracefully instead of throwing.
         var query = QueryHelpers.ParseQuery(uri.Query);
         var sslMode = query.TryGetValue("sslmode", out var rawSslMode) &&
                       Enum.TryParse<SslMode>(rawSslMode.ToString(), ignoreCase: true, out var parsed)

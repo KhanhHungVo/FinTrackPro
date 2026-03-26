@@ -11,25 +11,25 @@ namespace FinTrackPro.Application.UnitTests.Notifications;
 public class SaveNotificationPreferenceHandlerTests
 {
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
-    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly INotificationPreferenceRepository _preferenceRepository = Substitute.For<INotificationPreferenceRepository>();
     private readonly SaveNotificationPreferenceCommandHandler _handler;
 
-    private static readonly AppUser TestUser = AppUser.Create("kc-test", "test@dev.com", "Test", "local");
+    private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public SaveNotificationPreferenceHandlerTests()
     {
         _handler = new SaveNotificationPreferenceCommandHandler(
             _context, _currentUser, _userRepository, _preferenceRepository);
-        _currentUser.ExternalUserId.Returns("kc-test");
+        _currentUser.UserId.Returns(TestUser.Id);
         _context.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
     }
 
     [Fact]
     public async Task Handle_NoExistingPreference_CreatesNew()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _preferenceRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((NotificationPreference?)null);
@@ -46,7 +46,7 @@ public class SaveNotificationPreferenceHandlerTests
     {
         var existing = NotificationPreference.CreateTelegram(TestUser.Id, "111111111");
 
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
         _preferenceRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(existing);
@@ -63,7 +63,7 @@ public class SaveNotificationPreferenceHandlerTests
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
-        _userRepository.GetByExternalIdAsync("kc-test", Arg.Any<CancellationToken>())
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(
