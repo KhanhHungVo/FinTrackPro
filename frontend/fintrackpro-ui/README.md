@@ -72,7 +72,7 @@ src/
 |---|---|---|
 | `app` | all layers | Router, QueryClientProvider |
 | `pages` | widgets, features, entities, shared | DashboardPage, TransactionsPage |
-| `widgets` | features, entities, shared | TransactionTable, BudgetSummary |
+| `widgets` | features, entities, shared | TransactionTable, BudgetSummary, TrendingCoinsWidget |
 | `features` | entities, shared | AddTransactionForm, ExportButton |
 | `entities` | shared | TransactionCard, BudgetProgress |
 | `shared` | nothing above | Button, apiClient, formatCurrency |
