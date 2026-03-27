@@ -51,4 +51,29 @@ public class Trade : BaseEntity
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    public void Update(
+        string symbol, TradeDirection direction,
+        decimal entryPrice, decimal exitPrice,
+        decimal positionSize, decimal fees, string? notes)
+    {
+        if (string.IsNullOrWhiteSpace(symbol))
+            throw new DomainException("Symbol is required.");
+        if (entryPrice <= 0)
+            throw new DomainException("Entry price must be greater than zero.");
+        if (exitPrice <= 0)
+            throw new DomainException("Exit price must be greater than zero.");
+        if (positionSize <= 0)
+            throw new DomainException("Position size must be greater than zero.");
+        if (fees < 0)
+            throw new DomainException("Fees cannot be negative.");
+
+        Symbol = symbol.Trim().ToUpperInvariant();
+        Direction = direction;
+        EntryPrice = entryPrice;
+        ExitPrice = exitPrice;
+        PositionSize = positionSize;
+        Fees = fees;
+        Notes = notes?.Trim();
+    }
 }
