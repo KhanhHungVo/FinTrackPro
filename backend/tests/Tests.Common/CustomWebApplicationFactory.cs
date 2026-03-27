@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 
 namespace Tests.Common;
 
@@ -28,14 +29,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Override connection string so Hangfire and the app read the test DB, not appsettings.json
-        builder.ConfigureAppConfiguration((_, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:DefaultConnection"] = ConnectionString
-            });
-        });
+        // UseSetting injects config before AddInfrastructureServices runs, so Hangfire,
+        // HealthChecks, and EF Core all receive the test DB connection string.
+        builder.UseSetting("ConnectionStrings:DefaultConnection", ConnectionString);
+        builder.UseSetting("DatabaseProvider:Provider", "postgresql");
 
         builder.ConfigureServices(services =>
         {
@@ -82,14 +79,52 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     public async Task InitializeAsync()
     {
+        await ResetDatabaseAsync();
+
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseNpgsql(ConnectionString,
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
             .Options;
 
         await using var db = new ApplicationDbContext(options);
-        await db.Database.EnsureDeletedAsync();
         await db.Database.MigrateAsync();
+    }
+
+    /// <summary>
+    /// Drops and recreates the test database via the postgres maintenance DB so the
+    /// connection never targets a non-existent database (which Npgsql rejects with 3D000).
+    /// </summary>
+    private async Task ResetDatabaseAsync()
+    {
+        var builder = new NpgsqlConnectionStringBuilder(ConnectionString);
+        var dbName = builder.Database
+            ?? throw new InvalidOperationException("Connection string must include a database name.");
+        builder.Database = "postgres";
+
+        await using var conn = new NpgsqlConnection(builder.ConnectionString);
+        await conn.OpenAsync();
+
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = $"""
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = '{dbName}' AND pid <> pg_backend_pid();
+                """;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = $"DROP DATABASE IF EXISTS \"{dbName}\";";
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = $"CREATE DATABASE \"{dbName}\";";
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 
     public new Task DisposeAsync() => Task.CompletedTask;
