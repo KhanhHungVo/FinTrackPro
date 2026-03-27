@@ -61,7 +61,7 @@ services:
       - keycloak-data:/opt/keycloak/data
       - ./infra/docker/keycloak-realm.json:/opt/keycloak/data/import/fintrackpro-realm.json:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/realms/fintrackpro || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/realms/fintrackpro > /dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 24
