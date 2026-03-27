@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import {
   useNotificationPreference,
   useSaveNotificationPreference,
 } from '@/entities/notification-preference'
+import { errorToastMessage } from '@/shared/lib/apiError'
 
 export function NotificationSettingsForm() {
   const { data: pref, isLoading } = useNotificationPreference()
-  const { mutate, isPending, isSuccess } = useSaveNotificationPreference()
+  const { mutate, isPending } = useSaveNotificationPreference()
 
   const [chatId, setChatId] = useState('')
   const [enabled, setEnabled] = useState(true)
@@ -22,7 +24,13 @@ export function NotificationSettingsForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    mutate({ telegramChatId: chatId, isEnabled: enabled })
+    mutate(
+      { telegramChatId: chatId, isEnabled: enabled },
+      {
+        onSuccess: () => toast.success('Preferences saved.'),
+        onError: (err) => toast.error(errorToastMessage(err)),
+      },
+    )
   }
 
   return (
@@ -68,9 +76,6 @@ export function NotificationSettingsForm() {
         {isPending ? 'Saving...' : 'Save Preferences'}
       </button>
 
-      {isSuccess && (
-        <p className="text-sm text-green-600">Preferences saved successfully.</p>
-      )}
     </form>
   )
 }

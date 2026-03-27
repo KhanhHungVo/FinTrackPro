@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useBudgets, useDeleteBudget, useUpdateBudget } from '@/entities/budget'
 import { useTransactions } from '@/entities/transaction'
 import { AddBudgetForm } from '@/features/add-budget'
 import { cn } from '@/shared/lib/cn'
+import { errorToastMessage } from '@/shared/lib/apiError'
 
 function monthsBack(n: number): string {
   const d = new Date()
@@ -27,7 +29,13 @@ export function BudgetsPage() {
   function commitEdit(id: string) {
     const val = parseFloat(editLimit)
     if (!isNaN(val) && val > 0) {
-      updateBudget({ id, limitAmount: val }, { onSuccess: () => setEditingId(null) })
+      updateBudget(
+        { id, limitAmount: val },
+        {
+          onSuccess: () => setEditingId(null),
+          onError: (err) => { setEditingId(null); toast.error(errorToastMessage(err)) },
+        },
+      )
     } else {
       setEditingId(null)
     }
@@ -119,7 +127,7 @@ export function BudgetsPage() {
                       ✎
                     </button>
                     <button
-                      onClick={() => deleteBudget(budget.id)}
+                      onClick={() => deleteBudget(budget.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
                       disabled={isDeleting && deletingId === budget.id}
                       className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
                       aria-label="Delete budget"

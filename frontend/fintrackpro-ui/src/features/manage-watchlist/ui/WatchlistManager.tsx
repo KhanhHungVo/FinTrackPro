@@ -1,19 +1,24 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import {
   useWatchedSymbols,
   useAddWatchedSymbol,
   useRemoveWatchedSymbol,
 } from '@/entities/watched-symbol'
+import { errorToastMessage } from '@/shared/lib/apiError'
 
 export function WatchlistManager() {
   const { data: symbols, isLoading } = useWatchedSymbols()
-  const { mutate: add, isPending: adding, error: addError } = useAddWatchedSymbol()
+  const { mutate: add, isPending: adding } = useAddWatchedSymbol()
   const { mutate: remove } = useRemoveWatchedSymbol()
   const [symbol, setSymbol] = useState('')
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault()
-    add(symbol, { onSuccess: () => setSymbol('') })
+    add(symbol, {
+      onSuccess: () => setSymbol(''),
+      onError: (err) => toast.error(errorToastMessage(err)),
+    })
   }
 
   return (
@@ -41,10 +46,6 @@ export function WatchlistManager() {
         </button>
       </form>
 
-      {addError && (
-        <p className="text-sm text-red-600">{(addError as Error).message}</p>
-      )}
-
       {isLoading ? (
         <div className="animate-pulse h-16 rounded bg-gray-100" />
       ) : symbols?.length === 0 ? (
@@ -58,7 +59,7 @@ export function WatchlistManager() {
             >
               <span className="font-mono text-sm font-medium">{ws.symbol}</span>
               <button
-                onClick={() => remove(ws.id)}
+                onClick={() => remove(ws.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
                 className="text-xs text-red-500 hover:text-red-700"
               >
                 Remove

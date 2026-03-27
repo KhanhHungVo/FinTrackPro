@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useTrades, useDeleteTrade } from '@/entities/trade'
 import type { Trade } from '@/entities/trade'
 import { AddTradeForm } from '@/features/add-trade'
 import { EditTradeModal } from '@/features/edit-trade'
 import { cn } from '@/shared/lib/cn'
+import { errorToastMessage } from '@/shared/lib/apiError'
 
 export function TradesPage() {
   const { data: trades, isLoading } = useTrades()
@@ -120,7 +122,7 @@ export function TradesPage() {
                         ✎
                       </button>
                       <button
-                        onClick={() => deleteTrade(trade.id)}
+                        onClick={() => deleteTrade(trade.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
                         className="text-xs text-gray-300 hover:text-red-500"
                         title="Delete"
                       >

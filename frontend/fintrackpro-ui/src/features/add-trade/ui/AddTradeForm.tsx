@@ -1,9 +1,14 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useCreateTrade } from '@/entities/trade'
 import { cn } from '@/shared/lib/cn'
+import { createTradeSchema, type CreateTradeInput } from '@/shared/lib/tradeSchema'
+import { classifyApiError, errorToastMessage, type ProblemDetails } from '@/shared/lib/apiError'
+
+type FieldErrors = Partial<Record<keyof CreateTradeInput, string>>
 
 export function AddTradeForm() {
-  const { mutate, isPending, error } = useCreateTrade()
+  const { mutate, isPending } = useCreateTrade()
   const [direction, setDirection] = useState<'Long' | 'Short'>('Long')
   const [symbol, setSymbol] = useState('')
   const [entryPrice, setEntryPrice] = useState('')
@@ -11,10 +16,29 @@ export function AddTradeForm() {
   const [positionSize, setPositionSize] = useState('')
   const [fees, setFees] = useState('')
   const [notes, setNotes] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [serverErrors, setServerErrors] = useState<ProblemDetails | null>(null)
+
+  function clearFieldError(field: keyof FieldErrors) {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
+    }
+  }
+
+  function validateField(field: keyof CreateTradeInput, value: unknown) {
+    const result = createTradeSchema.shape[field].safeParse(value)
+    if (!result.success) {
+      setFieldErrors((prev) => ({ ...prev, [field]: result.error.issues[0].message }))
+    } else {
+      setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    mutate({
+    setServerErrors(null)
+
+    const raw = {
       symbol,
       direction,
       entryPrice: parseFloat(entryPrice),
@@ -22,13 +46,38 @@ export function AddTradeForm() {
       positionSize: parseFloat(positionSize),
       fees: parseFloat(fees) || 0,
       notes: notes || null,
+    }
+
+    const result = createTradeSchema.safeParse(raw)
+    if (!result.success) {
+      const errors: FieldErrors = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0] as keyof FieldErrors
+        if (!errors[field]) errors[field] = issue.message
+      }
+      setFieldErrors(errors)
+      return
+    }
+
+    mutate(result.data, {
+      onSuccess: () => {
+        setSymbol('')
+        setEntryPrice('')
+        setExitPrice('')
+        setPositionSize('')
+        setFees('')
+        setNotes('')
+        setFieldErrors({})
+      },
+      onError: (err) => {
+        const kind = classifyApiError(err)
+        if (kind.type === 'validation') {
+          setServerErrors(kind.details)
+        } else {
+          toast.error(errorToastMessage(err))
+        }
+      },
     })
-    setSymbol('')
-    setEntryPrice('')
-    setExitPrice('')
-    setPositionSize('')
-    setFees('')
-    setNotes('')
   }
 
   return (
@@ -55,61 +104,115 @@ export function AddTradeForm() {
         ))}
       </div>
 
-      <input
-        type="text"
-        placeholder="Symbol (e.g. BTCUSDT)"
-        value={symbol}
-        onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-        required
-        className="w-full rounded-md border px-3 py-2 text-sm font-mono"
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="flex flex-col gap-1">
         <input
-          type="number"
-          placeholder="Entry price"
-          value={entryPrice}
-          onChange={(e) => setEntryPrice(e.target.value)}
-          required
-          className="rounded-md border px-3 py-2 text-sm"
+          type="text"
+          placeholder="Symbol (e.g. BTCUSDT)"
+          value={symbol}
+          onChange={(e) => { setSymbol(e.target.value.toUpperCase()); clearFieldError('symbol') }}
+          onBlur={() => validateField('symbol', symbol)}
+          className={cn(
+            'w-full rounded-md border px-3 py-2 text-sm font-mono',
+            fieldErrors.symbol && 'border-red-400',
+          )}
         />
-        <input
-          type="number"
-          placeholder="Exit price"
-          value={exitPrice}
-          onChange={(e) => setExitPrice(e.target.value)}
-          required
-          className="rounded-md border px-3 py-2 text-sm"
-        />
+        {fieldErrors.symbol && <p className="text-xs text-red-600">{fieldErrors.symbol}</p>}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <input
-          type="number"
-          placeholder="Position size"
-          value={positionSize}
-          onChange={(e) => setPositionSize(e.target.value)}
-          required
-          className="rounded-md border px-3 py-2 text-sm"
-        />
-        <input
-          type="number"
-          placeholder="Fees"
-          value={fees}
-          onChange={(e) => setFees(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm"
-        />
-      </div>
-      <input
-        type="text"
-        placeholder="Notes (optional)"
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
-      />
 
-      {error && (
-        <p className="text-sm text-red-600">
-          {(error as Error).message}
-        </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1">
+          <input
+            type="number"
+            placeholder="Entry price"
+            value={entryPrice}
+            onChange={(e) => { setEntryPrice(e.target.value); clearFieldError('entryPrice') }}
+            onBlur={() => validateField('entryPrice', parseFloat(entryPrice))}
+            className={cn(
+              'rounded-md border px-3 py-2 text-sm',
+              fieldErrors.entryPrice && 'border-red-400',
+            )}
+          />
+          {fieldErrors.entryPrice && (
+            <p className="text-xs text-red-600">{fieldErrors.entryPrice}</p>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <input
+            type="number"
+            placeholder="Exit price"
+            value={exitPrice}
+            onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
+            onBlur={() => validateField('exitPrice', parseFloat(exitPrice))}
+            className={cn(
+              'rounded-md border px-3 py-2 text-sm',
+              fieldErrors.exitPrice && 'border-red-400',
+            )}
+          />
+          {fieldErrors.exitPrice && (
+            <p className="text-xs text-red-600">{fieldErrors.exitPrice}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1">
+          <input
+            type="number"
+            placeholder="Position size"
+            value={positionSize}
+            onChange={(e) => { setPositionSize(e.target.value); clearFieldError('positionSize') }}
+            onBlur={() => validateField('positionSize', parseFloat(positionSize))}
+            className={cn(
+              'rounded-md border px-3 py-2 text-sm',
+              fieldErrors.positionSize && 'border-red-400',
+            )}
+          />
+          {fieldErrors.positionSize && (
+            <p className="text-xs text-red-600">{fieldErrors.positionSize}</p>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <input
+            type="number"
+            placeholder="Fees"
+            value={fees}
+            onChange={(e) => { setFees(e.target.value); clearFieldError('fees') }}
+            onBlur={() => validateField('fees', parseFloat(fees) || 0)}
+            className={cn(
+              'rounded-md border px-3 py-2 text-sm',
+              fieldErrors.fees && 'border-red-400',
+            )}
+          />
+          {fieldErrors.fees && <p className="text-xs text-red-600">{fieldErrors.fees}</p>}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <input
+          type="text"
+          placeholder="Notes (optional)"
+          value={notes}
+          onChange={(e) => { setNotes(e.target.value); clearFieldError('notes') }}
+          onBlur={() => validateField('notes', notes || null)}
+          className={cn(
+            'w-full rounded-md border px-3 py-2 text-sm',
+            fieldErrors.notes && 'border-red-400',
+          )}
+        />
+        {fieldErrors.notes && <p className="text-xs text-red-600">{fieldErrors.notes}</p>}
+      </div>
+
+      {serverErrors && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="font-medium">{serverErrors.title ?? 'Validation failed'}</p>
+          {serverErrors.errors && (
+            <ul className="mt-1 list-disc list-inside space-y-0.5">
+              {Object.entries(serverErrors.errors).flatMap(([, msgs]) =>
+                msgs.map((m, i) => <li key={i}>{m}</li>),
+              )}
+            </ul>
+          )}
+        </div>
       )}
 
       <button

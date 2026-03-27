@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useTransactions, useDeleteTransaction } from '@/entities/transaction'
 import type { TransactionType } from '@/entities/transaction'
 import { AddTransactionForm } from '@/features/add-transaction'
 import { cn } from '@/shared/lib/cn'
+import { errorToastMessage } from '@/shared/lib/apiError'
 
 function monthsBack(n: number): string {
   const d = new Date()
@@ -107,7 +109,7 @@ export function TransactionsPage() {
                   {new Date(tx.createdAt).toLocaleDateString()}
                 </span>
                 <button
-                  onClick={() => deleteTx(tx.id)}
+                  onClick={() => deleteTx(tx.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
                   className="text-xs text-gray-300 hover:text-red-500 transition-colors"
                   title="Delete"
                 >

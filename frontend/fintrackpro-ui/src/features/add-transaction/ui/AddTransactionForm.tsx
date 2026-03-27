@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useCreateTransaction } from '@/entities/transaction'
 import { cn } from '@/shared/lib/cn'
+import { errorToastMessage } from '@/shared/lib/apiError'
 
 export function AddTransactionForm() {
   const { mutate, isPending } = useCreateTransaction()
@@ -12,16 +14,23 @@ export function AddTransactionForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    mutate({
-      type,
-      amount: parseFloat(amount),
-      category,
-      note: note || null,
-      budgetMonth: currentMonth,
-    })
-    setAmount('')
-    setCategory('')
-    setNote('')
+    mutate(
+      {
+        type,
+        amount: parseFloat(amount),
+        category,
+        note: note || null,
+        budgetMonth: currentMonth,
+      },
+      {
+        onSuccess: () => {
+          setAmount('')
+          setCategory('')
+          setNote('')
+        },
+        onError: (err) => toast.error(errorToastMessage(err)),
+      },
+    )
   }
 
   return (

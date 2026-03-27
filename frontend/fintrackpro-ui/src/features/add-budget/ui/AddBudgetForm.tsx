@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useCreateBudget } from '@/entities/budget'
+import { errorToastMessage } from '@/shared/lib/apiError'
 
 interface Props {
   month: string
@@ -15,7 +17,10 @@ export function AddBudgetForm({ month, onAdded }: Props) {
     e.preventDefault()
     mutate(
       { category, limitAmount: parseFloat(limit), month },
-      { onSuccess: () => { setCategory(''); setLimit(''); onAdded?.() } },
+      {
+        onSuccess: () => { setCategory(''); setLimit(''); onAdded?.() },
+        onError: (err) => toast.error(errorToastMessage(err)),
+      },
     )
   }
 

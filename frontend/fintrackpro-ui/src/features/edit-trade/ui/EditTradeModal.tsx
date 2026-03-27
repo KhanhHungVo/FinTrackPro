@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useUpdateTrade } from '@/entities/trade'
 import type { Trade, TradeDirection } from '@/entities/trade'
 import { cn } from '@/shared/lib/cn'
+import { updateTradeSchema, type UpdateTradeInput } from '@/shared/lib/tradeSchema'
+import { classifyApiError, errorToastMessage, type ProblemDetails } from '@/shared/lib/apiError'
 
 interface EditTradeModalProps {
   trade: Trade | null
   onClose: () => void
 }
 
+type FieldErrors = Partial<Record<keyof UpdateTradeInput, string>>
+
 export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
-  const { mutate, isPending, error } = useUpdateTrade()
+  const { mutate, isPending } = useUpdateTrade()
   const [direction, setDirection] = useState<TradeDirection>('Long')
   const [symbol, setSymbol] = useState('')
   const [entryPrice, setEntryPrice] = useState('')
@@ -17,6 +22,8 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
   const [positionSize, setPositionSize] = useState('')
   const [fees, setFees] = useState('')
   const [notes, setNotes] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [serverErrors, setServerErrors] = useState<ProblemDetails | null>(null)
 
   useEffect(() => {
     if (trade) {
@@ -27,25 +34,66 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
       setPositionSize(String(trade.positionSize))
       setFees(String(trade.fees))
       setNotes(trade.notes ?? '')
+      setFieldErrors({})
+      setServerErrors(null)
     }
   }, [trade])
 
   if (!trade) return null
 
+  function clearFieldError(field: keyof FieldErrors) {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
+    }
+  }
+
+  function validateField(field: keyof UpdateTradeInput, value: unknown) {
+    const result = updateTradeSchema.shape[field].safeParse(value)
+    if (!result.success) {
+      setFieldErrors((prev) => ({ ...prev, [field]: result.error.issues[0].message }))
+    } else {
+      setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setServerErrors(null)
+
+    const raw = {
+      symbol,
+      direction,
+      entryPrice: parseFloat(entryPrice),
+      exitPrice: parseFloat(exitPrice),
+      positionSize: parseFloat(positionSize),
+      fees: parseFloat(fees) || 0,
+      notes: notes || null,
+    }
+
+    const result = updateTradeSchema.safeParse(raw)
+    if (!result.success) {
+      const errors: FieldErrors = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0] as keyof FieldErrors
+        if (!errors[field]) errors[field] = issue.message
+      }
+      setFieldErrors(errors)
+      return
+    }
+
     mutate(
+      { id: trade.id, ...result.data },
       {
-        id: trade.id,
-        symbol,
-        direction,
-        entryPrice: parseFloat(entryPrice),
-        exitPrice: parseFloat(exitPrice),
-        positionSize: parseFloat(positionSize),
-        fees: parseFloat(fees) || 0,
-        notes: notes || null,
+        onSuccess: onClose,
+        onError: (err) => {
+          const kind = classifyApiError(err)
+          if (kind.type === 'validation') {
+            setServerErrors(kind.details)
+          } else {
+            toast.error(errorToastMessage(err))
+          }
+        },
       },
-      { onSuccess: onClose },
     )
   }
 
@@ -88,62 +136,115 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
             ))}
           </div>
 
-          <input
-            type="text"
-            placeholder="Symbol (e.g. BTCUSDT)"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            required
-            className="w-full rounded-md border px-3 py-2 text-sm font-mono"
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="flex flex-col gap-1">
             <input
-              type="number"
-              placeholder="Entry price"
-              value={entryPrice}
-              onChange={(e) => setEntryPrice(e.target.value)}
-              required
-              className="rounded-md border px-3 py-2 text-sm"
+              type="text"
+              placeholder="Symbol (e.g. BTCUSDT)"
+              value={symbol}
+              onChange={(e) => { setSymbol(e.target.value.toUpperCase()); clearFieldError('symbol') }}
+              onBlur={() => validateField('symbol', symbol)}
+              className={cn(
+                'w-full rounded-md border px-3 py-2 text-sm font-mono',
+                fieldErrors.symbol && 'border-red-400',
+              )}
             />
-            <input
-              type="number"
-              placeholder="Exit price"
-              value={exitPrice}
-              onChange={(e) => setExitPrice(e.target.value)}
-              required
-              className="rounded-md border px-3 py-2 text-sm"
-            />
+            {fieldErrors.symbol && <p className="text-xs text-red-600">{fieldErrors.symbol}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <input
-              type="number"
-              placeholder="Position size"
-              value={positionSize}
-              onChange={(e) => setPositionSize(e.target.value)}
-              required
-              className="rounded-md border px-3 py-2 text-sm"
-            />
-            <input
-              type="number"
-              placeholder="Fees"
-              value={fees}
-              onChange={(e) => setFees(e.target.value)}
-              className="rounded-md border px-3 py-2 text-sm"
-            />
+            <div className="flex flex-col gap-1">
+              <input
+                type="number"
+                placeholder="Entry price"
+                value={entryPrice}
+                onChange={(e) => { setEntryPrice(e.target.value); clearFieldError('entryPrice') }}
+                onBlur={() => validateField('entryPrice', parseFloat(entryPrice))}
+                className={cn(
+                  'rounded-md border px-3 py-2 text-sm',
+                  fieldErrors.entryPrice && 'border-red-400',
+                )}
+              />
+              {fieldErrors.entryPrice && (
+                <p className="text-xs text-red-600">{fieldErrors.entryPrice}</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <input
+                type="number"
+                placeholder="Exit price"
+                value={exitPrice}
+                onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
+                onBlur={() => validateField('exitPrice', parseFloat(exitPrice))}
+                className={cn(
+                  'rounded-md border px-3 py-2 text-sm',
+                  fieldErrors.exitPrice && 'border-red-400',
+                )}
+              />
+              {fieldErrors.exitPrice && (
+                <p className="text-xs text-red-600">{fieldErrors.exitPrice}</p>
+              )}
+            </div>
           </div>
 
-          <textarea
-            placeholder="Notes (optional)"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={4}
-            className="w-full rounded-md border px-3 py-2 text-sm resize-y"
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <input
+                type="number"
+                placeholder="Position size"
+                value={positionSize}
+                onChange={(e) => { setPositionSize(e.target.value); clearFieldError('positionSize') }}
+                onBlur={() => validateField('positionSize', parseFloat(positionSize))}
+                className={cn(
+                  'rounded-md border px-3 py-2 text-sm',
+                  fieldErrors.positionSize && 'border-red-400',
+                )}
+              />
+              {fieldErrors.positionSize && (
+                <p className="text-xs text-red-600">{fieldErrors.positionSize}</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <input
+                type="number"
+                placeholder="Fees"
+                value={fees}
+                onChange={(e) => { setFees(e.target.value); clearFieldError('fees') }}
+                onBlur={() => validateField('fees', parseFloat(fees) || 0)}
+                className={cn(
+                  'rounded-md border px-3 py-2 text-sm',
+                  fieldErrors.fees && 'border-red-400',
+                )}
+              />
+              {fieldErrors.fees && <p className="text-xs text-red-600">{fieldErrors.fees}</p>}
+            </div>
+          </div>
 
-          {error && (
-            <p className="text-sm text-red-600">{(error as Error).message}</p>
+          <div className="flex flex-col gap-1">
+            <textarea
+              placeholder="Notes (optional)"
+              value={notes}
+              onChange={(e) => { setNotes(e.target.value); clearFieldError('notes') }}
+              onBlur={() => validateField('notes', notes || null)}
+              rows={4}
+              className={cn(
+                'w-full rounded-md border px-3 py-2 text-sm resize-y',
+                fieldErrors.notes && 'border-red-400',
+              )}
+            />
+            {fieldErrors.notes && <p className="text-xs text-red-600">{fieldErrors.notes}</p>}
+          </div>
+
+          {serverErrors && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="font-medium">{serverErrors.title ?? 'Validation failed'}</p>
+              {serverErrors.errors && (
+                <ul className="mt-1 list-disc list-inside space-y-0.5">
+                  {Object.entries(serverErrors.errors).flatMap(([, msgs]) =>
+                    msgs.map((m, i) => <li key={i}>{m}</li>),
+                  )}
+                </ul>
+              )}
+            </div>
           )}
 
           <div className="flex gap-2 pt-1">
