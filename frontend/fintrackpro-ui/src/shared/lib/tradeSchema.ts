@@ -12,16 +12,16 @@ const baseSchema = z.object({
     .regex(symbolRegex, 'Symbol must be uppercase letters/digits (e.g. BTCUSDT, AAPL, EUR/USD)'),
   direction: z.enum(['Long', 'Short']),
   entryPrice: z
-    .number({ invalid_type_error: 'Entry price is required' })
+    .number({ error: 'Entry price is required' })
     .positive('Entry price must be greater than zero'),
   exitPrice: z
-    .number({ invalid_type_error: 'Exit price is required' })
+    .number({ error: 'Exit price is required' })
     .positive('Exit price must be greater than zero'),
   positionSize: z
-    .number({ invalid_type_error: 'Position size is required' })
+    .number({ error: 'Position size is required' })
     .positive('Position size must be greater than zero'),
   fees: z
-    .number({ invalid_type_error: 'Fees must be a number' })
+    .number({ error: 'Fees must be a number' })
     .min(0, 'Fees cannot be negative'),
   notes: z.string().max(1000, 'Notes must be 1000 characters or fewer').nullable(),
 })
