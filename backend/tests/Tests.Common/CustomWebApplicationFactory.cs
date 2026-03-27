@@ -82,8 +82,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     public async Task InitializeAsync()
     {
-        using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseNpgsql(ConnectionString,
+                b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
+            .Options;
+
+        await using var db = new ApplicationDbContext(options);
         await db.Database.EnsureDeletedAsync();
         await db.Database.MigrateAsync();
     }

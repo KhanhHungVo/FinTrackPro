@@ -171,7 +171,7 @@ public static class DependencyInjection
 
     private static DatabaseConfiguration ResolveDatabaseConfiguration(IConfiguration configuration)
     {
-        var provider = configuration["DatabaseProvider:Provider"] ?? "sqlserver";
+        var provider = configuration["DatabaseProvider:Provider"] ?? throw new InvalidOperationException("DatabaseProvider:Provider is required.");
         var rawConnectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
         var isPostgres = provider.Equals("postgresql", StringComparison.OrdinalIgnoreCase);

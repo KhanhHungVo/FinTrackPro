@@ -2,6 +2,8 @@ version: '3.9'
 
 services:
   sqlserver:
+    profiles:
+      - sqlserver
     # azure-sql-edge is Microsoft's ARM64-native SQL Server variant.
     # On Windows/Linux (amd64), Docker pulls the amd64 layer automatically — no behavioural difference.
     # mssql/server:2022 has no ARM64 image and crashes under QEMU emulation on Apple Silicon.
@@ -74,10 +76,10 @@ services:
       dockerfile: Dockerfile.migrator
     container_name: fintrackpro-migrator
     environment:
-      DatabaseProvider__Provider: sqlserver
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FinTrackPro;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;"
+      DatabaseProvider__Provider: postgresql
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=FinTrackPro;Username=postgres;Password=YourStrong@Passw0rd"
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
 
   api:
@@ -89,8 +91,8 @@ services:
       - "5018:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      DatabaseProvider__Provider: sqlserver
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FinTrackPro;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;"
+      DatabaseProvider__Provider: postgresql
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=FinTrackPro;Username=postgres;Password=YourStrong@Passw0rd"
       Keycloak__Authority: "http://localhost:8080/realms/fintrackpro"
       Keycloak__MetadataAddress: "http://keycloak:8080/realms/fintrackpro/.well-known/openid-configuration"
       IdentityProvider__Audience: "https://api.fintrackpro.dev"
@@ -98,7 +100,7 @@ services:
       Telegram__BotToken: "${TELEGRAM_BOT_TOKEN}"
       Cors__Origins: "http://localhost:5173"
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
       keycloak:
         condition: service_healthy
