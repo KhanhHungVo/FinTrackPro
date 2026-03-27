@@ -99,4 +99,62 @@ public class TradesTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task UpdateTrade_ValidRequest_Returns200WithUpdatedValues()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/trades", TradeRequestBuilder.Build(symbol: "BTCUSDT"));
+        var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var updateRequest = new
+        {
+            symbol = "ETHUSDT",
+            direction = "Short",
+            entryPrice = 2000m,
+            exitPrice = 2500m,
+            positionSize = 1m,
+            fees = 10m,
+            notes = "Updated\nMultiline note",
+        };
+
+        var response = await _client.PutAsJsonAsync($"/api/trades/{id}", updateRequest);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        body.GetProperty("symbol").GetString().Should().Be("ETHUSDT");
+        body.GetProperty("notes").GetString().Should().Be("Updated\nMultiline note");
+    }
+
+    [Fact]
+    public async Task UpdateTrade_NonExistentId_Returns404()
+    {
+        var updateRequest = TradeRequestBuilder.Build();
+
+        var response = await _client.PutAsJsonAsync($"/api/trades/{Guid.NewGuid()}", updateRequest);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateTrade_ZeroExitPrice_Returns400()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/trades", TradeRequestBuilder.Build());
+        var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var updateRequest = TradeRequestBuilder.Build(exitPrice: 0m);
+
+        var response = await _client.PutAsJsonAsync($"/api/trades/{id}", updateRequest);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateTrade_Unauthenticated_Returns401()
+    {
+        var unauthClient = _fixture.Factory.CreateClient();
+
+        var response = await unauthClient.PutAsJsonAsync($"/api/trades/{Guid.NewGuid()}", TradeRequestBuilder.Build());
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
 }
