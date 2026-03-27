@@ -28,6 +28,11 @@ apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401 && !error.config._retried) {
+      // In E2E bypass mode the Keycloak SDK is never initialized —
+      // refreshToken() would throw, and logout() would destroy the injected token.
+      if (localStorage.getItem('e2e_bypass') === '1') {
+        return Promise.reject(error)
+      }
       error.config._retried = true
       try {
         const newToken = await authAdapter.refreshToken()
