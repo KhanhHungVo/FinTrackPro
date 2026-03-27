@@ -14,11 +14,11 @@ export function DashboardPage() {
   const totalPnl = trades?.reduce((s, t) => s + t.result, 0) ?? 0
 
   return (
-    <div className="mx-auto max-w-5xl p-6 space-y-6">
+    <div className="mx-auto max-w-5xl p-4 md:p-6 space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {/* Finance summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-lg border p-4">
           <p className="text-sm text-gray-500">Income (this month)</p>
           <p className="text-2xl font-semibold text-green-600">${income.toFixed(2)}</p>
@@ -35,7 +35,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Fear & Greed */}
         <FearGreedWidget />
 

@@ -28,8 +28,8 @@ export function TransactionsPage() {
   const monthOptions = Array.from({ length: 6 }, (_, i) => monthsBack(i))
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Transactions</h1>
         <select
           value={month}
@@ -43,7 +43,7 @@ export function TransactionsPage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-lg border p-4">
           <p className="text-xs text-gray-500">Income</p>
           <p className="text-xl font-semibold text-green-600">+${income.toFixed(2)}</p>

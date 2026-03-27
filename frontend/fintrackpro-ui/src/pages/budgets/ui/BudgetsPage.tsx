@@ -43,8 +43,8 @@ export function BudgetsPage() {
     })
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Budgets</h1>
         <select
           value={month}

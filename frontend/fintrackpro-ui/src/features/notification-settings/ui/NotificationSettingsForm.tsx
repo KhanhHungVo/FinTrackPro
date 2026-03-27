@@ -26,7 +26,7 @@ export function NotificationSettingsForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-6 max-w-md">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-4 md:p-6 max-w-md w-full">
       <h2 className="text-lg font-semibold">Telegram Notifications</h2>
 
       <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800 space-y-1">

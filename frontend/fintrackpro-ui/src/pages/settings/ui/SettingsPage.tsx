@@ -3,7 +3,7 @@ import { WatchlistManager } from '@/features/manage-watchlist'
 
 export function SettingsPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-8 p-6">
+    <div className="mx-auto max-w-3xl space-y-8 p-4 md:p-6">
       <h1 className="text-2xl font-bold">Settings</h1>
 
       <section>

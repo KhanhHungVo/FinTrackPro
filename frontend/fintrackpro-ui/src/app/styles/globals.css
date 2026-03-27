@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+@keyframes tcw-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}

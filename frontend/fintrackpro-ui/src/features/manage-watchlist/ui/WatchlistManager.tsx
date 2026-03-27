@@ -17,7 +17,7 @@ export function WatchlistManager() {
   }
 
   return (
-    <div className="rounded-lg border p-6 max-w-md space-y-4">
+    <div className="rounded-lg border p-4 md:p-6 max-w-md w-full space-y-4">
       <h2 className="text-lg font-semibold">Signal Watchlist</h2>
       <p className="text-sm text-gray-500">
         Symbols here are monitored by the 4-hour signal job (RSI, volume spikes).

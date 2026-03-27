@@ -20,7 +20,7 @@ export function AddBudgetForm({ month, onAdded }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
       <div className="flex-1">
         <label className="block text-xs text-gray-500 mb-1">Category</label>
         <input
@@ -32,7 +32,7 @@ export function AddBudgetForm({ month, onAdded }: Props) {
           className="w-full rounded-md border px-3 py-2 text-sm"
         />
       </div>
-      <div className="w-36">
+      <div className="w-full sm:w-36">
         <label className="block text-xs text-gray-500 mb-1">Limit ($)</label>
         <input
           type="number"

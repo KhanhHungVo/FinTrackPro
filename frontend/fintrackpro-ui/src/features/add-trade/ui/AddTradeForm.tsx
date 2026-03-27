@@ -63,7 +63,7 @@ export function AddTradeForm() {
         required
         className="w-full rounded-md border px-3 py-2 text-sm font-mono"
       />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <input
           type="number"
           placeholder="Entry price"
@@ -81,7 +81,7 @@ export function AddTradeForm() {
           className="rounded-md border px-3 py-2 text-sm"
         />
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <input
           type="number"
           placeholder="Position size"

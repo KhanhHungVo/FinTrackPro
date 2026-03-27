@@ -14,8 +14,8 @@ export function TradesPage() {
   const winRate    = total > 0 ? Math.round((wins / total) * 100) : 0
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Trading Journal</h1>
         <button
           onClick={() => setShowForm((v) => !v)}
@@ -26,7 +26,7 @@ export function TradesPage() {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-lg border p-4">
           <p className="text-xs text-gray-500">Total P&amp;L</p>
           <p className={cn('text-xl font-semibold', totalPnl >= 0 ? 'text-green-600' : 'text-red-600')}>
@@ -61,26 +61,26 @@ export function TradesPage() {
           No trades logged yet. Click &ldquo;Log Trade&rdquo; to get started.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
+        <div className="overflow-x-auto rounded-lg border -mx-4 sm:mx-0">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
               <tr>
-                <th className="px-4 py-3 text-left">Symbol</th>
-                <th className="px-4 py-3 text-left">Direction</th>
-                <th className="px-4 py-3 text-right">Entry</th>
-                <th className="px-4 py-3 text-right">Exit</th>
-                <th className="px-4 py-3 text-right">Size</th>
-                <th className="px-4 py-3 text-right">Fees</th>
-                <th className="px-4 py-3 text-right">P&amp;L</th>
-                <th className="px-4 py-3 text-left">Date</th>
-                <th className="px-4 py-3" />
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">Symbol</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">Direction</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">Entry</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">Exit</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">Size</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">Fees</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">P&amp;L</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">Date</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3" />
               </tr>
             </thead>
             <tbody className="divide-y">
               {trades?.map((trade) => (
                 <tr key={trade.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono font-medium">{trade.symbol}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 font-mono font-medium">{trade.symbol}</td>
+                  <td className="px-3 py-2 sm:px-4 sm:py-3">
                     <span
                       className={cn(
                         'rounded px-1.5 py-0.5 text-xs font-medium',
@@ -92,22 +92,22 @@ export function TradesPage() {
                       {trade.direction}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-600">${trade.entryPrice.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">${trade.exitPrice.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{trade.positionSize}</td>
-                  <td className="px-4 py-3 text-right text-gray-400">${trade.fees.toFixed(2)}</td>
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">${trade.entryPrice.toFixed(2)}</td>
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">${trade.exitPrice.toFixed(2)}</td>
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{trade.positionSize}</td>
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-400">${trade.fees.toFixed(2)}</td>
                   <td
                     className={cn(
-                      'px-4 py-3 text-right font-semibold',
+                      'px-3 py-2 sm:px-4 sm:py-3 text-right font-semibold',
                       trade.result >= 0 ? 'text-green-600' : 'text-red-600',
                     )}
                   >
                     {trade.result >= 0 ? '+' : ''}${trade.result.toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-400">
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs text-gray-400">
                     {new Date(trade.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 sm:px-4 sm:py-3">
                     <button
                       onClick={() => deleteTrade(trade.id)}
                       className="text-xs text-gray-300 hover:text-red-500"
