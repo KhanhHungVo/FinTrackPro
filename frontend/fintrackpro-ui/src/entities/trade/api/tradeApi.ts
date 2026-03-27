@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
-import type { Trade } from '../model/types'
+import type { Trade, TradeDirection } from '../model/types'
+
+export interface UpdateTradePayload {
+  symbol: string
+  direction: TradeDirection
+  entryPrice: number
+  exitPrice: number
+  positionSize: number
+  fees: number
+  notes: string | null
+}
 
 export function useTrades() {
   return useQuery({
@@ -25,6 +35,15 @@ export function useDeleteTrade() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/api/trades/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trades'] }),
+  })
+}
+
+export function useUpdateTrade() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & UpdateTradePayload) =>
+      apiClient.put<Trade>(`/api/trades/${id}`, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['trades'] }),
   })
 }

@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { useTrades, useDeleteTrade } from '@/entities/trade'
+import type { Trade } from '@/entities/trade'
 import { AddTradeForm } from '@/features/add-trade'
+import { EditTradeModal } from '@/features/edit-trade'
 import { cn } from '@/shared/lib/cn'
 
 export function TradesPage() {
   const { data: trades, isLoading } = useTrades()
   const { mutate: deleteTrade } = useDeleteTrade()
   const [showForm, setShowForm] = useState(false)
+  const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
 
   const totalPnl   = trades?.reduce((s, t) => s + t.result, 0) ?? 0
   const wins       = trades?.filter((t) => t.result > 0).length ?? 0
@@ -108,13 +111,22 @@ export function TradesPage() {
                     {new Date(trade.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3">
-                    <button
-                      onClick={() => deleteTrade(trade.id)}
-                      className="text-xs text-gray-300 hover:text-red-500"
-                      title="Delete"
-                    >
-                      ✕
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setEditingTrade(trade)}
+                        className="text-xs text-gray-300 hover:text-blue-500"
+                        title="Edit"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={() => deleteTrade(trade.id)}
+                        className="text-xs text-gray-300 hover:text-red-500"
+                        title="Delete"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -122,6 +134,8 @@ export function TradesPage() {
           </table>
         </div>
       )}
+
+      <EditTradeModal trade={editingTrade} onClose={() => setEditingTrade(null)} />
     </div>
   )
 }

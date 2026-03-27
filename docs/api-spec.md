@@ -172,10 +172,35 @@ Log a new trade. Symbol is validated against Binance `exchangeInfo`.
 
 ---
 
+### `PUT /api/trades/{id}`
+Update all editable fields of an existing trade (owner only).
+
+**Body:**
+```json
+{
+  "symbol": "ETHUSDT",
+  "direction": "Short",
+  "entryPrice": 2000.0,
+  "exitPrice": 2500.0,
+  "positionSize": 1.0,
+  "fees": 10.0,
+  "notes": "Updated note\nSecond line"
+}
+```
+
+**Response 200:** updated `TradeDto` (same shape as GET response, including re-computed `result`)
+
+**Errors:**
+- `400` validation failures (same rules as POST)
+- `403` if trade belongs to another user
+- `404` if trade not found
+
+---
+
 ### `DELETE /api/trades/{id}`
 Delete a trade (owner only).
 
-**Response 204** | **404** | **400**
+**Response 204** | **404** | **403**
 
 ---
 
