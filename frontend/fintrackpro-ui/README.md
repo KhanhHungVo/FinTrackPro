@@ -106,6 +106,25 @@ bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts
 
 See [docs/dev-setup.md — Mode E](../../docs/dev-setup.md#mode-e--running-playwright-e2e-tests-locally) for prerequisites and troubleshooting.
 
+## Responsive Design
+
+The UI is fully responsive using TailwindCSS v4 breakpoints:
+
+| Breakpoint | Min width | Key behavior |
+|---|---|---|
+| Mobile (default) | — | Stacked layouts, hamburger nav drawer, `p-4` spacing |
+| `sm` | 640px | 2-column form grids, small tablets |
+| `md` | 768px | Desktop nav links, 3-column stat grids, `p-6` spacing, 2-column widget rows |
+| `lg` | 1024px | Optimized for wider screens |
+
+Common patterns used across all pages (Dashboard, Transactions, Budgets, Trades, Settings):
+
+- **Navigation** — hamburger drawer on mobile (`< md`), horizontal links on desktop (`≥ md`)
+- **Stat grids** — `grid-cols-1 sm:grid-cols-3` (stacked → 3 columns)
+- **Form layouts** — `sm:grid-cols-2` or `sm:flex-row` (stacked → side-by-side)
+- **Widget rows** — `md:grid-cols-2` (e.g. FearGreed + TrendingCoins on Dashboard)
+- **Table bleed** — `-mx-4 sm:mx-0` (extends to screen edges on mobile)
+
 ## Further Reading
 
 - [../../docs/api-spec.md](../../docs/api-spec.md) — API endpoints consumed by this app

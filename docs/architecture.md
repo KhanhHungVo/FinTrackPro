@@ -112,6 +112,17 @@ app → pages → widgets → features → entities → shared
 | `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference — types + React Query hooks |
 | `shared/` | Axios client (Bearer injection + redirect on 401), `auth/` adapter (Keycloak or Auth0), env config, `cn()` |
 
+### Responsive Design
+
+The frontend uses a mobile-first approach with TailwindCSS v4 breakpoints:
+
+- `md` (768px) is the primary layout threshold — navigation switches from hamburger drawer to desktop links, and multi-column page layouts activate
+- `sm` (640px) adapts form grids and stat cards (e.g. `grid-cols-1 sm:grid-cols-3`)
+- Spacing scales from `p-4` (mobile) to `p-6` (md+)
+- Tables use a `-mx-4 sm:mx-0` bleed pattern on mobile
+
+All pages (Dashboard, Transactions, Budgets, Trades, Settings) follow the same responsive patterns.
+
 ## Key Design Decisions
 
 | Decision | Choice | Reason |
@@ -126,6 +137,7 @@ app → pages → widgets → features → entities → shared
 | Caching | IMemoryCache (in-process) | Single instance — swap to Redis when scaling |
 | API docs | Scalar + .NET 10 built-in OpenAPI | Swashbuckle incompatible with .NET 10 |
 | Frontend state | React Query (server) + Zustand (client) | Clear separation of concerns |
+| Responsive design | TailwindCSS v4 breakpoints — mobile-first (`sm`/`md`/`lg`) | Progressive enhancement; `md` (768px) is the primary nav and layout threshold |
 
 ## Infrastructure
 

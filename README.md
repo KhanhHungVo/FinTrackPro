@@ -1,6 +1,6 @@
 # FinTrackPro
 
-Personal finance tracking application with budgeting, expense management, and Telegram notifications.
+Personal finance tracking application with budgeting, expense management, and Telegram notifications. Fully responsive across mobile, tablet, and desktop.
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)
