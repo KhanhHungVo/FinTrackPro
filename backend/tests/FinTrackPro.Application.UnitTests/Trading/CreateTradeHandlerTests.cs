@@ -15,14 +15,13 @@ public class CreateTradeHandlerTests
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
-    private readonly IBinanceService _binanceService = Substitute.For<IBinanceService>();
     private readonly CreateTradeCommandHandler _handler;
 
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public CreateTradeHandlerTests()
     {
-        _handler = new CreateTradeCommandHandler(_context, _currentUser, _userRepository, _binanceService);
+        _handler = new CreateTradeCommandHandler(_context, _currentUser, _userRepository);
         _currentUser.UserId.Returns(TestUser.Id);
 
         var trades = Substitute.For<DbSet<Trade>>();
@@ -35,8 +34,6 @@ public class CreateTradeHandlerTests
     {
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
-        _binanceService.IsValidSymbolAsync("BTCUSDT", Arg.Any<CancellationToken>())
-            .Returns(true);
 
         var command = new CreateTradeCommand("BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, null);
 
@@ -58,21 +55,5 @@ public class CreateTradeHandlerTests
             CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
-    }
-
-    [Fact]
-    public async Task Handle_InvalidSymbol_ThrowsDomainException()
-    {
-        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
-            .Returns(TestUser);
-        _binanceService.IsValidSymbolAsync("FAKESYMBOL", Arg.Any<CancellationToken>())
-            .Returns(false);
-
-        var act = async () => await _handler.Handle(
-            new CreateTradeCommand("FAKESYMBOL", TradeDirection.Long, 100m, 110m, 1m, 0m, null),
-            CancellationToken.None);
-
-        await act.Should().ThrowAsync<DomainException>()
-            .WithMessage("*not a valid Binance*");
     }
 }

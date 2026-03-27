@@ -15,12 +15,14 @@ public class BinanceService(
 {
     private const string ExchangeInfoCacheKey = "binance_exchange_info";
 
+    /// <inheritdoc/>
     public async Task<bool> IsValidSymbolAsync(string symbol, CancellationToken cancellationToken = default)
     {
         var symbols = await GetValidSymbolsAsync(cancellationToken);
         return symbols.Contains(symbol.ToUpperInvariant());
     }
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<KlineDto>> GetKlinesAsync(
         string symbol, string interval, int limit, CancellationToken cancellationToken = default)
     {
@@ -47,6 +49,7 @@ public class BinanceService(
         return result;
     }
 
+    /// <inheritdoc/>
     public async Task<TickerDto?> Get24HrTickerAsync(string symbol, CancellationToken cancellationToken = default)
     {
         var url = $"/api/v3/ticker/24hr?symbol={symbol}";
@@ -78,6 +81,12 @@ public class BinanceService(
         }
     }
 
+    /// <summary>
+    /// Fetches and caches the full Binance symbol list for 24 hours.
+    /// Cache key: <c>binance_exchange_info</c>. Falls back to an empty set on parse failure.
+    /// Used internally by <see cref="IsValidSymbolAsync"/> — reserved for future features
+    /// that need to filter or validate against Binance-listed trading pairs.
+    /// </summary>
     private async Task<HashSet<string>> GetValidSymbolsAsync(CancellationToken cancellationToken)
     {
         if (cache.TryGetValue(ExchangeInfoCacheKey, out HashSet<string>? cached) && cached is not null)

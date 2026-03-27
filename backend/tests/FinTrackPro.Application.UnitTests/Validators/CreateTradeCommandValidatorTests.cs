@@ -30,6 +30,40 @@ public class CreateTradeCommandValidatorTests
         result.Errors.Should().ContainSingle(e => e.ErrorMessage == "Symbol is required.");
     }
 
+    [Theory]
+    [InlineData("BTCUSDT")]  // crypto pair
+    [InlineData("VIC")]      // Vietnamese equity
+    [InlineData("HPG")]      // Vietnamese equity
+    [InlineData("VN30")]     // Vietnamese index
+    [InlineData("AAPL")]     // global equity
+    [InlineData("TSLA")]     // global equity
+    [InlineData("EUR/USD")]  // FX slash-separated
+    [InlineData("GBP/VND")]  // FX slash-separated
+    [InlineData("GBP-VND")]  // FX dash-separated
+    [InlineData("EURUSD")]   // FX concatenated
+    public void Validate_ValidSymbolFormats_Pass(string symbol)
+    {
+        var command = Valid() with { Symbol = symbol };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("btcusdt")]                    // lowercase
+    [InlineData("BTC USDT")]                   // space
+    [InlineData("BTC@USDT")]                   // invalid char
+    [InlineData("AVERYLONGSYMBOLNAME12345")]    // >20 chars
+    public void Validate_InvalidSymbolFormats_Fail(string symbol)
+    {
+        var command = Valid() with { Symbol = symbol };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+    }
+
     [Fact]
     public void Validate_InvalidDirection_Fails()
     {

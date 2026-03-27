@@ -8,6 +8,11 @@ namespace Tests.Common;
 /// </summary>
 public class FakeBinanceService : IBinanceService
 {
+    /// <summary>
+    /// Stub: always returns <c>true</c>. Used in integration tests to bypass Binance HTTP calls.
+    /// Symbol validation is now handled by FluentValidation format rules in
+    /// <c>CreateTradeCommandValidator</c>, not by this service.
+    /// </summary>
     public Task<bool> IsValidSymbolAsync(string symbol, CancellationToken cancellationToken = default)
         => Task.FromResult(true);
 
