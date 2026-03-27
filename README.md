@@ -10,13 +10,13 @@ Personal finance tracking application with budgeting, expense management, and Te
 
 ## Architecture
 
-Clean Architecture monorepo: React SPA → .NET 10 REST API → SQL Server (local) / PostgreSQL (Render production), with Keycloak or Auth0 for authentication and Hangfire for background jobs. See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
+Clean Architecture monorepo: React SPA → .NET 10 REST API → PostgreSQL (local + Render production; SQL Server optional), with Keycloak or Auth0 for authentication and Hangfire for background jobs. See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
 
 ## Prerequisites
 
 | Tool | Version | Notes |
 |---|---|---|
-| Docker Desktop | Latest | Required for local SQL Server + Keycloak containers |
+| Docker Desktop | Latest | Required for local PostgreSQL + Keycloak containers |
 | .NET SDK | 10.0 | |
 | Node.js | 22+ | |
 
@@ -35,7 +35,7 @@ cp .env.example .env && npm install && npm run dev
 **Hybrid (recommended — hot reload + debugger):**
 
 ```bash
-docker compose up -d sqlserver keycloak
+docker compose up -d postgres keycloak
 
 cd backend
 dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
@@ -125,7 +125,7 @@ dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-pro
 ```
 See [docs/database.md](docs/database.md) for adding new migrations.
 
-**Playwright E2E tests** — requires Docker (Keycloak + SQL Server for local dev), the API, and the frontend dev server running. Then:
+**Playwright E2E tests** — requires Docker (Keycloak + PostgreSQL for local dev), the API, and the frontend dev server running. Then:
 ```bash
 bash scripts/e2e-local.sh      # Git Bash / WSL
 ```

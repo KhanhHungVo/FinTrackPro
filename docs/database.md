@@ -1,8 +1,8 @@
 # FinTrackPro — Database Schema
 
-Database: SQL Server (local Docker) / PostgreSQL (Render in production). ORM: EF Core 10. Migrations assembly: `FinTrackPro.Infrastructure`.
+Database: PostgreSQL (local Docker + Render production). SQL Server supported as optional provider. ORM: EF Core 10. Migrations assembly: `FinTrackPro.Infrastructure`.
 
-> **Provider selection:** set `DatabaseProvider:Provider` to `"sqlserver"` (default, local dev) or `"postgresql"` (production). The migrations are provider-agnostic — EF Core applies the correct column types for the active provider at runtime.
+> **Provider selection:** set `DatabaseProvider:Provider` to `"postgresql"` (default) or `"sqlserver"` (optional). The migrations are provider-agnostic — EF Core applies the correct column types for the active provider at runtime.
 >
 > **Production:** PostgreSQL 18 on Render free tier, provisioned by Terraform. See [render-terraform-deploy.md](render-terraform-deploy.md).
 

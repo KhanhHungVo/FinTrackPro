@@ -104,8 +104,8 @@ VITE_KEYCLOAK_CLIENT_ID=fintrackpro-spa
 docker compose down -v
 
 # 2. Start infrastructure only
-docker compose up -d sqlserver keycloak
-# Wait ~15 s for both to be ready
+docker compose up -d postgres keycloak
+# Wait ~10 s for both to be ready
 
 # 3. Run migrations (first time only — skip if Migrations/ folder already has files)
 cd backend
@@ -178,9 +178,9 @@ VITE_AUTH0_AUDIENCE=https://api.fintrackpro.dev
 # 1. Clean slate
 docker compose down -v
 
-# 2. Start SQL Server only (no Keycloak)
-docker compose up -d sqlserver
-# Wait ~15 s
+# 2. Start PostgreSQL only (no Keycloak)
+docker compose up -d postgres
+# Wait ~10 s
 
 # 3. Run migrations (if not already applied)
 cd backend

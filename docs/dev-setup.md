@@ -44,7 +44,7 @@ docker compose up --build
 ```
 
 Compose handles startup order automatically:
-1. `sqlserver` starts and passes its health check
+1. `postgres` starts and passes its health check
 2. `keycloak` starts and auto-imports the `fintrackpro` realm from `infra/docker/keycloak-realm.json`
 3. `migrator` (SDK image) runs `dotnet ef database update` and exits
 4. `api` starts only after `migrator` completes successfully
@@ -63,7 +63,7 @@ npm run dev
 | Frontend | http://localhost:5173 |
 | API | http://localhost:5018 |
 | Keycloak | http://localhost:8080 |
-| SQL Server | localhost:1433 |
+| PostgreSQL | localhost:5432 |
 
 > Keycloak realm is imported automatically on first start — no manual setup needed.
 > Log in with `admin@fintrackpro.dev` / `Admin1234!` (Admin role) or register a new account.
@@ -79,10 +79,10 @@ support on both.
 
 ```bash
 # From repo root
-docker compose up -d sqlserver keycloak
+docker compose up -d postgres keycloak
 ```
 
-Wait ~15 seconds for SQL Server to be ready and Keycloak to finish booting.
+Wait ~10 seconds for PostgreSQL to be ready and Keycloak to finish booting.
 
 > The `fintrackpro` realm is **automatically provisioned** from `infra/docker/keycloak-realm.json`
 > on first start. No manual Keycloak configuration is required. Log in immediately with
@@ -98,7 +98,7 @@ If you need to recreate the realm manually or configure custom settings (social 
 ### Step 2 — Create and apply database migration (first time only)
 
 > The Migrations folder is empty on a fresh clone — run this once before starting the API.
-> SQL Server must already be running (Step 1) before applying migrations.
+> PostgreSQL must already be running (Step 1) before applying migrations.
 
 ```bash
 cd backend
@@ -108,7 +108,7 @@ dotnet ef migrations add InitialCreate --project src/FinTrackPro.Infrastructure 
 dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
 ```
 
-This works because `appsettings.json` targets `localhost,1433` — the port that Docker maps from the `sqlserver` container.
+This works because `appsettings.json` targets `localhost:5432` — the port that Docker maps from the `postgres` container.
 
 ---
 
@@ -210,21 +210,22 @@ Frontend runs at **http://localhost:5173**.
 
 ---
 
-## Mode C — Hybrid dev against local PostgreSQL
+## Mode C — Hybrid dev against SQL Server (optional)
 
-Run the API locally using the `postgres` Docker service instead of SQL Server. Useful when you want a local environment that matches the production provider.
+Run the API locally using the `sqlserver` Docker service instead of the default PostgreSQL. Useful if you need
+to test SQL Server-specific behaviour.
 
 ### Prerequisites
 
 - Docker Desktop running
 
-### Step 1 — Start PostgreSQL and Keycloak
+### Step 1 — Start SQL Server and Keycloak
 
 ```bash
-docker compose up -d postgres keycloak
+docker compose --profile sqlserver up -d sqlserver keycloak
 ```
 
-Wait ~10 seconds for PostgreSQL to be ready.
+Wait ~15 seconds for SQL Server to be ready.
 
 ### Step 2 — Set the provider and connection string
 
@@ -233,38 +234,22 @@ Add to `backend/src/FinTrackPro.API/appsettings.Development.json` (gitignored �
 ```json
 {
   "DatabaseProvider": {
-    "Provider": "postgresql"
+    "Provider": "sqlserver"
   },
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=FinTrackPro;Username=postgres;Password=YourStrong@Passw0rd;"
+    "DefaultConnection": "Server=localhost,1433;Database=FinTrackPro;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;"
   }
 }
 ```
 
-### Step 3 — Regenerate and apply migrations
-
-The existing migration was generated with the SQL Server provider. Before applying to PostgreSQL you must remove it and regenerate so EF emits PostgreSQL-compatible DDL (`uuid`, `text`, `timestamp`, `boolean` instead of SQL Server types).
+### Step 3 — Apply migrations
 
 ```bash
 cd backend
-
-# Remove the SQL Server migration
-dotnet ef migrations remove \
-  --project src/FinTrackPro.Infrastructure \
-  --startup-project src/FinTrackPro.API
-
-# Regenerate with the PostgreSQL provider active
-dotnet ef migrations add InitialCreate \
-  --project src/FinTrackPro.Infrastructure \
-  --startup-project src/FinTrackPro.API
-
-# Apply to the local PostgreSQL database
 dotnet ef database update \
   --project src/FinTrackPro.Infrastructure \
   --startup-project src/FinTrackPro.API
 ```
-
-> **Skip the remove/add steps** if the `Migrations/` folder is already empty or was already generated against PostgreSQL.
 
 ### Step 4 — Run the API and frontend
 
@@ -313,8 +298,8 @@ dotnet run --project src/FinTrackPro.API --launch-profile http
 | API (local) | hybrid | http://localhost:5018 |
 | API (Docker) | full Docker | http://localhost:5018 |
 | Keycloak | both | http://localhost:8080 |
-| SQL Server | both (default) | localhost:1433 |
-| PostgreSQL | Mode C (local) | localhost:5432 |
+| PostgreSQL | both | localhost:5432 |
+| SQL Server | Mode C (optional) | localhost:1433 |
 | Scalar API docs | both | `<api-url>/scalar` |
 | Hangfire dashboard | both | `<api-url>/hangfire` (Basic Auth: `hangfire-admin` / `Dev-Hangfire@1234!`) |
 
@@ -337,7 +322,7 @@ Run these checks in order after starting everything:
 # Stop Docker services
 docker compose down
 
-# To also delete the SQL Server data volume (full reset)
+# To also delete all data volumes (full reset)
 docker compose down -v
 ```
 
@@ -350,7 +335,7 @@ Keycloak login redirect. A helper script at the repo root handles token minting 
 
 ### Prerequisites
 
-- Docker running with `sqlserver` and `keycloak` containers up
+- Docker running with `postgres` and `keycloak` containers up
 - API running on `http://localhost:5018`
 - Frontend dev server running on `http://localhost:5173` (`npm run dev`)
 - `curl` and `grep -P` available (Git Bash / WSL / Linux — no `jq` or Node required)

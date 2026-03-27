@@ -45,13 +45,13 @@ bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts        # single spec
 .\scripts\e2e-local.ps1 tests/e2e/budgets.spec.ts
 ```
 
-Prerequisites: Docker up (`sqlserver` + `keycloak`), API on :5018, frontend dev server on :5173.
+Prerequisites: Docker up (`postgres` + `keycloak`), API on :5018, frontend dev server on :5173.
 The `fintrackpro-e2e` Keycloak client is included in `infra/docker/keycloak-realm.json` and
 auto-imported on first `docker compose up`.
 
 ### Infrastructure
 ```bash
-docker compose up -d sqlserver keycloak   # hybrid dev (recommended)
+docker compose up -d postgres keycloak    # hybrid dev (recommended)
 docker compose up --build                 # full docker
 
 # Terraform (Render deployment)
