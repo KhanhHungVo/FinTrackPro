@@ -159,10 +159,10 @@ RecurringJob.AddOrUpdate<BudgetOverrunJob>(
     job => job.ExecuteAsync(CancellationToken.None),
     Cron.Daily);
 
-RecurringJob.AddOrUpdate<IamUserSyncJob>(
-    "iam-user-sync",
-    job => job.ExecuteAsync(CancellationToken.None),
-    Cron.Daily);
+// RecurringJob.AddOrUpdate<IamUserSyncJob>(
+//     "iam-user-sync",
+//     job => job.ExecuteAsync(CancellationToken.None),
+//     Cron.Daily);
 
 app.Run();
 
