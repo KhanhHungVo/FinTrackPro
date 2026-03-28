@@ -46,6 +46,14 @@ jobs:
           TEST_DB_CONNECTION_STRING: "Host=localhost;Port=5432;Database=fintrackpro_test;Username=postgres;Password=YourStrong@Passw0rd"
         run: dotnet test backend/FinTrackPro.slnx --no-build -c Release --filter "Category=Integration" --logger "trx;LogFileName=integration-test-results.trx"
 
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/**/TestResults/*.trx
+          retention-days: 14
+
       - name: Docker Build
         run: docker build -t fintrackpro-api:${{ github.sha }} ./backend
 
@@ -70,6 +78,14 @@ jobs:
 
       - name: Unit Tests
         run: npm test
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-unit-test-results
+          path: frontend/fintrackpro-ui/test-results/junit.xml
+          retention-days: 14
 
       - name: Build
         run: npm run build
@@ -147,7 +163,7 @@ jobs:
         run: npm run test:e2e
 
       - name: Upload Playwright report
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report

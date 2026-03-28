@@ -12,5 +12,6 @@ export default defineConfig({
     globals: true,
     setupFiles: './tests/setup.ts',
     exclude: ['**/node_modules/**', '**/tests/e2e/**'],
+    reporters: ['verbose', ['junit', { outputFile: 'test-results/junit.xml' }]],
   },
 })
