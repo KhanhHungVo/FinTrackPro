@@ -53,6 +53,34 @@ public class IdentityService(
         {
             await db.SaveChangesAsync(cancellationToken);
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // The AppUser row was stale in the change tracker (e.g. Keycloak volume was wiped and
+            // the same email got a new sub — the Users row may have been truncated and re-provisioned
+            // between our read and save). Clear the tracker and retry once with a fresh load.
+            logger.LogWarning(ex, "Concurrency conflict linking externalId={ExternalId}, provider={Provider} — retrying with fresh state", externalId, provider);
+
+            db.ChangeTracker.Clear();
+
+            var existing = await userIdentityRepository.GetAsync(externalId, provider, cancellationToken);
+            if (existing is not null)
+                return CurrentUser.From(existing.User);
+
+            // Re-resolve user by email and re-link, or create new
+            AppUser? retryUser = null;
+            if (email is not null && emailVerified)
+                retryUser = await userRepository.GetByEmailAsync(email, cancellationToken);
+
+            if (retryUser is null)
+            {
+                retryUser = AppUser.Create(email, displayName);
+                userRepository.Add(retryUser);
+            }
+
+            retryUser.AddIdentity(externalId, provider);
+            await db.SaveChangesAsync(cancellationToken);
+            return CurrentUser.From(retryUser);
+        }
         catch (DbUpdateException ex)
         {
             logger.LogWarning(ex, "Concurrent first-login race for externalId={ExternalId}, provider={Provider} — re-querying winner", externalId, provider);
