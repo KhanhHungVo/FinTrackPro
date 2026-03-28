@@ -21,6 +21,12 @@ public class BudgetRepository(ApplicationDbContext context) : IBudgetRepository
             b => b.UserId == userId && b.Category == category && b.Month == month,
             cancellationToken);
 
+    public Task<bool> ExistsAsync(
+        Guid userId, string category, string month, CancellationToken cancellationToken = default) =>
+        context.Budgets.AnyAsync(
+            b => b.UserId == userId && b.Category == category && b.Month == month,
+            cancellationToken);
+
     public void Add(Budget budget) => context.Budgets.Add(budget);
     public void Remove(Budget budget) => context.Budgets.Remove(budget);
 }

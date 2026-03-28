@@ -14,18 +14,22 @@ public class CreateBudgetHandlerTests
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly IBudgetRepository _budgetRepository = Substitute.For<IBudgetRepository>();
     private readonly CreateBudgetCommandHandler _handler;
 
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public CreateBudgetHandlerTests()
     {
-        _handler = new CreateBudgetCommandHandler(_context, _currentUser, _userRepository);
+        _handler = new CreateBudgetCommandHandler(_context, _currentUser, _userRepository, _budgetRepository);
         _currentUser.UserId.Returns(TestUser.Id);
 
         var budgets = Substitute.For<DbSet<Budget>>();
         _context.Budgets.Returns(budgets);
         _context.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
+
+        _budgetRepository.ExistsAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(false);
     }
 
     [Fact]
@@ -52,5 +56,18 @@ public class CreateBudgetHandlerTests
         var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "2026-03"), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_DuplicateBudget_ThrowsConflictException()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _budgetRepository.ExistsAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "2026-03"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
     }
 }
