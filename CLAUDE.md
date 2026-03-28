@@ -49,6 +49,38 @@ Prerequisites: Docker up (`postgres` + `keycloak`), API on :5018, frontend dev s
 The `fintrackpro-e2e` Keycloak client is included in `infra/docker/keycloak-realm.json` and
 auto-imported on first `docker compose up`.
 
+### API E2E tests (Newman)
+Newman-based suite that hits a real running API process with a real Keycloak-issued JWT. Covers full CRUD lifecycle, authorization guards (403 cross-user ownership checks), validation errors, and market endpoints.
+
+```bash
+# Prerequisites: Docker up (postgres + keycloak), API on :5018, Newman installed globally
+npm install -g newman
+
+# Full suite
+bash scripts/api-e2e-local.sh
+
+# Single folder (use exact folder name prefix)
+bash scripts/api-e2e-local.sh --folder "Trades — Full lifecycle"
+
+# Verbose output
+bash scripts/api-e2e-local.sh --verbose
+```
+
+Override defaults via env vars:
+```bash
+KEYCLOAK_URL=http://localhost:8080 \
+API_BASE_URL=http://localhost:5018 \
+E2E_USERNAME=admin@fintrackpro.dev \
+E2E_PASSWORD=Admin1234! \
+E2E_USERNAME2=user2@fintrackpro.dev \
+E2E_PASSWORD2=User2Pass! \
+bash scripts/api-e2e-local.sh
+```
+
+The collection auto-mints `bearerToken` (user 1) via the Keycloak ROPC flow. `bearerToken2` (user 2) is minted in the Authorization Guards folder. Results are written to `test-results/newman.xml`.
+
+See `docs/postman/api-e2e-plan.md` for the full collection structure, CI job diagram, first-time Keycloak setup, and required GitHub secrets.
+
 ### Infrastructure
 ```bash
 docker compose up -d postgres keycloak    # hybrid dev (recommended)

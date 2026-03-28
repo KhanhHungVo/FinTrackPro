@@ -8,6 +8,7 @@ appsettings.*.json
 
 # Test result output
 TestResults/
+test-results/
 
 # Node
 node_modules/

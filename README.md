@@ -74,7 +74,8 @@ FinTrackPro/
 │   └── terraform/                      # Terraform IaC — Render API + frontend (TF Cloud state)
 ├── scripts/
 │   ├── e2e-local.sh                    # Mint E2E token + run Playwright (Git Bash / WSL)
-│   └── e2e-local.ps1                   # Mint E2E token + run Playwright (PowerShell)
+│   ├── e2e-local.ps1                   # Mint E2E token + run Playwright (PowerShell)
+│   └── api-e2e-local.sh               # Newman API E2E suite (Git Bash / WSL)
 ├── docs/                               # Reference documentation
 ├── .github/workflows/ci.yml            # CI pipeline
 └── docker-compose.yml
@@ -100,6 +101,8 @@ See [docs/render-terraform-deploy.md](docs/render-terraform-deploy.md) for the f
 | [docs/database.md](docs/database.md) | Database schema, tables, relationships, migration commands |
 | [docs/roadmap.md](docs/roadmap.md) | Feature phases and release milestones |
 | [docs/testing.md](docs/testing.md) | Manual end-to-end test scenarios |
+| [docs/postman/api-e2e-plan.md](docs/postman/api-e2e-plan.md) | Newman API E2E suite — collection structure, CI job, GitHub secrets |
+| [docs/security-hardening.md](docs/security-hardening.md) | Security hardening guide — rate limiting, headers, HTTPS, input validation, JWT storage, XSS, quotas |
 | [docs/auth0-config-as-code-plan.md](docs/auth0-config-as-code-plan.md) | Plan: Auth0 config-as-code via `auth0 deploy` CLI (not yet implemented) |
 | [backend/README.md](backend/README.md) | Backend developer reference |
 | [frontend/fintrackpro-ui/README.md](frontend/fintrackpro-ui/README.md) | Frontend developer reference |
@@ -133,3 +136,10 @@ bash scripts/e2e-local.sh      # Git Bash / WSL
 .\scripts\e2e-local.ps1        # PowerShell
 ```
 See [docs/dev-setup.md — Mode E](docs/dev-setup.md#mode-e--running-playwright-e2e-tests-locally) for full steps and troubleshooting.
+
+**Newman API E2E tests** — hits a real running API with a real Keycloak-issued JWT. Requires Docker (`postgres` + `keycloak`) and the API on :5018:
+```bash
+npm install -g newman          # one-time
+bash scripts/api-e2e-local.sh
+```
+See [docs/postman/api-e2e-plan.md](docs/postman/api-e2e-plan.md) for collection structure, CI job, and required GitHub secrets.

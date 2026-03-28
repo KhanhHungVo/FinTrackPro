@@ -14,6 +14,7 @@ Two ways to run the full stack locally. **Hybrid mode** is recommended for day-t
 - [Mode C — Hybrid dev against local PostgreSQL](#mode-c--hybrid-dev-against-local-postgresql)
 - [Mode D — Hybrid dev against Render PostgreSQL](#mode-d--hybrid-dev-against-render-postgresql-production-db)
 - [Mode E — Running Playwright E2E Tests Locally](#mode-e--running-playwright-e2e-tests-locally)
+- [Mode F — Running Newman API E2E Tests Locally](#mode-f--running-newman-api-e2e-tests-locally)
 - [Port Reference](#port-reference)
 - [Verifying the Stack](#verifying-the-stack)
 - [Stopping the Stack](#stopping-the-stack)
@@ -393,6 +394,86 @@ bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts     # single spec
 
 The `e2e` job in `.github/workflows/ci.yml` mints the token inline using the same
 `fintrackpro-e2e` client and injects it as `E2E_TOKEN`. No changes to the script are needed for CI.
+
+---
+
+## Mode F — Running Newman API E2E Tests Locally
+
+The Newman suite (`docs/postman/FinTrackPro.postman_collection.json`) hits a real running API container with a real Keycloak-issued JWT. It covers full CRUD lifecycles, 403 ownership guard tests (second user), validation errors, and market endpoints.
+
+This is distinct from the Playwright suite — Newman tests the API contract directly; Playwright tests the browser UI.
+
+### Prerequisites
+
+- Docker running with `postgres`, `keycloak`, and `api` containers up (`docker compose up -d postgres keycloak api`)
+- Newman installed globally: `npm install -g newman`
+- Both test users present in the Keycloak realm (provisioned automatically from `infra/docker/keycloak-realm.json` on first `docker compose up`)
+
+### Run the tests
+
+```bash
+bash scripts/api-e2e-local.sh
+```
+
+The script mints tokens for both test users via the `fintrackpro-e2e` Keycloak client (ROPC flow), passes credentials as env vars to Newman, and writes results to `test-results/newman.xml`.
+
+### Run a single folder
+
+```bash
+bash scripts/api-e2e-local.sh --folder "Trades — Full lifecycle"
+bash scripts/api-e2e-local.sh --folder "Authorization Guards"
+bash scripts/api-e2e-local.sh --verbose   # full request/response output
+```
+
+### Override defaults
+
+```bash
+KEYCLOAK_URL=http://localhost:8080 \
+API_BASE_URL=http://localhost:5018 \
+E2E_USERNAME=admin@fintrackpro.dev \
+E2E_PASSWORD=Admin1234! \
+E2E_USERNAME2=user2@fintrackpro.dev \
+E2E_PASSWORD2=User2Pass! \
+bash scripts/api-e2e-local.sh
+```
+
+### First-time setup — adding `user2@fintrackpro.dev`
+
+The second test user is provisioned from `infra/docker/keycloak-realm.json`. If you started the stack before this user was added to the realm JSON, wipe the Keycloak data volume and restart so the updated realm is re-imported:
+
+```bash
+docker compose stop keycloak
+docker volume rm fintrackpro_keycloak-data
+docker compose up -d keycloak
+```
+
+Wait ~30 s, then verify:
+
+```bash
+curl -sf -X POST http://localhost:8080/realms/fintrackpro/protocol/openid-connect/token \
+  -d "grant_type=password&client_id=fintrackpro-e2e&username=user2@fintrackpro.dev&password=User2Pass!" \
+  | grep -o '"access_token":"[^"]*"' | head -c 40 && echo " ← user2 OK"
+```
+
+> **Note:** Wiping the Keycloak volume changes the `sub` claim for all users. The `IdentityService` handles re-linking automatically on next login via email match. For a completely clean slate, also truncate the `Users` table:
+> ```bash
+> docker exec fintrackpro-postgres psql -U postgres -d "FinTrackPro" -c 'TRUNCATE "Users" CASCADE;'
+> ```
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `invalid_client` from token mint | `fintrackpro-e2e` client missing | `docker compose restart keycloak` (re-imports realm JSON) |
+| `user2` token mint fails | User not in realm | See first-time setup above |
+| API 401 on all requests | API container not ready or JWT audience mismatch | Check `docker compose logs api`; verify `IdentityProvider__Audience` matches the realm audience mapper |
+| 409 on budget creation | Leftover data from a previous run | Budgets use `testMonth` (current YYYY-MM) set dynamically — collision means data from the same calendar month was not cleaned up. Truncate budgets or wait for the next month. |
+
+### CI (GitHub Actions)
+
+The `backend-api-e2e` job in `.github/workflows/ci.yml` runs after `Backend — Build & Test` passes. It starts the full Docker stack, installs Newman, and runs the same collection using GitHub secrets `E2E_USERNAME`, `E2E_PASSWORD`, `E2E_USERNAME2`, `E2E_PASSWORD2`. Results are uploaded as a JUnit artifact (`newman-api-e2e-results`).
+
+See [docs/postman/api-e2e-plan.md](postman/api-e2e-plan.md) for the full collection structure and CI job diagram.
 
 ---
 
