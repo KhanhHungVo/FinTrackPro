@@ -1,6 +1,6 @@
 # Plan: Auth0 Config-as-Code via `auth0 deploy`
 
-> ⚠️ **PLAN — not yet implemented.** These files and scripts do not exist yet. See [docs/roadmap.md](roadmap.md) for implementation status.
+> ⚠️ **PLAN — not yet implemented.** These files and scripts do not exist yet. See [docs/roadmap.md](../roadmap.md) for implementation status.
 
 ## Context
 

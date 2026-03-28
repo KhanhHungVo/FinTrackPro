@@ -144,7 +144,7 @@ All pages (Dashboard, Transactions, Budgets, Trades, Settings) follow the same r
 ### Terraform (`infra/terraform/`)
 
 Render services are managed as code using the official `render-oss/render` Terraform provider.
-State is stored in **Terraform Cloud** (free tier). See [render-terraform-deploy.md](render-terraform-deploy.md) for the full deploy guide.
+State is stored in **Terraform Cloud** (free tier). See [render-deploy.md](../guides/render-deploy.md) for the full deploy guide.
 
 | Resource | Type | Description |
 |---|---|---|

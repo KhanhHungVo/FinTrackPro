@@ -4,7 +4,7 @@ Database: PostgreSQL (local Docker + Render production). SQL Server supported as
 
 > **Provider selection:** set `DatabaseProvider:Provider` to `"postgresql"` (default) or `"sqlserver"` (optional). The migrations are provider-agnostic — EF Core applies the correct column types for the active provider at runtime.
 >
-> **Production:** PostgreSQL 18 on Render free tier, provisioned by Terraform. See [render-terraform-deploy.md](render-terraform-deploy.md).
+> **Production:** PostgreSQL 18 on Render free tier, provisioned by Terraform. See [render-deploy.md](../guides/render-deploy.md).
 
 Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` → `uniqueidentifier`, `character varying(n)` → `nvarchar(n)`, `boolean` → `bit`, `timestamp` → `datetime2`.
 

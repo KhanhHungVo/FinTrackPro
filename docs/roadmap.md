@@ -172,7 +172,7 @@
 | 5 | Telegram Bot | Create via @BotFather → set token via env var or User Secrets (`Telegram:BotToken`) |
 | 6 | Frontend env | Copy `.env.example` → `.env`, set `VITE_API_BASE_URL` and IAM provider vars |
 | 7 | Start environment | `docker compose up` then `dotnet run` then `npm run dev` |
-| 8 | Render deployment | Terraform deploy — see [docs/render-terraform-deploy.md](render-terraform-deploy.md) |
+| 8 | Render deployment | Terraform deploy — see [docs/guides/render-deploy.md](guides/render-deploy.md) |
 
 ---
 

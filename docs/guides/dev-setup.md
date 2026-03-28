@@ -19,7 +19,7 @@ Two ways to run the full stack locally. **Hybrid mode** is recommended for day-t
 - [Verifying the Stack](#verifying-the-stack)
 - [Stopping the Stack](#stopping-the-stack)
 
-> For IAM provider configuration (Keycloak manual setup, Auth0 dashboard config, switching providers) see [docs/auth-setup.md](auth-setup.md).
+> For IAM provider configuration (Keycloak manual setup, Auth0 dashboard config, switching providers) see [docs/guides/auth-setup.md](auth-setup.md).
 
 ---
 
@@ -473,7 +473,7 @@ curl -sf -X POST http://localhost:8080/realms/fintrackpro/protocol/openid-connec
 
 The `backend-api-e2e` job in `.github/workflows/ci.yml` runs after `Backend — Build & Test` passes. It starts the full Docker stack, installs Newman, and runs the same collection using GitHub secrets `E2E_USERNAME`, `E2E_PASSWORD`, `E2E_USERNAME2`, `E2E_PASSWORD2`. Results are uploaded as a JUnit artifact (`newman-api-e2e-results`).
 
-See [docs/postman/api-e2e-plan.md](postman/api-e2e-plan.md) for the full collection structure and CI job diagram.
+See [docs/postman/api-e2e-plan.md](../postman/api-e2e-plan.md) for the full collection structure and CI job diagram.
 
 ---
 
@@ -482,7 +482,7 @@ See [docs/postman/api-e2e-plan.md](postman/api-e2e-plan.md) for the full collect
 Both services (API + frontend) are deployed to Render via **Terraform** (`infra/terraform/`).
 The `render.yaml` Blueprint remains as a fallback for manual one-click deploys.
 
-See **[docs/render-terraform-deploy.md](render-terraform-deploy.md)** for the complete guide covering:
+See **[docs/guides/render-deploy.md](render-deploy.md)** for the complete guide covering:
 - Terraform step-by-step (primary)
 - render.yaml Blueprint (fallback)
 - Migration strategies

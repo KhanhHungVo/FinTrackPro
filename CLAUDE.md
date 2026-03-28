@@ -112,7 +112,7 @@ The IAM provider is selected by a single config key: `IdentityProvider:Provider 
 
 **Keycloak** (local dev, Docker): realm `fintrackpro` is auto-provisioned from `infra/docker/keycloak-realm.json` on first `docker compose up`. Import is idempotent. Default dev credentials: `admin@fintrackpro.dev` / `Admin1234!`. The `User` role is assigned by Default Roles; `Admin` is assigned manually.
 
-**Auth0** (cloud, free tier): requires one-time dashboard setup (API, SPA app, M2M app, roles, post-login Action). See `docs/auth-setup.md` for the full Auth0 setup guide.
+**Auth0** (cloud, free tier): requires one-time dashboard setup (API, SPA app, M2M app, roles, post-login Action). See `docs/guides/auth-setup.md` for the full Auth0 setup guide.
 
 Roles (`User`, `Admin`) are stored only in the IAM provider — never in the database. `AppUser.ExternalUserId` stores the JWT `sub` claim; `AppUser.Provider` records which IAM issued it.
 
@@ -155,13 +155,30 @@ dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrac
 | API (Docker) | 5000 |
 
 ## Docs
-- `docs/architecture.md` — layer descriptions and design decisions
-- `docs/dev-setup.md` — hybrid vs full-Docker setup, local PostgreSQL, Render deployment
-- `docs/render-terraform-deploy.md` — Render deploy guide (Terraform primary + render.yaml fallback + migration strategies)
-- `docs/auth-setup.md` — IAM provider setup (Keycloak, Auth0, switching providers)
-- `docs/auth0-config-as-code-plan.md` — plan for Auth0 CLI deploy (not yet implemented)
-- `docs/api-spec.md` — REST endpoints and schemas
-- `docs/database.md` — schema, tables, relationships, migration commands
+### Architecture (reference — what the system is)
+- `docs/architecture/overview.md` — layer descriptions and design decisions
+- `docs/architecture/api-spec.md` — REST endpoints and schemas
+- `docs/architecture/database.md` — schema, tables, relationships, migration commands
+- `docs/architecture/background-jobs.md` — Hangfire job details and sequence diagrams
+- `docs/architecture/ui-flows.md` — frontend user flows
+
+### Guides (how-to — operational and setup)
+- `docs/guides/dev-setup.md` — hybrid vs full-Docker setup, local PostgreSQL, Render deployment
+- `docs/guides/auth-setup.md` — IAM provider setup (Keycloak, Auth0, switching providers)
+- `docs/guides/render-deploy.md` — Render deploy guide (Terraform primary + render.yaml fallback + migration strategies)
+- `docs/guides/testing.md` — manual E2E test guide across provider × mode combinations
+- `docs/guides/security-hardening.md` — rate limiting, headers, HTTPS, Cloudflare setup
+
+### Decisions (implemented — why things are the way they are)
+- `docs/decisions/postgres-migration.md` — migration from Azure SQL to PostgreSQL
+- `docs/decisions/integration-test-refactor.md` — SQL Server → PostgreSQL test infra change
+- `docs/decisions/preventing-duplicate-calls-on-fast-clicks.md` — useGuardedMutation hook design rationale
+
+### Planned (not yet implemented)
+- `docs/planned/identity-linking-refactor.md` — multi-provider identity linking via UserContextMiddleware
+- `docs/planned/auth0-config-as-code.md` — Auth0 CLI deploy automation
+- `docs/planned/frontend-error-handling.md` — consistent error handling and form validation
+- `docs/planned/health-checks-external-services.md` — health check endpoints for external services
 
 ## Documentation Sync Rules
 
