@@ -49,6 +49,22 @@
         }
       ],
       "realmRoles": ["Admin", "User"]
+    },
+    {
+      "username": "user2@fintrackpro.dev",
+      "email": "user2@fintrackpro.dev",
+      "firstName": "User",
+      "lastName": "Two",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "User2Pass!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["User"]
     }
   ],
   "clients": [

@@ -58,7 +58,7 @@ jobs:
         run: docker build -t fintrackpro-api:${{ github.sha }} ./backend
 
   frontend:
-    name: Frontend — Build
+    name: Frontend — Build & Test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -95,6 +95,69 @@ jobs:
           VITE_KEYCLOAK_URL: http://localhost:8080
           VITE_KEYCLOAK_REALM: fintrackpro
           VITE_KEYCLOAK_CLIENT_ID: fintrackpro-spa
+
+  backend-api-e2e:
+    name: Backend — API E2E
+    needs: [backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start PostgreSQL + Keycloak
+        run: |
+          docker compose up -d postgres keycloak
+          echo "Waiting for Keycloak to become ready…"
+          for i in $(seq 1 36); do
+            curl -sf http://localhost:8080/realms/fintrackpro && echo "Keycloak ready" && break
+            echo "  attempt $i/36 — sleeping 5s"
+            sleep 5
+          done
+          curl -sf http://localhost:8080/realms/fintrackpro \
+            || { echo "Keycloak failed to start within 180s"; docker compose logs keycloak; exit 1; }
+
+      - name: Start API
+        run: |
+          docker compose up -d api
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5018/health && break || sleep 3
+          done
+          curl -sf http://localhost:5018/health \
+            || { echo "API failed to start"; docker compose logs api; exit 1; }
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Run Newman API E2E tests
+        env:
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_USERNAME2: ${{ secrets.E2E_USERNAME2 }}
+          E2E_PASSWORD2: ${{ secrets.E2E_PASSWORD2 }}
+        run: |
+          newman run docs/postman/FinTrackPro.postman_collection.json \
+            -e docs/postman/FinTrackPro.postman_environment.json \
+            --env-var "baseUrl=http://localhost:5018" \
+            --env-var "keycloakUrl=http://localhost:8080" \
+            --env-var "testUsername=$E2E_USERNAME" \
+            --env-var "testPassword=$E2E_PASSWORD" \
+            --env-var "testUsername2=$E2E_USERNAME2" \
+            --env-var "testPassword2=$E2E_PASSWORD2" \
+            --bail \
+            -r cli,junit \
+            --reporter-junit-export test-results/newman.xml
+
+      - name: Upload Newman results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-api-e2e-results
+          path: test-results/newman.xml
+          retention-days: 14
 
   e2e:
     name: Frontend — E2E (Playwright)

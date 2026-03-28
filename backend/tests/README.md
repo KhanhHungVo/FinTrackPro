@@ -78,3 +78,15 @@ dotnet test --filter "Category!=Integration"
 # Integration tests — PR and nightly (requires TEST_DB_CONNECTION_STRING)
 dotnet test --filter "Category=Integration"
 ```
+
+## Newman API E2E (third test layer)
+
+The `dotnet test` projects above use `WebApplicationFactory` with a local symmetric-key JWT — Keycloak is never involved. The Newman suite (`scripts/api-e2e-local.sh`) fills that gap: it hits a real running Docker API container with a real Keycloak-issued token, exercising the full auth stack (`iss`/`aud` validation, `KeycloakClaimsTransformer`, middleware ordering) end-to-end.
+
+| Layer | Auth | API process | When |
+|---|---|---|---|
+| `dotnet test` (unit) | N/A | None | Every commit |
+| `dotnet test` (integration) | Local symmetric JWT | In-process `WebApplicationFactory` | PR + nightly |
+| Newman | Real Keycloak JWT | Real Docker container | After `Backend — Build & Test` passes |
+
+See [docs/postman/api-e2e-plan.md](../../docs/postman/api-e2e-plan.md) for collection structure and CI setup.
