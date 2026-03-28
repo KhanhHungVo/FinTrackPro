@@ -6,11 +6,13 @@ import {
   useRemoveWatchedSymbol,
 } from '@/entities/watched-symbol'
 import { errorToastMessage } from '@/shared/lib/apiError'
+import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
 
 export function WatchlistManager() {
   const { data: symbols, isLoading } = useWatchedSymbols()
   const { mutate: add, isPending: adding } = useAddWatchedSymbol()
   const { mutate: remove } = useRemoveWatchedSymbol()
+  const { guarded: guardedRemove, isPending: isRemoving } = useGuardedMutation(remove)
   const [symbol, setSymbol] = useState('')
 
   const handleAdd = (e: React.FormEvent) => {
@@ -59,8 +61,9 @@ export function WatchlistManager() {
             >
               <span className="font-mono text-sm font-medium">{ws.symbol}</span>
               <button
-                onClick={() => remove(ws.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
-                className="text-xs text-red-500 hover:text-red-700"
+                onClick={() => guardedRemove(ws.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
+                disabled={isRemoving(ws.id)}
+                className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
               >
                 Remove
               </button>

@@ -6,10 +6,12 @@ import { AddTradeForm } from '@/features/add-trade'
 import { EditTradeModal } from '@/features/edit-trade'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
+import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
 
 export function TradesPage() {
   const { data: trades, isLoading } = useTrades()
   const { mutate: deleteTrade } = useDeleteTrade()
+  const { guarded: guardedDelete, isPending: isDeleting } = useGuardedMutation(deleteTrade)
   const [showForm, setShowForm] = useState(false)
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
 
@@ -122,8 +124,9 @@ export function TradesPage() {
                         ✎
                       </button>
                       <button
-                        onClick={() => deleteTrade(trade.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
-                        className="text-xs text-gray-300 hover:text-red-500"
+                        onClick={() => guardedDelete(trade.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
+                        disabled={isDeleting(trade.id)}
+                        className="text-xs text-gray-300 hover:text-red-500 disabled:opacity-50"
                         title="Delete"
                       >
                         ✕

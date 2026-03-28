@@ -5,6 +5,7 @@ import { useTransactions } from '@/entities/transaction'
 import { AddBudgetForm } from '@/features/add-budget'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
+import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
 
 function monthsBack(n: number): string {
   const d = new Date()
@@ -18,7 +19,8 @@ export function BudgetsPage() {
   const [editLimit, setEditLimit] = useState('')
   const { data: budgets, isLoading } = useBudgets(month)
   const { data: transactions } = useTransactions(month)
-  const { mutate: deleteBudget, isPending: isDeleting, variables: deletingId } = useDeleteBudget()
+  const { mutate: deleteBudget } = useDeleteBudget()
+  const { guarded: guardedDelete, isPending: isDeleting } = useGuardedMutation(deleteBudget)
   const { mutate: updateBudget, isPending: isSaving } = useUpdateBudget()
 
   function startEdit(id: string, current: number) {
@@ -98,7 +100,7 @@ export function BudgetsPage() {
                         onChange={(e) => setEditLimit(e.target.value)}
                         onBlur={() => commitEdit(budget.id)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') commitEdit(budget.id)
+                          if (e.key === 'Enter') { e.currentTarget.blur() }
                           if (e.key === 'Escape') setEditingId(null)
                         }}
                         disabled={isSaving}
@@ -127,8 +129,8 @@ export function BudgetsPage() {
                       ✎
                     </button>
                     <button
-                      onClick={() => deleteBudget(budget.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
-                      disabled={isDeleting && deletingId === budget.id}
+                      onClick={() => guardedDelete(budget.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
+                      disabled={isDeleting(budget.id)}
                       className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
                       aria-label="Delete budget"
                       title="Delete budget"

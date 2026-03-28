@@ -5,6 +5,7 @@ import type { TransactionType } from '@/entities/transaction'
 import { AddTransactionForm } from '@/features/add-transaction'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
+import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
 
 function monthsBack(n: number): string {
   const d = new Date()
@@ -21,6 +22,9 @@ export function TransactionsPage() {
   const [month, setMonth] = useState(monthsBack(0))
   const { data: transactions, isLoading } = useTransactions(month)
   const { mutate: deleteTx } = useDeleteTransaction()
+  const { guarded: handleDelete, isPending: isDeleting } = useGuardedMutation<unknown, Error, string>(deleteTx)
+  const onDeleteClick = (id: string) =>
+    handleDelete(id, { onError: (err) => toast.error(errorToastMessage(err)) })
 
   const income  = transactions?.filter(t => t.type === 'Income').reduce((s, t) => s + t.amount, 0) ?? 0
   const expense = transactions?.filter(t => t.type === 'Expense').reduce((s, t) => s + t.amount, 0) ?? 0
@@ -109,8 +113,9 @@ export function TransactionsPage() {
                   {new Date(tx.createdAt).toLocaleDateString()}
                 </span>
                 <button
-                  onClick={() => deleteTx(tx.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
-                  className="text-xs text-gray-300 hover:text-red-500 transition-colors"
+                  onClick={() => onDeleteClick(tx.id)}
+                  disabled={isDeleting(tx.id)}
+                  className="text-xs text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Delete"
                 >
                   ✕
