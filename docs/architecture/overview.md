@@ -25,9 +25,10 @@ graph TD
     IAM["Keycloak / Auth0\n(OIDC + JWKS)"]
     Binance["Binance API\n(klines, tickers)"]
     CoinGecko["CoinGecko API\n(trending coins)"]
+    ExchangeRateApi["ExchangeRate-API\n(fiat exchange rates)"]
     FearGreed["Fear & Greed Index\n(market sentiment)"]
     Telegram["Telegram Bot\n(push notifications)"]
-    Hangfire["Hangfire Jobs\n(MarketSignal · BudgetOverrun · IamSync)"]
+    Hangfire["Hangfire Jobs\n(MarketSignal · BudgetOverrun · ExchangeRateSync · IamSync)"]
     Render["Render\n(cloud hosting)"]
     Terraform["Terraform\n(infra as code)"]
 
@@ -38,6 +39,7 @@ graph TD
     SPA -->|"OIDC login redirect"| IAM
     API -->|market data| Binance
     API -->|trending coins| CoinGecko
+    API -->|fiat exchange rates| ExchangeRateApi
     API -->|sentiment index| FearGreed
     Hangfire -->|alerts| Telegram
     Hangfire -->|user sync| IAM
@@ -57,14 +59,14 @@ graph TD
 ### Application (`FinTrackPro.Application`)
 - CQRS commands and queries via MediatR
 - FluentValidation validators
-- Service interfaces (`ICurrentUser`, `IIdentityService`, `INotificationService`, `IBinanceService`, etc.)
+- Service interfaces (`ICurrentUser`, `IIdentityService`, `INotificationService`, `IBinanceService`, `IExchangeRateService`, etc.)
 - DTOs (explicit `operator` conversions, no AutoMapper)
 - Pipeline behaviors: `ValidationBehavior` → `LoggingBehavior`
 
 ### Infrastructure (`FinTrackPro.Infrastructure`)
 - EF Core `ApplicationDbContext` + entity configurations
 - Repository implementations
-- External services: `BinanceService`, `FearGreedService`, `CoinGeckoService`
+- External services: `BinanceService`, `FearGreedService`, `CoinGeckoService`, `CoinGeckoExchangeRateService`
 - `TelegramNotificationChannel`, `NotificationService`
 - `UserContextMiddleware` — resolves and provisions the local `AppUser` once per authenticated request; stores result in `HttpContext.Items`
 - `IdentityService` — fast path (existing `UserIdentity`) + slow path (create or link); handles concurrent first-login races via `DbUpdateException` retry
@@ -90,7 +92,8 @@ graph TD
 
 ### BackgroundJobs (`FinTrackPro.BackgroundJobs`)
 - `MarketSignalJob` — every 4h: RSI + volume spike signals via Skender + Binance
-- `BudgetOverrunJob` — daily: checks category spending vs budget limits
+- `BudgetOverrunJob` — daily: checks category spending vs budget limits; all comparisons normalised to USD via stored `RateToUsd`
+- `ExchangeRateSyncJob` — every 8h (Hangfire): fetches fiat rates from ExchangeRate-API v6 (`latest/USD`) and populates `IMemoryCache`
 - `IamUserSyncJob` — daily: diffs active IAM provider users against `AppUser` table; deactivates rows for deleted or disabled accounts
 
 See [background-jobs.md](background-jobs.md) for detailed sequence diagrams of each job.
@@ -105,12 +108,12 @@ app → pages → widgets → features → entities → shared
 
 | Layer | Contents |
 |---|---|
-| `app/` | QueryProvider, BrowserRouter + Outlet layout, global CSS |
-| `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage |
-| `widgets/` | Navbar, FearGreedWidget, SignalsList, TrendingCoinsWidget |
-| `features/` | AddTransactionForm, AddTradeForm, EditTradeModal, AddBudgetForm, NotificationSettingsForm, WatchlistManager, authStore (Zustand — `accessToken`, `displayName`, `email`, `isAuthenticated`) |
-| `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference — types + React Query hooks |
-| `shared/` | Axios client (Bearer injection + redirect on 401), `auth/` adapter (Keycloak or Auth0), env config, `cn()` |
+| `app/` | QueryProvider, AuthProvider, LocaleProvider, BrowserRouter + Outlet layout, global CSS, i18n initialization |
+| `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage — all translated via `useTranslation()`, amounts converted via `convertAmount()` + `formatCurrency()` |
+| `widgets/` | Navbar (translated links + LocaleSettingsDropdown), FearGreedWidget, SignalsList, TrendingCoinsWidget |
+| `features/` | AddTransactionForm, AddTradeForm, EditTradeModal, AddBudgetForm (all include currency selector), NotificationSettingsForm, WatchlistManager, authStore (Zustand), localeStore (Zustand + persist — `language`, `currency`) |
+| `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference, exchange-rate, user-preferences — types + React Query hooks |
+| `shared/` | Axios client (Bearer injection + redirect on 401), `auth/` adapter (Keycloak or Auth0), env config, `cn()`, `formatCurrency()`, `convertAmount()`, i18n resources (en/vi) |
 
 ### Responsive Design
 

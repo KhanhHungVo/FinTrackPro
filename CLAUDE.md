@@ -130,6 +130,7 @@ Roles (`User`, `Admin`) are stored only in the IAM provider — never in the dat
 | `Auth0__Domain` | `appsettings.Development.json` / env |
 | `Telegram__BotToken` | env var only |
 | `CoinGecko__ApiKey` | `appsettings.Development.json` / env — Demo or Pro API key; required for `/market/trending` endpoint |
+| `ExchangeRate__ApiKey` | `appsettings.Development.json` / env — ExchangeRate-API v6 key; required for fiat rate sync |
 | `VITE_AUTH_PROVIDER` | `frontend/fintrackpro-ui/.env` (`"keycloak"` or `"auth0"`) |
 | `VITE_API_BASE_URL` | `frontend/fintrackpro-ui/.env` |
 | `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` (Keycloak mode) |

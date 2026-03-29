@@ -24,6 +24,8 @@ Returns all transactions for the authenticated user.
     "id": "guid",
     "type": "Expense",
     "amount": 120.50,
+    "currency": "VND",
+    "rateToUsd": 25000.0,
     "category": "Food",
     "note": "Grocery run",
     "budgetMonth": "2026-03",
@@ -35,13 +37,14 @@ Returns all transactions for the authenticated user.
 ---
 
 ### `POST /api/transactions`
-Create a new transaction.
+Create a new transaction. The handler resolves and stores `rateToUsd` from the exchange-rate cache at creation time.
 
 **Body:**
 ```json
 {
   "type": "Expense",
   "amount": 120.50,
+  "currency": "VND",
   "category": "Food",
   "note": "Grocery run",
   "budgetMonth": "2026-03"
@@ -54,6 +57,7 @@ Create a new transaction.
 - `amount` must be > 0
 - `category` required
 - `budgetMonth` must match `YYYY-MM`
+- `currency` required, max 3 chars
 
 ---
 
@@ -76,6 +80,8 @@ Returns all budgets for the user in the given month (YYYY-MM).
     "id": "guid",
     "category": "Food",
     "limitAmount": 500.00,
+    "currency": "USD",
+    "rateToUsd": 1.0,
     "month": "2026-03",
     "createdAt": "2026-03-01T00:00:00Z"
   }
@@ -85,13 +91,14 @@ Returns all budgets for the user in the given month (YYYY-MM).
 ---
 
 ### `POST /api/budgets`
-Create a budget for a category and month.
+Create a budget for a category and month. The handler resolves and stores `rateToUsd` at creation time.
 
 **Body:**
 ```json
 {
   "category": "Food",
   "limitAmount": 500.00,
+  "currency": "USD",
   "month": "2026-03"
 }
 ```
@@ -137,6 +144,8 @@ Returns all trades for the user, ordered by date descending.
     "exitPrice": 65000.0,
     "positionSize": 0.1,
     "fees": 5.0,
+    "currency": "USD",
+    "rateToUsd": 1.0,
     "result": 495.0,
     "notes": null,
     "createdAt": "2026-03-10T14:00:00Z"
@@ -149,7 +158,7 @@ Returns all trades for the user, ordered by date descending.
 ---
 
 ### `POST /api/trades`
-Log a new trade. Symbol is validated against Binance `exchangeInfo`.
+Log a new trade. Symbol is validated against Binance `exchangeInfo`. The handler resolves and stores `rateToUsd` at creation time.
 
 **Body:**
 ```json
@@ -160,6 +169,7 @@ Log a new trade. Symbol is validated against Binance `exchangeInfo`.
   "exitPrice": 65000.0,
   "positionSize": 0.1,
   "fees": 5.0,
+  "currency": "USD",
   "notes": "Breakout trade"
 }
 ```
@@ -173,7 +183,7 @@ Log a new trade. Symbol is validated against Binance `exchangeInfo`.
 ---
 
 ### `PUT /api/trades/{id}`
-Update all editable fields of an existing trade (owner only).
+Update all editable fields of an existing trade (owner only). Re-resolves `rateToUsd` for the new currency.
 
 **Body:**
 ```json
@@ -184,6 +194,7 @@ Update all editable fields of an existing trade (owner only).
   "exitPrice": 2500.0,
   "positionSize": 1.0,
   "fees": 10.0,
+  "currency": "USD",
   "notes": "Updated note\nSecond line"
 }
 ```
@@ -285,6 +296,59 @@ Returns top 7 trending coins from CoinGecko (cached 15 minutes).
   { "id": "bitcoin", "name": "Bitcoin", "symbol": "BTC", "marketCapRank": 1 }
 ]
 ```
+
+---
+
+### `GET /api/market/rates`
+Returns exchange rates (units of currency per 1 USD) for the requested codes. Served from the in-memory cache (8h TTL) populated by `ExchangeRateSyncJob`.
+
+**Query params:**
+| Param | Type | Description |
+|---|---|---|
+| `currencies` | string | Comma-separated ISO 4217 codes (e.g. `USD,VND,EUR`) |
+
+**Response 200:**
+```json
+{
+  "USD": 1.0,
+  "VND": 25432.0,
+  "EUR": 0.92
+}
+```
+
+---
+
+## Users
+
+### `GET /api/users/preferences`
+Returns the authenticated user's language and currency preferences.
+
+**Response 200:**
+```json
+{
+  "language": "en",
+  "currency": "USD"
+}
+```
+
+---
+
+### `PATCH /api/users/preferences`
+Update the authenticated user's language and currency preferences.
+
+**Body:**
+```json
+{
+  "language": "vi",
+  "currency": "VND"
+}
+```
+
+**Response 204**
+
+**Validation errors (400):**
+- `language` must be one of `["en", "vi"]`
+- `currency` required, max 3 chars
 
 ---
 

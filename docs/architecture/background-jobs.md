@@ -1,11 +1,12 @@
 # Background Jobs
 
-FinTrackPro runs three Hangfire recurring jobs. All jobs are registered in `Program.cs`. Hangfire storage uses the active database provider — PostgreSQL (`Hangfire.PostgreSql`) in production on Render, SQL Server (`Hangfire.SqlServer`) for local Docker dev.
+FinTrackPro runs four Hangfire recurring jobs plus one hosted-service warm-up. All are registered in `Program.cs`. Hangfire storage uses the active database provider — PostgreSQL (`Hangfire.PostgreSql`) in production on Render, SQL Server (`Hangfire.SqlServer`) for local Docker dev.
 
 | Job | Schedule | Purpose |
 |---|---|---|
 | `MarketSignalJob` | Every 4 hours | RSI + volume spike signals for watched symbols |
-| `BudgetOverrunJob` | Daily | Detect and alert on budget limit breaches |
+| `BudgetOverrunJob` | Daily | Detect and alert on budget limit breaches (USD-normalised) |
+| `ExchangeRateSyncJob` | Every 8 hours + startup | Warm and refresh in-memory exchange rate cache |
 | `IamUserSyncJob` | Daily | Deactivate local users deleted from IAM provider |
 
 The Hangfire dashboard is available at `/hangfire` (requires `Admin` role).
@@ -75,7 +76,7 @@ sequenceDiagram
 
 ## BudgetOverrunJob
 
-Runs daily. For each budget in the current month, sums the user's expenses in that category. If spending exceeds the limit and no alert has been sent yet this month, it sends one Telegram notification and records a marker `Signal` to prevent duplicate alerts.
+Runs daily. For each budget in the current month, loads the user's expenses in that category and normalises all amounts to USD using each record's stored `RateToUsd`. If USD-normalised spending exceeds the USD-normalised limit and no alert has been sent yet this month, it sends one Telegram notification (formatted in the budget's own currency) and records a marker `Signal` to prevent duplicate alerts.
 
 ```mermaid
 sequenceDiagram
@@ -93,26 +94,40 @@ sequenceDiagram
     BR-->>Job: List of Budget
 
     loop each Budget
-        Job->>TR: SumExpensesAsync(userId, category, month)
-        TR-->>Job: Total spent (decimal)
+        Job->>TR: GetExpensesAsync(userId, category, month)
+        TR-->>Job: List of Transaction (with Currency, RateToUsd)
 
-        alt spent > budget.LimitAmount
+        Note over Job: budgetInUsd = LimitAmount / RateToUsd
+        Note over Job: spentInUsd = Sum(t.Amount / t.RateToUsd)
+
+        alt spentInUsd > budgetInUsd
             Job->>SR: ExistsAsync(userId, "BUDGET:<category>", FundingRate, currentMonth)
             alt No marker exists (first breach this month)
-                Job->>NS: NotifyAsync(userId, "Budget Overrun", overage message)
+                Job->>NS: NotifyAsync(userId, "Budget Alert", message in budget.Currency)
                 NS->>Telegram: SendMessage(chatId, text)
                 Job->>SR: Add(Signal) — marker with Symbol="BUDGET:<category>", Type=FundingRate
             end
         end
     end
-
-    Job->>DB: SaveChangesAsync
 ```
 
 **Key details:**
+- All comparisons are in USD using stored `RateToUsd` — avoids live rate calls and is consistent with historical data
 - Alert fires only once per `(UserId, Category, Month)` — first breach only
+- Notification message formats amounts back in `budget.Currency` for human readability
 - Marker signal uses `SignalType.FundingRate` as a workaround (no dedicated `BudgetOverrun` type yet)
 - `Symbol` field stores `"BUDGET:<category>"` to namespace budget markers from market signals
+
+---
+
+## ExchangeRateSyncJob
+
+Implements `IHostedService` (startup warm-up) and is also scheduled as a Hangfire recurring job (every 8 hours). Fetches rates for the currencies listed in `ExchangeRate:PreloadCurrencies` and stores them in `IMemoryCache` with an 8-hour TTL.
+
+**Key details:**
+- USD is short-circuited: returns `1.0m` without a network call
+- Per-currency errors are caught and logged; other currencies continue
+- Registered as both `AddScoped<ExchangeRateSyncJob>()` and `AddHostedService<ExchangeRateSyncJob>()` so it runs at startup and via Hangfire
 
 ---
 

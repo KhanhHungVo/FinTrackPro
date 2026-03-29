@@ -308,7 +308,7 @@ public class UsersController : BaseApiController
 **10. Add `ExchangeRateSyncJob` — cache pre-warmer**
 - File: `backend/src/FinTrackPro.BackgroundJobs/Jobs/ExchangeRateSyncJob.cs`
 - Inject `IExchangeRateService` + `IConfiguration`
-- Reads a configurable currency list from `appsettings.json` key `ExchangeRate:WarmupCurrencies` (e.g. `["VND","EUR","GBP"]`); USD is always skipped (hardcoded `1.0m`)
+- Reads a configurable currency list from `appsettings.json` key `ExchangeRate:PreloadCurrencies` (e.g. `["VND","EUR","GBP"]`); USD is always skipped (hardcoded `1.0m`)
 - Calls `GetRateToUsdAsync()` for each currency sequentially — populates `IMemoryCache` as a side effect
 - Registered as a Hangfire recurring job every **8 h** in `Program.cs`
 - Also called once in `IHostedService.StartAsync()` so the cache is warm before the first request
@@ -316,7 +316,7 @@ public class UsersController : BaseApiController
 - `appsettings.json` addition:
   ```json
   "ExchangeRate": {
-    "WarmupCurrencies": ["VND", "EUR", "GBP"]
+    "PreloadCurrencies": ["VND", "EUR", "GBP"]
   }
   ```
 
@@ -436,7 +436,7 @@ Add `currency` field (dropdown defaulting to user's `PreferredCurrency`) to all 
 - Add migration name `AddCurrencyAndRateToRecords` to the migration history section
 
 **26. Update `docs/architecture/background-jobs.md`**
-- Add `ExchangeRateSyncJob` entry: schedule (every 8 h + startup), purpose (cache pre-warmer), config key (`ExchangeRate:WarmupCurrencies`), failure behaviour (silent — API fallback always active)
+- Add `ExchangeRateSyncJob` entry: schedule (every 8 h + startup), purpose (cache pre-warmer), config key (`ExchangeRate:PreloadCurrencies`), failure behaviour (silent — API fallback always active)
 - Update `BudgetOverrunJob` entry: overrun comparison now normalises all amounts to USD via stored `RateToUsd` before comparing
 
 **27. Update `docs/architecture/overview.md`**
@@ -444,12 +444,12 @@ Add `currency` field (dropdown defaulting to user's `PreferredCurrency`) to all 
 - Note the `Currency` + `RateToUsd` per-record design decision and why `PreferredCurrency` is display-only
 
 **28. Update `docs/guides/dev-setup.md`**
-- Add `ExchangeRate:WarmupCurrencies` to the local configuration table
+- Add `ExchangeRate:PreloadCurrencies` to the local configuration table
 - Note that on first startup `ExchangeRateSyncJob` calls CoinGecko — requires internet access (or mock the rate in integration tests)
 
 **29. Update `README.md` and `backend/README.md`**
 - Add `GET /api/market/rates` and `GET|PATCH /api/users/preferences` to the API overview section
-- Add `ExchangeRate:WarmupCurrencies` to the environment variable / config table
+- Add `ExchangeRate:PreloadCurrencies` to the environment variable / config table
 - Note the multi-currency design: amounts stored with `Currency` + `RateToUsd`; `PreferredCurrency` is display-only
 
 **30. Update `frontend/fintrackpro-ui/README.md`**
@@ -894,6 +894,6 @@ POST /api/budgets     (missing currency field) → 400
 2. `docs/architecture/database.md` — `Currency`, `RateToUsd`, `PreferredLanguage`, `PreferredCurrency` columns present in table definitions; migration listed
 3. `docs/architecture/background-jobs.md` — `ExchangeRateSyncJob` entry present; `BudgetOverrunJob` updated to reflect USD normalisation
 4. `docs/architecture/overview.md` — `IExchangeRateService` in Infrastructure layer; per-record currency design noted
-5. `docs/guides/dev-setup.md` — `ExchangeRate:WarmupCurrencies` in config table
+5. `docs/guides/dev-setup.md` — `ExchangeRate:PreloadCurrencies` in config table
 6. `README.md` + `backend/README.md` — new endpoints and config key present
 7. `frontend/fintrackpro-ui/README.md` — `useExchangeRates`, `useLocaleStore`, `convertAmount`, `formatCurrency`, and `locale-preferences` localStorage key documented

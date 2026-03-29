@@ -166,6 +166,8 @@ dotnet run --project src/FinTrackPro.API --launch-profile http
 > `x-cg-demo-api-key` with `x-cg-pro-api-key` in
 > `FinTrackPro.Infrastructure/DependencyInjection.cs`.
 
+**Exchange rate warm-up** — `ExchangeRateSyncJob` runs every 8 h (Hangfire) and fetches all fiat rates from ExchangeRate-API v6 (`GET /v6/{apiKey}/latest/USD`), caching the result for 8 hours. Set `ExchangeRate__ApiKey` via user-secrets or environment variable. Errors are logged and swallowed; the app starts regardless.
+
 ---
 
 ### Step 4 — Run the frontend

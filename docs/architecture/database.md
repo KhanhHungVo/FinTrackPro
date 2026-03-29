@@ -18,6 +18,8 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | DisplayName | character varying(100) | NOT NULL |
 | CreatedAt | timestamp | NOT NULL |
 | IsActive | boolean | NOT NULL, DEFAULT true |
+| PreferredLanguage | character varying(10) | NOT NULL, DEFAULT 'en' |
+| PreferredCurrency | character varying(3) | NOT NULL, DEFAULT 'USD' |
 
 ---
 
@@ -41,10 +43,14 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | UserId | uuid | FK → Users, CASCADE DELETE |
 | Type | integer | NOT NULL (0=Income, 1=Expense) |
 | Amount | numeric(18,2) | NOT NULL |
+| Currency | character varying(3) | NOT NULL, DEFAULT 'USD' |
+| RateToUsd | numeric(18,8) | NOT NULL, DEFAULT 1.0 |
 | Category | character varying(100) | NOT NULL |
 | Note | character varying(500) | nullable |
 | BudgetMonth | character varying(7) | NOT NULL (YYYY-MM) |
 | CreatedAt | timestamp | NOT NULL |
+
+> `Currency` and `RateToUsd` are stored at creation time. `RateToUsd` = units of the record's currency per 1 USD. Display conversion: `displayAmount = (amount / rateToUsd) × preferredRateToUsd`.
 
 ---
 
@@ -55,6 +61,8 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | UserId | uuid | FK → Users, CASCADE DELETE |
 | Category | character varying(100) | NOT NULL |
 | LimitAmount | numeric(18,2) | NOT NULL |
+| Currency | character varying(3) | NOT NULL, DEFAULT 'USD' |
+| RateToUsd | numeric(18,8) | NOT NULL, DEFAULT 1.0 |
 | Month | character varying(7) | NOT NULL (YYYY-MM) |
 | CreatedAt | timestamp | NOT NULL |
 | — | — | UNIQUE INDEX (UserId, Category, Month) |
@@ -72,6 +80,8 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | ExitPrice | numeric(18,8) | NOT NULL |
 | PositionSize | numeric(18,8) | NOT NULL |
 | Fees | numeric(18,8) | NOT NULL |
+| Currency | character varying(3) | NOT NULL, DEFAULT 'USD' |
+| RateToUsd | numeric(18,8) | NOT NULL, DEFAULT 1.0 |
 | Notes | character varying(1000) | nullable |
 | CreatedAt | timestamp | NOT NULL |
 
