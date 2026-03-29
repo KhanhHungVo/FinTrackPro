@@ -6,7 +6,7 @@ import { useLocaleStore } from '@/features/locale'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
 
-const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'VND']
+const SUPPORTED_CURRENCIES = ['USD', 'VND']
 
 export function AddTransactionForm() {
   const { t } = useTranslation()

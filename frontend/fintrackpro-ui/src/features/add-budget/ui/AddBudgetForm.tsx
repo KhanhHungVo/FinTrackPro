@@ -5,7 +5,7 @@ import { useCreateBudget } from '@/entities/budget'
 import { useLocaleStore } from '@/features/locale'
 import { errorToastMessage } from '@/shared/lib/apiError'
 
-const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'VND']
+const SUPPORTED_CURRENCIES = ['USD', 'VND']
 
 interface Props {
   month: string

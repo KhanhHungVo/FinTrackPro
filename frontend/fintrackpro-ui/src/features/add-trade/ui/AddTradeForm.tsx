@@ -7,7 +7,7 @@ import { cn } from '@/shared/lib/cn'
 import { createTradeSchema, type CreateTradeInput } from '@/shared/lib/tradeSchema'
 import { classifyApiError, errorToastMessage, type ProblemDetails } from '@/shared/lib/apiError'
 
-const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'VND']
+const SUPPORTED_CURRENCIES = ['USD', 'VND']
 
 type FieldErrors = Partial<Record<keyof CreateTradeInput, string>>
 

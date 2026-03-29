@@ -5,7 +5,7 @@ import { useUpdateUserPreferences } from '@/entities/user-preferences'
 import { SUPPORTED_LANGUAGES, type Language } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 
-const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'VND']
+const SUPPORTED_CURRENCIES = ['USD', 'VND']
 
 export function LocaleSettingsDropdown() {
   const { t } = useTranslation()
