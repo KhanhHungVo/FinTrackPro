@@ -46,7 +46,7 @@ describe('useCreateBudget', () => {
 
     const { result } = renderHook(() => useCreateBudget(), { wrapper: createWrapper() })
 
-    result.current.mutate({ category: 'Food', limitAmount: 500, month: '2026-03' })
+    result.current.mutate({ category: 'Food', limitAmount: 500, month: '2026-03', currency: 'USD' })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
