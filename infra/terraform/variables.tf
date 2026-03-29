@@ -39,6 +39,12 @@ variable "coingecko_api_key" {
   description = "CoinGecko Demo or Pro API key"
 }
 
+variable "exchangerate_api_key" {
+  type        = string
+  sensitive   = true
+  description = "ExchangeRate-API v6 key — required for fiat currency rate sync"
+}
+
 variable "telegram_bot_token" {
   type        = string
   sensitive   = true

@@ -43,10 +43,6 @@ resource "render_web_service" "api" {
 
   health_check_path = "/health"
 
-  lifecycle {
-    ignore_changes = [maintenance_mode]
-  }
-
   env_vars = {
     ASPNETCORE_ENVIRONMENT = { value = "Production" }
     ASPNETCORE_URLS        = { value = "http://+:8080" }
@@ -62,6 +58,7 @@ resource "render_web_service" "api" {
     Auth0__Domain                       = { value = var.auth0_domain }
     Cors__Origins                       = { value = var.cors_origins }
     CoinGecko__ApiKey                   = { value = var.coingecko_api_key }
+    ExchangeRate__ApiKey                = { value = var.exchangerate_api_key }
     Telegram__BotToken                  = { value = var.telegram_bot_token }
     Hangfire__Password                  = { value = var.hangfire_dashboard_password }
   }

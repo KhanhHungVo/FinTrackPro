@@ -28,6 +28,6 @@ vite_auth0_domain    = "dev-xxxx.us.auth0.com"
 vite_auth0_client_id = "your-spa-client-id"
 
 # Sensitive variables (render_api_key, auth0_m2m_client_secret, coingecko_api_key,
-# telegram_bot_token, hangfire_dashboard_password)
+# exchangerate_api_key, telegram_bot_token, hangfire_dashboard_password)
 # should be set as sensitive Terraform Cloud workspace variables,
 # NOT stored here.
