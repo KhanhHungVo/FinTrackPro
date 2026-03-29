@@ -15,7 +15,7 @@ export function useBudgets(month: string) {
 export function useCreateBudget() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: { category: string; limitAmount: number; month: string }) =>
+    mutationFn: (body: { category: string; limitAmount: number; currency: string; month: string }) =>
       apiClient.post('/api/budgets', body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
   })

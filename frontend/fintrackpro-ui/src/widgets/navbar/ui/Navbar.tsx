@@ -1,15 +1,20 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/features/auth'
 import { cn } from '@/shared/lib/cn'
+import { LocaleSettingsDropdown } from './LocaleSettingsDropdown'
 
-const links = [
-  { to: '/dashboard',    label: 'Dashboard'     },
-  { to: '/transactions', label: 'Transactions'  },
-  { to: '/budgets',      label: 'Budgets'       },
-  { to: '/trades',       label: 'Trades'        },
-  { to: '/settings',     label: 'Settings'      },
-]
+function useNavLinks() {
+  const { t } = useTranslation()
+  return [
+    { to: '/dashboard',    label: t('nav.dashboard')    },
+    { to: '/transactions', label: t('nav.transactions') },
+    { to: '/budgets',      label: t('nav.budgets')      },
+    { to: '/trades',       label: t('nav.trades')       },
+    { to: '/settings',     label: t('nav.settings')     },
+  ]
+}
 
 export function Navbar() {
   const [open, setOpen] = useState(false)
@@ -17,6 +22,7 @@ export function Navbar() {
   const displayName = useAuthStore((s) => s.displayName)
   const email = useAuthStore((s) => s.email)
   const logout = useAuthStore((s) => s.logout)
+  const links = useNavLinks()
 
   const initial = displayName?.charAt(0).toUpperCase() ?? '?'
 
@@ -46,6 +52,8 @@ export function Navbar() {
         </ul>
 
         <div className="flex items-center gap-2">
+          <LocaleSettingsDropdown />
+
           <button
             onClick={() => setMobileOpen((v) => !v)}
             className="md:hidden flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100"

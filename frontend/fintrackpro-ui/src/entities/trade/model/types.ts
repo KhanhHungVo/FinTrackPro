@@ -8,6 +8,8 @@ export interface Trade {
   exitPrice: number
   positionSize: number
   fees: number
+  currency: string
+  rateToUsd: number
   result: number
   notes: string | null
   createdAt: string

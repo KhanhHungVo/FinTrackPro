@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
-import { QueryProvider, AuthProvider, ErrorBoundary } from './providers'
+import { QueryProvider, AuthProvider, ErrorBoundary, LocaleProvider } from './providers'
 import { Toaster } from 'sonner'
+import '@/shared/i18n'
 import { Navbar } from '@/widgets/navbar'
 import { DashboardPage } from '@/pages/dashboard'
 import { TransactionsPage } from '@/pages/transactions'
@@ -26,20 +27,22 @@ export function App() {
     <ErrorBoundary>
       <AuthProvider>
         <QueryProvider>
-          <Toaster position="top-right" richColors />
-          <BrowserRouter>
-            <Routes>
-              <Route element={<AppLayout />}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard"    element={<DashboardPage />} />
-                <Route path="/transactions" element={<TransactionsPage />} />
-                <Route path="/budgets"      element={<BudgetsPage />} />
-                <Route path="/trades"       element={<TradesPage />} />
-                <Route path="/settings"     element={<SettingsPage />} />
-                <Route path="*"             element={<NotFoundPage />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
+          <LocaleProvider>
+            <Toaster position="top-right" richColors />
+            <BrowserRouter>
+              <Routes>
+                <Route element={<AppLayout />}>
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard"    element={<DashboardPage />} />
+                  <Route path="/transactions" element={<TransactionsPage />} />
+                  <Route path="/budgets"      element={<BudgetsPage />} />
+                  <Route path="/trades"       element={<TradesPage />} />
+                  <Route path="/settings"     element={<SettingsPage />} />
+                  <Route path="*"             element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </LocaleProvider>
         </QueryProvider>
       </AuthProvider>
     </ErrorBoundary>

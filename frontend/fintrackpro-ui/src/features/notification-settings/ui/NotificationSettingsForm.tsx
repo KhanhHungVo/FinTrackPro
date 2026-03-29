@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import {
   useNotificationPreference,
   useSaveNotificationPreference,
@@ -7,6 +8,7 @@ import {
 import { errorToastMessage } from '@/shared/lib/apiError'
 
 export function NotificationSettingsForm() {
+  const { t } = useTranslation()
   const { data: pref, isLoading } = useNotificationPreference()
   const { mutate, isPending } = useSaveNotificationPreference()
 
@@ -27,7 +29,7 @@ export function NotificationSettingsForm() {
     mutate(
       { telegramChatId: chatId, isEnabled: enabled },
       {
-        onSuccess: () => toast.success('Preferences saved.'),
+        onSuccess: () => toast.success(t('notifications.saved')),
         onError: (err) => toast.error(errorToastMessage(err)),
       },
     )
@@ -35,7 +37,7 @@ export function NotificationSettingsForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-4 md:p-6 max-w-md w-full">
-      <h2 className="text-lg font-semibold">Telegram Notifications</h2>
+      <h2 className="text-lg font-semibold">{t('notifications.title')}</h2>
 
       <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800 space-y-1">
         <p className="font-medium">Setup steps:</p>
@@ -47,7 +49,7 @@ export function NotificationSettingsForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Telegram Chat ID</label>
+        <label className="block text-sm font-medium mb-1">{t('notifications.telegramChatId')}</label>
         <input
           type="text"
           placeholder="e.g. 123456789"
@@ -73,9 +75,8 @@ export function NotificationSettingsForm() {
         disabled={isPending}
         className="w-full rounded-md bg-blue-600 py-2 text-sm text-white disabled:opacity-50"
       >
-        {isPending ? 'Saving...' : 'Save Preferences'}
+        {isPending ? t('common.loading') : t('notifications.save')}
       </button>
-
     </form>
   )
 }

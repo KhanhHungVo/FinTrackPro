@@ -9,6 +9,7 @@ export interface UpdateTradePayload {
   exitPrice: number
   positionSize: number
   fees: number
+  currency: string
   notes: string | null
 }
 

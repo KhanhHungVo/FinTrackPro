@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { useUpdateTrade } from '@/entities/trade'
 import type { Trade, TradeDirection } from '@/entities/trade'
 import { cn } from '@/shared/lib/cn'
 import { updateTradeSchema, type UpdateTradeInput } from '@/shared/lib/tradeSchema'
 import { classifyApiError, errorToastMessage, type ProblemDetails } from '@/shared/lib/apiError'
+
+const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'VND']
 
 interface EditTradeModalProps {
   trade: Trade | null
@@ -14,6 +17,7 @@ interface EditTradeModalProps {
 type FieldErrors = Partial<Record<keyof UpdateTradeInput, string>>
 
 export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
+  const { t } = useTranslation()
   const { mutate, isPending } = useUpdateTrade()
   const [direction, setDirection] = useState<TradeDirection>('Long')
   const [symbol, setSymbol] = useState('')
@@ -21,6 +25,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
   const [exitPrice, setExitPrice] = useState('')
   const [positionSize, setPositionSize] = useState('')
   const [fees, setFees] = useState('')
+  const [currency, setCurrency] = useState('USD')
   const [notes, setNotes] = useState('')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [serverErrors, setServerErrors] = useState<ProblemDetails | null>(null)
@@ -33,6 +38,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
       setExitPrice(String(trade.exitPrice))
       setPositionSize(String(trade.positionSize))
       setFees(String(trade.fees))
+      setCurrency(trade.currency)
       setNotes(trade.notes ?? '')
       setFieldErrors({})
       setServerErrors(null)
@@ -67,6 +73,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
       exitPrice: parseFloat(exitPrice),
       positionSize: parseFloat(positionSize),
       fees: parseFloat(fees) || 0,
+      currency,
       notes: notes || null,
     }
 
@@ -104,12 +111,12 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
     >
       <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-lg font-semibold">Edit Trade</h2>
+          <h2 className="text-lg font-semibold">{t('common.edit')} {t('trades.title')}</h2>
           <button
             type="button"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-            aria-label="Close"
+            aria-label={t('common.cancel')}
           >
             ✕
           </button>
@@ -131,31 +138,42 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                     : 'bg-gray-100 text-gray-700',
                 )}
               >
-                {d}
+                {d === 'Long' ? t('trades.long') : t('trades.short')}
               </button>
             ))}
           </div>
 
-          <div className="flex flex-col gap-1">
-            <input
-              type="text"
-              placeholder="Symbol (e.g. BTCUSDT)"
-              value={symbol}
-              onChange={(e) => { setSymbol(e.target.value.toUpperCase()); clearFieldError('symbol') }}
-              onBlur={() => validateField('symbol', symbol)}
-              className={cn(
-                'w-full rounded-md border px-3 py-2 text-sm font-mono',
-                fieldErrors.symbol && 'border-red-400',
-              )}
-            />
-            {fieldErrors.symbol && <p className="text-xs text-red-600">{fieldErrors.symbol}</p>}
+          <div className="flex gap-2">
+            <div className="flex flex-col gap-1 flex-1">
+              <input
+                type="text"
+                placeholder={t('trades.symbol')}
+                value={symbol}
+                onChange={(e) => { setSymbol(e.target.value.toUpperCase()); clearFieldError('symbol') }}
+                onBlur={() => validateField('symbol', symbol)}
+                className={cn(
+                  'w-full rounded-md border px-3 py-2 text-sm font-mono',
+                  fieldErrors.symbol && 'border-red-400',
+                )}
+              />
+              {fieldErrors.symbol && <p className="text-xs text-red-600">{fieldErrors.symbol}</p>}
+            </div>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="rounded-md border px-3 py-2 text-sm self-start"
+            >
+              {SUPPORTED_CURRENCIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
               <input
                 type="number"
-                placeholder="Entry price"
+                placeholder={t('trades.entryPrice')}
                 value={entryPrice}
                 onChange={(e) => { setEntryPrice(e.target.value); clearFieldError('entryPrice') }}
                 onBlur={() => validateField('entryPrice', parseFloat(entryPrice))}
@@ -171,7 +189,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
             <div className="flex flex-col gap-1">
               <input
                 type="number"
-                placeholder="Exit price"
+                placeholder={t('trades.exitPrice')}
                 value={exitPrice}
                 onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
                 onBlur={() => validateField('exitPrice', parseFloat(exitPrice))}
@@ -190,7 +208,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
             <div className="flex flex-col gap-1">
               <input
                 type="number"
-                placeholder="Position size"
+                placeholder={t('trades.positionSize')}
                 value={positionSize}
                 onChange={(e) => { setPositionSize(e.target.value); clearFieldError('positionSize') }}
                 onBlur={() => validateField('positionSize', parseFloat(positionSize))}
@@ -206,7 +224,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
             <div className="flex flex-col gap-1">
               <input
                 type="number"
-                placeholder="Fees"
+                placeholder={t('trades.fees')}
                 value={fees}
                 onChange={(e) => { setFees(e.target.value); clearFieldError('fees') }}
                 onBlur={() => validateField('fees', parseFloat(fees) || 0)}
@@ -221,7 +239,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
 
           <div className="flex flex-col gap-1">
             <textarea
-              placeholder="Notes (optional)"
+              placeholder={t('trades.notes')}
               value={notes}
               onChange={(e) => { setNotes(e.target.value); clearFieldError('notes') }}
               onBlur={() => validateField('notes', notes || null)}
@@ -253,14 +271,14 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
               onClick={onClose}
               className="flex-1 rounded-md border py-2 text-sm text-gray-600 hover:bg-gray-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={isPending}
               className="flex-1 rounded-md bg-blue-600 py-2 text-sm text-white disabled:opacity-50"
             >
-              {isPending ? 'Saving...' : 'Save'}
+              {isPending ? t('common.loading') : t('common.save')}
             </button>
           </div>
         </form>

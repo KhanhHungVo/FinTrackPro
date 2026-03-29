@@ -23,6 +23,7 @@ const baseSchema = z.object({
   fees: z
     .number({ error: 'Fees must be a number' })
     .min(0, 'Fees cannot be negative'),
+  currency: z.string().min(1).max(3),
   notes: z.string().max(1000, 'Notes must be 1000 characters or fewer').nullable(),
 })
 
