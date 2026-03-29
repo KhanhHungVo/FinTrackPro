@@ -15,15 +15,18 @@ public class CreateTransactionHandlerTests
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly IExchangeRateService _exchangeRateService = Substitute.For<IExchangeRateService>();
     private readonly CreateTransactionCommandHandler _handler;
 
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public CreateTransactionHandlerTests()
     {
-        _handler = new CreateTransactionCommandHandler(_context, _currentUser, _userRepository);
+        _handler = new CreateTransactionCommandHandler(_context, _currentUser, _userRepository, _exchangeRateService);
 
         _currentUser.UserId.Returns(TestUser.Id);
+        _exchangeRateService.GetRateToUsdAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, decimal> { ["EUR"] = 0.92m, ["GBP"] = 0.79m });
 
         var transactions = Substitute.For<DbSet<Transaction>>();
         _context.Transactions.Returns(transactions);
@@ -36,7 +39,7 @@ public class CreateTransactionHandlerTests
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
 
-        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "Food", null, "2026-03");
+        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", "Food", null, "2026-03");
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -51,7 +54,7 @@ public class CreateTransactionHandlerTests
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
-        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "Food", null, "2026-03");
+        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", "Food", null, "2026-03");
 
         var act = async () => await _handler.Handle(command, CancellationToken.None);
 

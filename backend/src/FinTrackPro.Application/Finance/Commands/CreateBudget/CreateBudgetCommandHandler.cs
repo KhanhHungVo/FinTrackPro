@@ -1,3 +1,4 @@
+using FinTrackPro.Application.Common.Extensions;
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Domain.Entities;
 using FinTrackPro.Domain.Exceptions;
@@ -10,7 +11,8 @@ public class CreateBudgetCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IUserRepository userRepository,
-    IBudgetRepository budgetRepository) : IRequestHandler<CreateBudgetCommand, Guid>
+    IBudgetRepository budgetRepository,
+    IExchangeRateService exchangeRateService) : IRequestHandler<CreateBudgetCommand, Guid>
 {
     public async Task<Guid> Handle(CreateBudgetCommand request, CancellationToken cancellationToken)
     {
@@ -20,7 +22,9 @@ public class CreateBudgetCommandHandler(
         if (await budgetRepository.ExistsAsync(user.Id, request.Category, request.Month, cancellationToken))
             throw new ConflictException($"A budget for category '{request.Category}' in {request.Month} already exists.");
 
-        var budget = Budget.Create(user.Id, request.Category, request.LimitAmount, request.Month);
+        var rateToUsd = await exchangeRateService.GetRateForCurrencyAsync(request.Currency, cancellationToken);
+
+        var budget = Budget.Create(user.Id, request.Category, request.LimitAmount, request.Currency, rateToUsd, request.Month);
 
         context.Budgets.Add(budget);
         await context.SaveChangesAsync(cancellationToken);

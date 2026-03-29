@@ -28,8 +28,8 @@ public class GetBudgetsHandlerTests
     {
         var budgets = new List<Budget>
         {
-            Budget.Create(TestUser.Id, "Food", 500m, "2026-03"),
-            Budget.Create(TestUser.Id, "Transport", 200m, "2026-03"),
+            Budget.Create(TestUser.Id, "Food", 500m, "USD", 1.0m, "2026-03"),
+            Budget.Create(TestUser.Id, "Transport", 200m, "USD", 1.0m, "2026-03"),
         };
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())

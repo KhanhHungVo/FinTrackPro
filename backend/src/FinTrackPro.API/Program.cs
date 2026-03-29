@@ -159,6 +159,11 @@ RecurringJob.AddOrUpdate<BudgetOverrunJob>(
     job => job.ExecuteAsync(CancellationToken.None),
     Cron.Daily);
 
+RecurringJob.AddOrUpdate<ExchangeRateSyncJob>(
+    "exchange-rate-sync",
+    job => job.ExecuteAsync(CancellationToken.None),
+    "0 */8 * * *");  // every 8 hours
+
 // RecurringJob.AddOrUpdate<IamUserSyncJob>(
 //     "iam-user-sync",
 //     job => job.ExecuteAsync(CancellationToken.None),

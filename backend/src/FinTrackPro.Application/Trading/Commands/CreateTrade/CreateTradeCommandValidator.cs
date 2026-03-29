@@ -21,5 +21,6 @@ public class CreateTradeCommandValidator : AbstractValidator<CreateTradeCommand>
         RuleFor(v => v.ExitPrice).GreaterThan(0).WithMessage("Exit price must be greater than zero.");
         RuleFor(v => v.PositionSize).GreaterThan(0).WithMessage("Position size must be greater than zero.");
         RuleFor(v => v.Fees).GreaterThanOrEqualTo(0).WithMessage("Fees cannot be negative.");
+        RuleFor(v => v.Currency).NotEmpty().MaximumLength(3).WithMessage("Currency is required and must be at most 3 characters.");
     }
 }

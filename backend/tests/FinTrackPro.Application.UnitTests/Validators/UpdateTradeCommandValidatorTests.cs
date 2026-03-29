@@ -9,7 +9,7 @@ public class UpdateTradeCommandValidatorTests
     private readonly UpdateTradeCommandValidator _validator = new();
 
     private static UpdateTradeCommand Valid() =>
-        new(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, 50000m, 55000m, 0.1m, 5m, null);
+        new(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, 50000m, 55000m, 0.1m, 5m, "USD", null);
 
     [Fact]
     public void Validate_ValidCommand_Passes()

@@ -29,8 +29,8 @@ public class GetTradesHandlerTests
     {
         var trades = new List<Trade>
         {
-            Trade.Create(TestUser.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, null),
-            Trade.Create(TestUser.Id, "ETHUSDT", TradeDirection.Short, 2000m, 1800m, 1m, 2m, null),
+            Trade.Create(TestUser.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", 1.0m, null),
+            Trade.Create(TestUser.Id, "ETHUSDT", TradeDirection.Short, 2000m, 1800m, 1m, 2m, "USD", 1.0m, null),
         };
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())

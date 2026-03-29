@@ -8,6 +8,8 @@ public class AppUser : AggregateRoot
 
     public string? Email { get; private set; }
     public string DisplayName { get; private set; } = string.Empty;
+    public string PreferredLanguage { get; private set; } = "en";
+    public string PreferredCurrency { get; private set; } = "USD";
     public DateTime CreatedAt { get; private set; }
     public bool IsActive { get; private set; } = true;
 
@@ -49,6 +51,12 @@ public class AppUser : AggregateRoot
         IsActive    = true;
 
         return changed;
+    }
+
+    public void UpdatePreferences(string language, string currency)
+    {
+        PreferredLanguage = language.Trim().ToLowerInvariant();
+        PreferredCurrency = currency.Trim().ToUpperInvariant();
     }
 
     public void Deactivate() => IsActive = false;

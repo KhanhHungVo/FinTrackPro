@@ -11,6 +11,8 @@ public record TradeDto(
     decimal ExitPrice,
     decimal PositionSize,
     decimal Fees,
+    string Currency,
+    decimal RateToUsd,
     decimal Result,
     string? Notes,
     DateTime CreatedAt)
@@ -18,6 +20,7 @@ public record TradeDto(
     public static explicit operator TradeDto(Trade t) => new(
         t.Id, t.Symbol, t.Direction,
         t.EntryPrice, t.ExitPrice,
-        t.PositionSize, t.Fees, t.Result,
+        t.PositionSize, t.Fees,
+        t.Currency, t.RateToUsd, t.Result,
         t.Notes, t.CreatedAt);
 }

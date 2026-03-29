@@ -11,12 +11,14 @@ public class BudgetTests
     [Fact]
     public void Create_ValidArguments_ReturnsBudget()
     {
-        var budget = Budget.Create(UserId, "Food", 500m, "2026-03");
+        var budget = Budget.Create(UserId, "Food", 500m, "USD", 1.0m, "2026-03");
 
         budget.Id.Should().NotBeEmpty();
         budget.UserId.Should().Be(UserId);
         budget.Category.Should().Be("Food");
         budget.LimitAmount.Should().Be(500m);
+        budget.Currency.Should().Be("USD");
+        budget.RateToUsd.Should().Be(1.0m);
         budget.Month.Should().Be("2026-03");
     }
 
@@ -25,7 +27,7 @@ public class BudgetTests
     [InlineData("   ")]
     public void Create_BlankCategory_ThrowsDomainException(string category)
     {
-        var act = () => Budget.Create(UserId, category, 100m, "2026-03");
+        var act = () => Budget.Create(UserId, category, 100m, "USD", 1.0m, "2026-03");
 
         act.Should().Throw<DomainException>()
             .WithMessage("*Category*");
@@ -36,7 +38,7 @@ public class BudgetTests
     [InlineData(-100)]
     public void Create_ZeroOrNegativeLimit_ThrowsDomainException(decimal limit)
     {
-        var act = () => Budget.Create(UserId, "Food", limit, "2026-03");
+        var act = () => Budget.Create(UserId, "Food", limit, "USD", 1.0m, "2026-03");
 
         act.Should().Throw<DomainException>()
             .WithMessage("*Limit amount*");
@@ -45,7 +47,7 @@ public class BudgetTests
     [Fact]
     public void UpdateLimit_ValidAmount_UpdatesLimit()
     {
-        var budget = Budget.Create(UserId, "Food", 500m, "2026-03");
+        var budget = Budget.Create(UserId, "Food", 500m, "USD", 1.0m, "2026-03");
 
         budget.UpdateLimit(1000m);
 
@@ -57,7 +59,7 @@ public class BudgetTests
     [InlineData(-50)]
     public void UpdateLimit_ZeroOrNegative_ThrowsDomainException(decimal newLimit)
     {
-        var budget = Budget.Create(UserId, "Food", 500m, "2026-03");
+        var budget = Budget.Create(UserId, "Food", 500m, "USD", 1.0m, "2026-03");
 
         var act = () => budget.UpdateLimit(newLimit);
 

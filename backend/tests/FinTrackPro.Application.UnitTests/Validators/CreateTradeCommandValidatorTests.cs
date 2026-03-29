@@ -9,7 +9,7 @@ public class CreateTradeCommandValidatorTests
     private readonly CreateTradeCommandValidator _validator = new();
 
     private static CreateTradeCommand Valid() =>
-        new("BTCUSDT", TradeDirection.Long, 50000m, 55000m, 0.1m, 5m, null);
+        new("BTCUSDT", TradeDirection.Long, 50000m, 55000m, 0.1m, 5m, "USD", null);
 
     [Fact]
     public void Validate_ValidCommand_Passes()

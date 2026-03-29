@@ -15,14 +15,17 @@ public class CreateBudgetHandlerTests
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IBudgetRepository _budgetRepository = Substitute.For<IBudgetRepository>();
+    private readonly IExchangeRateService _exchangeRateService = Substitute.For<IExchangeRateService>();
     private readonly CreateBudgetCommandHandler _handler;
 
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public CreateBudgetHandlerTests()
     {
-        _handler = new CreateBudgetCommandHandler(_context, _currentUser, _userRepository, _budgetRepository);
+        _handler = new CreateBudgetCommandHandler(_context, _currentUser, _userRepository, _budgetRepository, _exchangeRateService);
         _currentUser.UserId.Returns(TestUser.Id);
+        _exchangeRateService.GetRateToUsdAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, decimal> { ["EUR"] = 0.92m, ["GBP"] = 0.79m });
 
         var budgets = Substitute.For<DbSet<Budget>>();
         _context.Budgets.Returns(budgets);
@@ -38,7 +41,7 @@ public class CreateBudgetHandlerTests
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
 
-        var command = new CreateBudgetCommand("Food", 500m, "2026-03");
+        var command = new CreateBudgetCommand("Food", 500m, "USD", "2026-03");
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -53,7 +56,7 @@ public class CreateBudgetHandlerTests
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
-        var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "2026-03"), CancellationToken.None);
+        var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "USD", "2026-03"), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -66,7 +69,7 @@ public class CreateBudgetHandlerTests
         _budgetRepository.ExistsAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
-        var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "2026-03"), CancellationToken.None);
+        var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "USD", "2026-03"), CancellationToken.None);
 
         await act.Should().ThrowAsync<ConflictException>();
     }

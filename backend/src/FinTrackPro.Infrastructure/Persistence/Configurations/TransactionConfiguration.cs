@@ -10,6 +10,8 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
     {
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Amount).HasPrecision(18, 2).IsRequired();
+        builder.Property(t => t.Currency).HasMaxLength(3).IsRequired().HasDefaultValue("USD");
+        builder.Property(t => t.RateToUsd).HasPrecision(18, 8).IsRequired().HasDefaultValue(1.0m);
         builder.Property(t => t.Category).HasMaxLength(100).IsRequired();
         builder.Property(t => t.Note).HasMaxLength(500);
         builder.Property(t => t.BudgetMonth).HasMaxLength(7).IsRequired();

@@ -12,5 +12,6 @@ public record UpdateTradeCommand(
     decimal ExitPrice,
     decimal PositionSize,
     decimal Fees,
+    string Currency,
     string? Notes
 ) : IRequest<TradeDto>;

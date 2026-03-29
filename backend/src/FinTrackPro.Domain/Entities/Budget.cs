@@ -8,17 +8,23 @@ public class Budget : BaseEntity
     public Guid UserId { get; private set; }
     public string Category { get; private set; } = string.Empty;
     public decimal LimitAmount { get; private set; }
+    public string Currency { get; private set; } = "USD";
+    public decimal RateToUsd { get; private set; } = 1.0m;
     public string Month { get; private set; } = string.Empty; // YYYY-MM
     public DateTime CreatedAt { get; private set; }
 
     private Budget() { }
 
-    public static Budget Create(Guid userId, string category, decimal limitAmount, string month)
+    public static Budget Create(
+        Guid userId, string category, decimal limitAmount,
+        string currency, decimal rateToUsd, string month)
     {
         if (string.IsNullOrWhiteSpace(category))
             throw new DomainException("Category is required.");
         if (limitAmount <= 0)
             throw new DomainException("Limit amount must be greater than zero.");
+        if (string.IsNullOrWhiteSpace(currency))
+            throw new DomainException("Currency is required.");
 
         return new Budget
         {
@@ -26,6 +32,8 @@ public class Budget : BaseEntity
             UserId = userId,
             Category = category.Trim(),
             LimitAmount = limitAmount,
+            Currency = currency.Trim().ToUpperInvariant(),
+            RateToUsd = rateToUsd,
             Month = month,
             CreatedAt = DateTime.UtcNow
         };

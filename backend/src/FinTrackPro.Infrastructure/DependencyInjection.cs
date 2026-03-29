@@ -2,6 +2,7 @@ using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Domain.Repositories;
 using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure.ExternalServices;
+using FinTrackPro.Infrastructure.ExternalServices.ExchangeRate;
 using FinTrackPro.Infrastructure.Http;
 using FinTrackPro.Infrastructure.Identity;
 using FinTrackPro.Infrastructure.Persistence;
@@ -133,6 +134,21 @@ public static class DependencyInjection
         .AddHttpMessageHandler<LoggingDelegatingHandler>()
         .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
 
+        services.Configure<ExchangeRateOptions>(
+            configuration.GetSection(ExchangeRateOptions.SectionName));
+
+        services.AddHttpClient<IExchangeRateClient, ExchangeRateClient>(client =>
+        {
+            var baseUrl = configuration["ExchangeRate:BaseUrl"];
+            client.BaseAddress = new Uri(baseUrl!);
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+            // API key is embedded in the URL path by ExchangeRateClient, not sent as a header
+        })
+        .AddHttpMessageHandler<LoggingDelegatingHandler>()
+        .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
+
+        services.AddScoped<IExchangeRateService, ExchangeRateService>();
+
         // Hangfire — storage selection mirrors the EF Core db-provider check above
         services.AddHangfire(config =>
         {
@@ -149,11 +165,11 @@ public static class DependencyInjection
                     db.ConnectionString,
                     new SqlServerStorageOptions
                     {
-                        CommandBatchMaxTimeout     = TimeSpan.FromMinutes(5),
+                        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
                         SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                        QueuePollInterval          = TimeSpan.Zero,
+                        QueuePollInterval = TimeSpan.Zero,
                         UseRecommendedIsolationLevel = true,
-                        DisableGlobalLocks         = true
+                        DisableGlobalLocks = true
                     });
         });
         services.AddHangfireServer();
@@ -195,7 +211,7 @@ public static class DependencyInjection
         var uri = new Uri(connectionString);
 
         // Split on the first ':' only so passwords that contain ':' are preserved correctly.
-        var sep      = uri.UserInfo.IndexOf(':');
+        var sep = uri.UserInfo.IndexOf(':');
         var username = Uri.UnescapeDataString(sep < 0 ? uri.UserInfo : uri.UserInfo[..sep]);
         var password = sep < 0 ? string.Empty : Uri.UnescapeDataString(uri.UserInfo[(sep + 1)..]);
 
@@ -208,12 +224,12 @@ public static class DependencyInjection
 
         return new NpgsqlConnectionStringBuilder
         {
-            Host     = uri.Host,
-            Port     = uri.Port == -1 ? DefaultPostgresPort : uri.Port,
+            Host = uri.Host,
+            Port = uri.Port == -1 ? DefaultPostgresPort : uri.Port,
             Database = uri.AbsolutePath.TrimStart('/'),
             Username = username,
             Password = password,
-            SslMode  = sslMode,
+            SslMode = sslMode,
         }.ToString();
     }
 

@@ -13,6 +13,8 @@ public class Trade : BaseEntity
     public decimal ExitPrice { get; private set; }
     public decimal PositionSize { get; private set; }
     public decimal Fees { get; private set; }
+    public string Currency { get; private set; } = "USD";
+    public decimal RateToUsd { get; private set; } = 1.0m;
     public string? Notes { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
@@ -24,7 +26,7 @@ public class Trade : BaseEntity
     public static Trade Create(
         Guid userId, string symbol, TradeDirection direction,
         decimal entryPrice, decimal exitPrice, decimal positionSize,
-        decimal fees, string? notes)
+        decimal fees, string currency, decimal rateToUsd, string? notes)
     {
         if (string.IsNullOrWhiteSpace(symbol))
             throw new DomainException("Symbol is required.");
@@ -36,6 +38,8 @@ public class Trade : BaseEntity
             throw new DomainException("Position size must be greater than zero.");
         if (fees < 0)
             throw new DomainException("Fees cannot be negative.");
+        if (string.IsNullOrWhiteSpace(currency))
+            throw new DomainException("Currency is required.");
 
         return new Trade
         {
@@ -47,6 +51,8 @@ public class Trade : BaseEntity
             ExitPrice = exitPrice,
             PositionSize = positionSize,
             Fees = fees,
+            Currency = currency.Trim().ToUpperInvariant(),
+            RateToUsd = rateToUsd,
             Notes = notes?.Trim(),
             CreatedAt = DateTime.UtcNow
         };
@@ -55,7 +61,8 @@ public class Trade : BaseEntity
     public void Update(
         string symbol, TradeDirection direction,
         decimal entryPrice, decimal exitPrice,
-        decimal positionSize, decimal fees, string? notes)
+        decimal positionSize, decimal fees,
+        string currency, decimal rateToUsd, string? notes)
     {
         if (string.IsNullOrWhiteSpace(symbol))
             throw new DomainException("Symbol is required.");
@@ -67,6 +74,8 @@ public class Trade : BaseEntity
             throw new DomainException("Position size must be greater than zero.");
         if (fees < 0)
             throw new DomainException("Fees cannot be negative.");
+        if (string.IsNullOrWhiteSpace(currency))
+            throw new DomainException("Currency is required.");
 
         Symbol = symbol.Trim().ToUpperInvariant();
         Direction = direction;
@@ -74,6 +83,8 @@ public class Trade : BaseEntity
         ExitPrice = exitPrice;
         PositionSize = positionSize;
         Fees = fees;
+        Currency = currency.Trim().ToUpperInvariant();
+        RateToUsd = rateToUsd;
         Notes = notes?.Trim();
     }
 }

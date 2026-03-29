@@ -8,12 +8,13 @@ public class CreateTransactionCommandValidatorTests
 {
     private readonly CreateTransactionCommandValidator _validator = new();
 
+    private static CreateTransactionCommand Valid() =>
+        new(TransactionType.Expense, 100m, "USD", "Food", null, "2026-03");
+
     [Fact]
     public void Validate_ValidCommand_Passes()
     {
-        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "Food", null, "2026-03");
-
-        var result = _validator.Validate(command);
+        var result = _validator.Validate(Valid());
 
         result.IsValid.Should().BeTrue();
     }
@@ -21,7 +22,7 @@ public class CreateTransactionCommandValidatorTests
     [Fact]
     public void Validate_InvalidEnumType_Fails()
     {
-        var command = new CreateTransactionCommand((TransactionType)999, 100m, "Food", null, "2026-03");
+        var command = Valid() with { Type = (TransactionType)999 };
 
         var result = _validator.Validate(command);
 
@@ -34,7 +35,7 @@ public class CreateTransactionCommandValidatorTests
     [InlineData(-1)]
     public void Validate_NonPositiveAmount_Fails(decimal amount)
     {
-        var command = new CreateTransactionCommand(TransactionType.Expense, amount, "Food", null, "2026-03");
+        var command = Valid() with { Amount = amount };
 
         var result = _validator.Validate(command);
 
@@ -43,9 +44,20 @@ public class CreateTransactionCommandValidatorTests
     }
 
     [Fact]
+    public void Validate_EmptyCurrency_Fails()
+    {
+        var command = Valid() with { Currency = "" };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Currency");
+    }
+
+    [Fact]
     public void Validate_EmptyCategory_Fails()
     {
-        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "", null, "2026-03");
+        var command = Valid() with { Category = "" };
 
         var result = _validator.Validate(command);
 
@@ -61,7 +73,7 @@ public class CreateTransactionCommandValidatorTests
     [InlineData("")]
     public void Validate_InvalidBudgetMonthFormat_Fails(string budgetMonth)
     {
-        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "Food", null, budgetMonth);
+        var command = Valid() with { BudgetMonth = budgetMonth };
 
         var result = _validator.Validate(command);
 

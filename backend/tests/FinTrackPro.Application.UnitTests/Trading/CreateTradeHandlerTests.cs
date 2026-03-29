@@ -15,14 +15,17 @@ public class CreateTradeHandlerTests
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly IExchangeRateService _exchangeRateService = Substitute.For<IExchangeRateService>();
     private readonly CreateTradeCommandHandler _handler;
 
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     public CreateTradeHandlerTests()
     {
-        _handler = new CreateTradeCommandHandler(_context, _currentUser, _userRepository);
+        _handler = new CreateTradeCommandHandler(_context, _currentUser, _userRepository, _exchangeRateService);
         _currentUser.UserId.Returns(TestUser.Id);
+        _exchangeRateService.GetRateToUsdAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, decimal> { ["EUR"] = 0.92m, ["GBP"] = 0.79m });
 
         var trades = Substitute.For<DbSet<Trade>>();
         _context.Trades.Returns(trades);
@@ -35,7 +38,7 @@ public class CreateTradeHandlerTests
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
 
-        var command = new CreateTradeCommand("BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, null);
+        var command = new CreateTradeCommand("BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", null);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -51,7 +54,7 @@ public class CreateTradeHandlerTests
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(
-            new CreateTradeCommand("BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, null),
+            new CreateTradeCommand("BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();

@@ -45,6 +45,20 @@ namespace FinTrackPro.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("PreferredCurrency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("USD");
+
+                    b.Property<string>("PreferredLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("en");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email");
@@ -66,6 +80,13 @@ namespace FinTrackPro.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("USD");
+
                     b.Property<decimal>("LimitAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -74,6 +95,12 @@ namespace FinTrackPro.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(7)
                         .HasColumnType("character varying(7)");
+
+                    b.Property<decimal>("RateToUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)")
+                        .HasDefaultValue(1.0m);
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -173,6 +200,13 @@ namespace FinTrackPro.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("USD");
+
                     b.Property<int>("Direction")
                         .HasColumnType("integer");
 
@@ -195,6 +229,12 @@ namespace FinTrackPro.Infrastructure.Migrations
                     b.Property<decimal>("PositionSize")
                         .HasPrecision(18, 8)
                         .HasColumnType("numeric(18,8)");
+
+                    b.Property<decimal>("RateToUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)")
+                        .HasDefaultValue(1.0m);
 
                     b.Property<string>("Symbol")
                         .IsRequired()
@@ -234,9 +274,22 @@ namespace FinTrackPro.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("USD");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("RateToUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)")
+                        .HasDefaultValue(1.0m);
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");

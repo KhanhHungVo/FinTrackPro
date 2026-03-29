@@ -11,6 +11,8 @@ public class BudgetConfiguration : IEntityTypeConfiguration<Budget>
         builder.HasKey(b => b.Id);
         builder.Property(b => b.Category).HasMaxLength(100).IsRequired();
         builder.Property(b => b.LimitAmount).HasPrecision(18, 2).IsRequired();
+        builder.Property(b => b.Currency).HasMaxLength(3).IsRequired().HasDefaultValue("USD");
+        builder.Property(b => b.RateToUsd).HasPrecision(18, 8).IsRequired().HasDefaultValue(1.0m);
         builder.Property(b => b.Month).HasMaxLength(7).IsRequired();
 
         builder.HasIndex(b => new { b.UserId, b.Category, b.Month }).IsUnique();

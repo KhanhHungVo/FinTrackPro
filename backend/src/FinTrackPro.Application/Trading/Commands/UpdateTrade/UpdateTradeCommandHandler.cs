@@ -1,3 +1,4 @@
+using FinTrackPro.Application.Common.Extensions;
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Trading.Queries.GetTrades;
 using FinTrackPro.Domain.Entities;
@@ -11,7 +12,8 @@ public class UpdateTradeCommandHandler(
     IApplicationDbContext context,
     ITradeRepository tradeRepository,
     ICurrentUser currentUser,
-    IUserRepository userRepository) : IRequestHandler<UpdateTradeCommand, TradeDto>
+    IUserRepository userRepository,
+    IExchangeRateService exchangeRateService) : IRequestHandler<UpdateTradeCommand, TradeDto>
 {
     public async Task<TradeDto> Handle(UpdateTradeCommand request, CancellationToken cancellationToken)
     {
@@ -24,6 +26,8 @@ public class UpdateTradeCommandHandler(
         if (trade.UserId != user.Id)
             throw new AuthorizationException("You are not authorized to edit this trade.");
 
+        var rateToUsd = await exchangeRateService.GetRateForCurrencyAsync(request.Currency, cancellationToken);
+
         trade.Update(
             request.Symbol,
             request.Direction,
@@ -31,6 +35,8 @@ public class UpdateTradeCommandHandler(
             request.ExitPrice,
             request.PositionSize,
             request.Fees,
+            request.Currency,
+            rateToUsd,
             request.Notes);
 
         await context.SaveChangesAsync(cancellationToken);

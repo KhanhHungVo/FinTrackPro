@@ -10,6 +10,7 @@ public static class DependencyInjection
         services.AddScoped<MarketSignalJob>();
         services.AddScoped<BudgetOverrunJob>();
         services.AddScoped<IamUserSyncJob>();
+        services.AddScoped<ExchangeRateSyncJob>();
 
         return services;
     }

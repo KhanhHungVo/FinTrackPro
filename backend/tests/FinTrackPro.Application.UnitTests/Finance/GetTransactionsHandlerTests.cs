@@ -27,8 +27,8 @@ public class GetTransactionsHandlerTests
     [Fact]
     public async Task Handle_NoMonthFilter_ReturnsAllTransactionsOrderedByDateDesc()
     {
-        var older = Transaction.Create(TestUser.Id, TransactionType.Expense, 10m, "Food", null, "2026-02");
-        var newer = Transaction.Create(TestUser.Id, TransactionType.Income, 200m, "Salary", null, "2026-03");
+        var older = Transaction.Create(TestUser.Id, TransactionType.Expense, 10m, "USD", 1.0m, "Food", null, "2026-02");
+        var newer = Transaction.Create(TestUser.Id, TransactionType.Income, 200m, "USD", 1.0m, "Salary", null, "2026-03");
 
         // Force distinct timestamps so OrderByDescending is deterministic
         SetCreatedAt(older, DateTime.UtcNow.AddMinutes(-1));
@@ -48,8 +48,8 @@ public class GetTransactionsHandlerTests
     [Fact]
     public async Task Handle_WithMonthFilter_ReturnsOnlyMatchingMonth()
     {
-        var march = Transaction.Create(TestUser.Id, TransactionType.Expense, 50m, "Food", null, "2026-03");
-        var feb   = Transaction.Create(TestUser.Id, TransactionType.Expense, 30m, "Transport", null, "2026-02");
+        var march = Transaction.Create(TestUser.Id, TransactionType.Expense, 50m, "USD", 1.0m, "Food", null, "2026-03");
+        var feb   = Transaction.Create(TestUser.Id, TransactionType.Expense, 30m, "USD", 1.0m, "Transport", null, "2026-02");
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);

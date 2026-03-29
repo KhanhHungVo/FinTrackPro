@@ -10,5 +10,6 @@ public record CreateTradeCommand(
     decimal ExitPrice,
     decimal PositionSize,
     decimal Fees,
+    string Currency,
     string? Notes
 ) : IRequest<Guid>;

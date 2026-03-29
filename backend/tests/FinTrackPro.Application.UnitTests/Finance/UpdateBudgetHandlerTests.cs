@@ -28,7 +28,7 @@ public class UpdateBudgetHandlerTests
     [Fact]
     public async Task Handle_OwnedBudget_UpdatesLimitAndSaves()
     {
-        var budget = Budget.Create(TestUser.Id, "Food", 500m, "2026-03");
+        var budget = Budget.Create(TestUser.Id, "Food", 500m, "USD", 1.0m, "2026-03");
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
@@ -59,7 +59,7 @@ public class UpdateBudgetHandlerTests
     public async Task Handle_BudgetOwnedByOtherUser_ThrowsDomainException()
     {
         var otherUser = AppUser.Create("other@dev.com", "Other");
-        var budget = Budget.Create(otherUser.Id, "Food", 500m, "2026-03");
+        var budget = Budget.Create(otherUser.Id, "Food", 500m, "USD", 1.0m, "2026-03");
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
