@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Bogus.DataSets;
 using FluentAssertions;
 using Tests.Common;
 using Tests.Common.Builders;
@@ -115,6 +116,7 @@ public class TradesTests : IAsyncLifetime
             positionSize = 1m,
             fees = 10m,
             notes = "Updated\nMultiline note",
+            currency = "USD"
         };
 
         var response = await _client.PutAsJsonAsync($"/api/trades/{id}", updateRequest);

@@ -15,7 +15,8 @@ public static class TransactionRequestBuilder
         TransactionType? type = null,
         decimal? amount = null,
         string? category = null,
-        string? budgetMonth = null)
+        string? budgetMonth = null,
+        string? currency = null)
     {
         return new
         {
@@ -24,6 +25,7 @@ public static class TransactionRequestBuilder
             category = category ?? _faker.PickRandom(Categories),
             note = _faker.Lorem.Sentence(),
             budgetMonth = budgetMonth ?? DateTime.UtcNow.ToString("yyyy-MM"),
+            currency = currency ?? "USD"
         };
     }
 }

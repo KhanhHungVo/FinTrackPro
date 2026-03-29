@@ -13,7 +13,8 @@ public static class TradeRequestBuilder
         string? symbol = null,
         TradeDirection? direction = null,
         decimal? entryPrice = null,
-        decimal? exitPrice = null)
+        decimal? exitPrice = null,
+        string? currency = null)
     {
         var entry = entryPrice ?? _faker.Finance.Amount(100, 50000);
         var exit = exitPrice ?? _faker.Finance.Amount(100, 50000);
@@ -27,6 +28,7 @@ public static class TradeRequestBuilder
             positionSize = _faker.Finance.Amount(0.01m, 10m),
             fees = _faker.Finance.Amount(0.1m, 50m),
             notes = _faker.Lorem.Sentence(),
+            currency = currency ?? "USD"
         };
     }
 }
