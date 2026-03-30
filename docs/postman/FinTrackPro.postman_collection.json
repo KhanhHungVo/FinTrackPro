@@ -25,36 +25,6 @@
           "    const now = new Date();",
           "    const month = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');",
           "    pm.environment.set('testMonth', month);",
-          "}",
-          "",
-          "// Auto-mint and cache bearerToken (user 1) before the first request that needs it.",
-          "// Skips re-mint if the cached token is still valid (5-minute buffer).",
-          "const expiry = pm.environment.get('_tokenExpiry');",
-          "if (!expiry || Date.now() > parseInt(expiry)) {",
-          "    pm.sendRequest({",
-          "        url: pm.environment.get('keycloakUrl')",
-          "            + '/realms/fintrackpro/protocol/openid-connect/token',",
-          "        method: 'POST',",
-          "        header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
-          "        body: {",
-          "            mode: 'urlencoded',",
-          "            urlencoded: [",
-          "                { key: 'grant_type', value: 'password' },",
-          "                { key: 'client_id',  value: 'fintrackpro-e2e' },",
-          "                { key: 'username',   value: pm.environment.get('testUsername') },",
-          "                { key: 'password',   value: pm.environment.get('testPassword') }",
-          "            ]",
-          "        }",
-          "    }, (err, res) => {",
-          "        if (err) { throw new Error('Token mint failed: ' + err); }",
-          "        const body = res.json();",
-          "        if (!body.access_token) {",
-          "            throw new Error('Token mint failed: ' + JSON.stringify(body));",
-          "        }",
-          "        pm.environment.set('bearerToken', body.access_token);",
-          "        pm.environment.set('_tokenExpiry',",
-          "            String(Date.now() + (body.expires_in - 30) * 1000));",
-          "    });",
           "}"
         ]
       }
@@ -67,7 +37,9 @@
         {
           "name": "No token → GET /api/transactions → 401",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "url": "{{baseUrl}}/api/transactions"
           },
@@ -76,6 +48,33 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "// Mint bearerToken (user 1) here — runs after the 401 response so the token",
+                  "// is fully resolved before Newman moves to the next request.",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('keycloakUrl')",
+                  "        + '/realms/fintrackpro/protocol/openid-connect/token',",
+                  "    method: 'POST',",
+                  "    header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
+                  "    body: {",
+                  "        mode: 'urlencoded',",
+                  "        urlencoded: [",
+                  "            { key: 'grant_type', value: 'password' },",
+                  "            { key: 'client_id',  value: 'fintrackpro-e2e' },",
+                  "            { key: 'username',   value: pm.environment.get('testUsername') },",
+                  "            { key: 'password',   value: pm.environment.get('testPassword') }",
+                  "        ]",
+                  "    }",
+                  "}, (err, res) => {",
+                  "    if (err) { throw new Error('Token mint failed: ' + err); }",
+                  "    const body = res.json();",
+                  "    if (!body.access_token) {",
+                  "        throw new Error('Token mint failed: ' + JSON.stringify(body));",
+                  "    }",
+                  "    pm.environment.set('bearerToken', body.access_token);",
+                  "    pm.environment.set('_tokenExpiry',",
+                  "        String(Date.now() + (body.expires_in - 30) * 1000));",
+                  "});",
+                  "",
                   "pm.test('Returns 401 when no token provided', () => {",
                   "  pm.response.to.have.status(401);",
                   "});"
@@ -94,7 +93,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/trades",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 60000.0,\n  \"exitPrice\": 65000.0,\n  \"positionSize\": 0.1,\n  \"fees\": 5.0,\n  \"notes\": \"Breakout trade\",\n  \"currency\": \"USD\"\n}"
@@ -149,7 +153,12 @@
           "request": {
             "method": "PUT",
             "url": "{{baseUrl}}/api/trades/{{tradeId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 60000.0,\n  \"exitPrice\": 67000.0,\n  \"positionSize\": 0.1,\n  \"fees\": 5.0,\n  \"notes\": \"Updated target hit\\nTook partial profits\",\n  \"currency\": \"USD\"\n}"
@@ -226,7 +235,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/budgets",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"category\": \"Food\",\n  \"limitAmount\": 500.00,\n  \"month\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
@@ -253,7 +267,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/transactions",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 120.50,\n  \"category\": \"Food\",\n  \"note\": \"Grocery run\",\n  \"budgetMonth\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
@@ -308,7 +327,12 @@
           "request": {
             "method": "PATCH",
             "url": "{{baseUrl}}/api/budgets/{{budgetId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"limitAmount\": 750.00\n}"
@@ -369,7 +393,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/watchedsymbols",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"BNBUSDT\"\n}"
@@ -396,7 +425,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/watchedsymbols",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"BNBUSDT\"\n}"
@@ -532,7 +566,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/trades",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"ETHUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 3000.0,\n  \"exitPrice\": 3200.0,\n  \"positionSize\": 1.0,\n  \"fees\": 2.0,\n  \"notes\": \"Guard test seed\",\n  \"currency\": \"USD\"\n}"
@@ -559,7 +598,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/budgets",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"category\": \"Entertainment\",\n  \"limitAmount\": 200.00,\n  \"month\": \"2026-03\",\n  \"currency\": \"USD\"\n}"
@@ -571,11 +615,22 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{bearerToken2}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken2}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "PUT",
             "url": "{{baseUrl}}/api/trades/{{guardTradeId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"ETHUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 3000.0,\n  \"exitPrice\": 3100.0,\n  \"positionSize\": 1.0,\n  \"fees\": 2.0,\n  \"currency\": \"USD\"\n}"
@@ -599,7 +654,13 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{bearerToken2}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken2}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "DELETE",
             "url": "{{baseUrl}}/api/trades/{{guardTradeId}}"
@@ -622,7 +683,13 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{bearerToken2}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken2}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "DELETE",
             "url": "{{baseUrl}}/api/budgets/{{guardBudgetId}}"
@@ -685,7 +752,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/trades",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": -1,\n  \"exitPrice\": 65000.0,\n  \"positionSize\": 0.1,\n  \"fees\": 5.0,\n  \"currency\": \"USD\"\n}"
@@ -707,7 +779,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/trades",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 1.0,\n  \"exitPrice\": 2.0,\n  \"positionSize\": 0.01,\n  \"fees\": 0.0,\n  \"currency\": \"USD\"\n}"
@@ -730,7 +807,12 @@
           "request": {
             "method": "PUT",
             "url": "{{baseUrl}}/api/trades/{{validationTradeId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"symbol\": \"btcusdt\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 100.0,\n  \"exitPrice\": 110.0,\n  \"positionSize\": 1.0,\n  \"fees\": 0.5,\n  \"currency\": \"USD\"\n}"
@@ -769,7 +851,12 @@
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/transactions",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": -50,\n  \"category\": \"Food\",\n  \"budgetMonth\": \"2026-03\",\n  \"currency\": \"USD\"\n}"
