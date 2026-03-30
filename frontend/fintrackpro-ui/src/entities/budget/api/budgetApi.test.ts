@@ -54,6 +54,7 @@ describe('useCreateBudget', () => {
       category: 'Food',
       limitAmount: 500,
       month: '2026-03',
+      currency: 'USD',
     })
   })
 })
