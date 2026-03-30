@@ -130,14 +130,14 @@ if (!expiry || Date.now() > parseInt(expiry)) {
 
 | Variable | Committed value | Set by |
 |---|---|---|
-| `baseUrl` | `http://localhost:5018` | Override in CI |
-| `keycloakUrl` | `http://localhost:8080` | Override in CI |
+| `baseUrl` | `http://localhost:5018` | Override in CI / local env if needed |
+| `keycloakUrl` | `http://localhost:8080` | Override in CI / local env if needed |
 | `bearerToken` | `` | Pre-request Script |
 | `bearerToken2` | `` | `api-e2e-local.sh` |
-| `testUsername` | `` | CI secret / local env |
-| `testPassword` | `` | CI secret / local env |
-| `testUsername2` | `` | CI secret / local env |
-| `testPassword2` | `` | CI secret / local env |
+| `testUsername` | `admin@fintrackpro.dev` | Override in CI / local env if needed |
+| `testPassword` | `Admin1234!` | Override in CI / local env if needed |
+| `testUsername2` | `user2@fintrackpro.dev` | Override in CI / local env if needed |
+| `testPassword2` | `User2Pass!` | Override in CI / local env if needed |
 | `budgetId` | `` | Captured at runtime |
 | `transactionId` | `` | Captured at runtime |
 | `tradeId` | `` | Captured at runtime |
