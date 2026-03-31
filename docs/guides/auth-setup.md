@@ -63,6 +63,38 @@ sequenceDiagram
     API-->>SPA: Response (200 / 201 / 204 / 4xx)
 ```
 
+### Sign-up / Registration
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SPA as React SPA
+    participant IAM as Keycloak / Auth0
+    participant API as .NET API
+    participant DB as PostgreSQL
+
+    User->>SPA: Navigate to app (unauthenticated)
+    SPA->>IAM: Redirect (OIDC authorization code flow)
+    IAM-->>User: Login page (with Register / Sign up link)
+    User->>IAM: Click Register / Sign up → fill registration form
+    IAM->>IAM: Create account
+    Note over IAM: Keycloak: assigns User role via Default Roles<br/>Auth0: Post-Login Action assigns User role<br/>on first login (roles.length === 0 branch)
+    IAM-->>SPA: Redirect with auth code
+    SPA->>IAM: Exchange code for tokens (PKCE)
+    IAM-->>SPA: Access token (JWT) + ID token
+    SPA->>SPA: Store token in Zustand (authStore)
+
+    Note over SPA,API: First API request after registration
+
+    SPA->>API: HTTP request + Authorization: Bearer <token>
+    API->>IAM: Fetch JWKS (cached) — validate token signature & expiry
+    API->>API: ClaimsTransformer maps provider roles → ClaimTypes.Role
+    API->>API: EnsureUserBehavior — AppUser row exists?
+    API->>DB: INSERT AppUser (ExternalUserId, Email, Provider)
+    API->>API: Execute handler (business logic)
+    API-->>SPA: Response (200 / 201 / 204 / 4xx)
+```
+
 ### Nightly IAM User Sync
 
 ```mermaid
