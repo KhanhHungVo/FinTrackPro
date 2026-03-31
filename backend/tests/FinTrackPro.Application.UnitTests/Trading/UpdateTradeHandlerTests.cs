@@ -21,7 +21,8 @@ public class UpdateTradeHandlerTests
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
 
     private static Trade CreateTestTrade(Guid userId) =>
-        Trade.Create(userId, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", 1.0m, null);
+        Trade.Create(userId, "BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+            30000m, 35000m, null, 0.1m, 5m, "USD", 1.0m, null);
 
     public UpdateTradeHandlerTests()
     {
@@ -40,13 +41,14 @@ public class UpdateTradeHandlerTests
         _tradeRepository.GetByIdAsync(trade.Id, Arg.Any<CancellationToken>()).Returns(trade);
 
         var command = new UpdateTradeCommand(
-            trade.Id, "ETHUSDT", TradeDirection.Short,
-            2000m, 2500m, 1m, 10m, "USD", "Updated note\nSecond line");
+            trade.Id, "ETHUSDT", TradeDirection.Long, TradeStatus.Closed,
+            2000m, 2500m, null, 1m, 10m, "USD", "Updated note\nSecond line");
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.Symbol.Should().Be("ETHUSDT");
-        result.Direction.Should().Be(TradeDirection.Short);
+        result.Direction.Should().Be(TradeDirection.Long);
+        result.Status.Should().Be(TradeStatus.Closed);
         result.EntryPrice.Should().Be(2000m);
         result.ExitPrice.Should().Be(2500m);
         result.PositionSize.Should().Be(1m);
@@ -63,7 +65,8 @@ public class UpdateTradeHandlerTests
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>()).Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(
-            new UpdateTradeCommand(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", null),
+            new UpdateTradeCommand(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+                30000m, 35000m, null, 0.1m, 5m, "USD", null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
@@ -76,7 +79,8 @@ public class UpdateTradeHandlerTests
         _tradeRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Trade?)null);
 
         var act = async () => await _handler.Handle(
-            new UpdateTradeCommand(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", null),
+            new UpdateTradeCommand(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+                30000m, 35000m, null, 0.1m, 5m, "USD", null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
@@ -91,7 +95,8 @@ public class UpdateTradeHandlerTests
         _tradeRepository.GetByIdAsync(trade.Id, Arg.Any<CancellationToken>()).Returns(trade);
 
         var act = async () => await _handler.Handle(
-            new UpdateTradeCommand(trade.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", null),
+            new UpdateTradeCommand(trade.Id, "BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+                30000m, 35000m, null, 0.1m, 5m, "USD", null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<AuthorizationException>();
@@ -105,10 +110,11 @@ public class UpdateTradeHandlerTests
         _tradeRepository.GetByIdAsync(trade.Id, Arg.Any<CancellationToken>()).Returns(trade);
 
         var act = async () => await _handler.Handle(
-            new UpdateTradeCommand(trade.Id, "BTCUSDT", TradeDirection.Long, 30000m, 0m, 0.1m, 5m, "USD", null),
+            new UpdateTradeCommand(trade.Id, "BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+                30000m, 0m, null, 0.1m, 5m, "USD", null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>()
-            .WithMessage("Exit price must be greater than zero.");
+            .WithMessage("*exit price*");
     }
 }

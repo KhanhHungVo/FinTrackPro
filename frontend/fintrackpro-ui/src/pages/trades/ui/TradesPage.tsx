@@ -5,6 +5,7 @@ import { useTrades, useDeleteTrade } from '@/entities/trade'
 import type { Trade } from '@/entities/trade'
 import { AddTradeForm } from '@/features/add-trade'
 import { EditTradeModal } from '@/features/edit-trade'
+import { ClosePositionModal } from '@/features/close-position'
 import { useLocaleStore } from '@/features/locale'
 import { useExchangeRates } from '@/entities/exchange-rate'
 import { convertAmount } from '@/shared/lib/convertAmount'
@@ -21,13 +22,27 @@ export function TradesPage() {
   const { guarded: guardedDelete, isPending: isDeleting } = useGuardedMutation(deleteTrade)
   const [showForm, setShowForm] = useState(false)
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
+  const [closingTrade, setClosingTrade] = useState<Trade | null>(null)
   const { data: rates } = useExchangeRates([currency])
   const preferredRate = rates?.[currency] ?? 0
 
-  const totalPnl   = trades?.reduce((s, t) => s + convertAmount(t.result, t.rateToUsd, preferredRate), 0) ?? 0
-  const wins       = trades?.filter((t) => t.result > 0).length ?? 0
-  const total      = trades?.length ?? 0
-  const winRate    = total > 0 ? Math.round((wins / total) * 100) : 0
+  const closedTrades = trades?.filter((t) => t.status === 'Closed') ?? []
+  const openTradesWithPrice = trades?.filter(
+    (t) => t.status === 'Open' && t.currentPrice != null,
+  ) ?? []
+
+  const totalPnl = closedTrades.reduce(
+    (s, t) => s + convertAmount(t.result, t.rateToUsd, preferredRate), 0,
+  )
+  const wins = closedTrades.filter((t) => t.result > 0).length
+  const totalClosed = closedTrades.length
+  const winRate = totalClosed > 0 ? Math.round((wins / totalClosed) * 100) : 0
+  const totalAllTrades = trades?.length ?? 0
+
+  const unrealizedPnl = openTradesWithPrice.reduce((s, t) => {
+    const raw = t.unrealizedResult ?? 0
+    return s + convertAmount(raw, t.rateToUsd, preferredRate)
+  }, 0)
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
@@ -41,8 +56,8 @@ export function TradesPage() {
         </button>
       </div>
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Summary cards */}
+      <div className={cn('grid grid-cols-1 gap-4', openTradesWithPrice.length > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
         <div className="rounded-lg border p-4">
           <p className="text-xs text-gray-500">{t('trades.totalPnl')}</p>
           <p className={cn('text-xl font-semibold', totalPnl >= 0 ? 'text-green-600' : 'text-red-600')}>
@@ -55,8 +70,16 @@ export function TradesPage() {
         </div>
         <div className="rounded-lg border p-4">
           <p className="text-xs text-gray-500">{t('trades.totalTrades')}</p>
-          <p className="text-xl font-semibold">{total}</p>
+          <p className="text-xl font-semibold">{totalAllTrades}</p>
         </div>
+        {openTradesWithPrice.length > 0 && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-xs text-emerald-600">{t('trades.unrealizedPnl')}</p>
+            <p className={cn('text-xl font-semibold', unrealizedPnl >= 0 ? 'text-emerald-700' : 'text-red-600')}>
+              {unrealizedPnl >= 0 ? '+' : ''}{formatCurrency(unrealizedPnl, currency, i18n.language)}
+            </p>
+          </div>
+        )}
       </div>
 
       {showForm && (
@@ -83,8 +106,9 @@ export function TradesPage() {
               <tr>
                 <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">{t('trades.symbol')}</th>
                 <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">{t('trades.direction')}</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">{t('trades.status')}</th>
                 <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.entryPrice')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.exitPrice')}</th>
+                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.exitCurrentPrice')}</th>
                 <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.positionSize')}</th>
                 <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.fees')}</th>
                 <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.pnl')}</th>
@@ -94,8 +118,14 @@ export function TradesPage() {
             </thead>
             <tbody className="divide-y">
               {trades?.map((trade) => {
-                const displayPnl = convertAmount(trade.result, trade.rateToUsd, preferredRate)
+                const isOpen = trade.status === 'Open'
+                const displayPrice = isOpen ? trade.currentPrice : trade.exitPrice
+                const pnlRaw = isOpen ? (trade.unrealizedResult ?? null) : trade.result
+                const displayPnl = pnlRaw != null
+                  ? convertAmount(pnlRaw, trade.rateToUsd, preferredRate)
+                  : null
                 const displayFees = convertAmount(trade.fees, trade.rateToUsd, preferredRate)
+
                 return (
                   <tr key={trade.id} className="hover:bg-gray-50">
                     <td className="px-3 py-2 sm:px-4 sm:py-3 font-mono font-medium">{trade.symbol}</td>
@@ -111,29 +141,59 @@ export function TradesPage() {
                         {trade.direction === 'Long' ? t('trades.long') : t('trades.short')}
                       </span>
                     </td>
+                    <td className="px-3 py-2 sm:px-4 sm:py-3">
+                      <span
+                        className={cn(
+                          'rounded px-1.5 py-0.5 text-xs font-medium',
+                          isOpen
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-gray-100 text-gray-600',
+                        )}
+                      >
+                        {isOpen ? t('trades.open') : t('trades.closed')}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">
                       {formatCurrency(convertAmount(trade.entryPrice, trade.rateToUsd, preferredRate), currency, i18n.language)}
                     </td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">
-                      {formatCurrency(convertAmount(trade.exitPrice, trade.rateToUsd, preferredRate), currency, i18n.language)}
+                      {displayPrice != null
+                        ? formatCurrency(convertAmount(displayPrice, trade.rateToUsd, preferredRate), currency, i18n.language)
+                        : '—'}
                     </td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{trade.positionSize}</td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-400">
                       {formatCurrency(displayFees, currency, i18n.language)}
                     </td>
-                    <td
-                      className={cn(
-                        'px-3 py-2 sm:px-4 sm:py-3 text-right font-semibold',
-                        trade.result >= 0 ? 'text-green-600' : 'text-red-600',
+                    <td className="px-3 py-2 sm:px-4 sm:py-3 text-right">
+                      {displayPnl != null ? (
+                        <span
+                          className={cn(
+                            isOpen
+                              ? 'italic text-gray-400'
+                              : cn('font-semibold', displayPnl >= 0 ? 'text-green-600' : 'text-red-600'),
+                          )}
+                        >
+                          {displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl, currency, i18n.language)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
                       )}
-                    >
-                      {displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl, currency, i18n.language)}
                     </td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs text-gray-400">
                       {new Date(trade.createdAt).toLocaleDateString(i18n.language)}
                     </td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3">
                       <div className="flex gap-2">
+                        {isOpen && (
+                          <button
+                            onClick={() => setClosingTrade(trade)}
+                            className="text-xs text-gray-300 hover:text-emerald-600"
+                            title={t('trades.closeTrade')}
+                          >
+                            ✓
+                          </button>
+                        )}
                         <button
                           onClick={() => setEditingTrade(trade)}
                           className="text-xs text-gray-300 hover:text-blue-500"
@@ -160,6 +220,7 @@ export function TradesPage() {
       )}
 
       <EditTradeModal trade={editingTrade} onClose={() => setEditingTrade(null)} />
+      <ClosePositionModal trade={closingTrade} onClose={() => setClosingTrade(null)} />
     </div>
   )
 }

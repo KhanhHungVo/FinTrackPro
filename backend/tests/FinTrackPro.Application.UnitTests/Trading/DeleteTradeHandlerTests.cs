@@ -29,7 +29,7 @@ public class DeleteTradeHandlerTests
     [Fact]
     public async Task Handle_OwnedTrade_DeletesSuccessfully()
     {
-        var trade = Trade.Create(TestUser.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", 1.0m, null);
+        var trade = Trade.Create(TestUser.Id, "BTCUSDT", TradeDirection.Long, TradeStatus.Closed, 30000m, 35000m, null, 0.1m, 5m, "USD", 1.0m, null);
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
@@ -60,7 +60,7 @@ public class DeleteTradeHandlerTests
     public async Task Handle_TradeOwnedByOtherUser_ThrowsDomainException()
     {
         var otherUser = AppUser.Create("other@dev.com", "Other");
-        var trade = Trade.Create(otherUser.Id, "BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", 1.0m, null);
+        var trade = Trade.Create(otherUser.Id, "BTCUSDT", TradeDirection.Long, TradeStatus.Closed, 30000m, 35000m, null, 0.1m, 5m, "USD", 1.0m, null);
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);

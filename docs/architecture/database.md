@@ -76,8 +76,10 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | UserId | uuid | FK → Users, CASCADE DELETE |
 | Symbol | character varying(20) | NOT NULL (uppercased) |
 | Direction | integer | NOT NULL (0=Long, 1=Short) |
+| Status | integer | NOT NULL, DEFAULT 1 (0=Open, 1=Closed); all pre-existing rows backfilled to Closed |
 | EntryPrice | numeric(18,8) | NOT NULL |
-| ExitPrice | numeric(18,8) | NOT NULL |
+| ExitPrice | numeric(18,8) | nullable — required by app validation when Status=Closed |
+| CurrentPrice | numeric(18,8) | nullable — only meaningful when Status=Open |
 | PositionSize | numeric(18,8) | NOT NULL |
 | Fees | numeric(18,8) | NOT NULL |
 | Currency | character varying(3) | NOT NULL, DEFAULT 'USD' |
@@ -85,7 +87,9 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Notes | character varying(1000) | nullable |
 | CreatedAt | timestamp | NOT NULL |
 
-> `Result` (P&L) is a **computed property** on the entity: `(ExitPrice - EntryPrice) × PositionSize - Fees`. Not persisted. EF config has `builder.Ignore(t => t.Result)`.
+> `Result` (realized P&L) is a **computed property** on the entity: `(ExitPrice - EntryPrice) × PositionSize - Fees` for Long Closed trades (direction-aware). Not persisted.
+> `UnrealizedResult` is computed from `CurrentPrice` for Open trades with a current price. Not persisted.
+> Both are ignored in EF config via `builder.Ignore(...)`.
 
 ---
 

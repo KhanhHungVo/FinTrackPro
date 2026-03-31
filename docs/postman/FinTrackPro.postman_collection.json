@@ -161,7 +161,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 60000.0,\n  \"exitPrice\": 67000.0,\n  \"positionSize\": 0.1,\n  \"fees\": 5.0,\n  \"notes\": \"Updated target hit\\nTook partial profits\",\n  \"currency\": \"USD\"\n}"
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 60000,\n  \"exitPrice\": 67000,\n  \"positionSize\": 0.1,\n  \"fees\": 5,\n  \"notes\": \"Updated target hit\\nTook partial profits\",\n  \"currency\": \"USD\",\n  \"status\": \"Closed\"\n}"
             }
           },
           "event": [

@@ -1,16 +1,36 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
-import type { Trade, TradeDirection } from '../model/types'
+import type { Trade, TradeDirection, TradeStatus } from '../model/types'
 
-export interface UpdateTradePayload {
+export interface CreateTradePayload {
   symbol: string
   direction: TradeDirection
+  status: TradeStatus
   entryPrice: number
-  exitPrice: number
+  exitPrice: number | null
+  currentPrice: number | null
   positionSize: number
   fees: number
   currency: string
   notes: string | null
+}
+
+export interface UpdateTradePayload {
+  symbol: string
+  direction: TradeDirection
+  status: TradeStatus
+  entryPrice: number
+  exitPrice: number | null
+  currentPrice: number | null
+  positionSize: number
+  fees: number
+  currency: string
+  notes: string | null
+}
+
+export interface ClosePositionPayload {
+  exitPrice: number
+  fees: number
 }
 
 export function useTrades() {
@@ -26,7 +46,7 @@ export function useTrades() {
 export function useCreateTrade() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: Omit<Trade, 'id' | 'result' | 'createdAt'>) =>
+    mutationFn: (body: CreateTradePayload) =>
       apiClient.post('/api/trades', body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['trades'] }),
   })
@@ -45,6 +65,15 @@ export function useUpdateTrade() {
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string } & UpdateTradePayload) =>
       apiClient.put<Trade>(`/api/trades/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trades'] }),
+  })
+}
+
+export function useClosePosition() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & ClosePositionPayload) =>
+      apiClient.patch<Trade>(`/api/trades/${id}/close`, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['trades'] }),
   })
 }

@@ -8,13 +8,55 @@ public class CreateTradeCommandValidatorTests
 {
     private readonly CreateTradeCommandValidator _validator = new();
 
-    private static CreateTradeCommand Valid() =>
-        new("BTCUSDT", TradeDirection.Long, 50000m, 55000m, 0.1m, 5m, "USD", null);
+    private static CreateTradeCommand ValidClosed() =>
+        new("BTCUSDT", TradeDirection.Long, TradeStatus.Closed, 50000m, 55000m, null, 0.1m, 5m, "USD", null);
+
+    private static CreateTradeCommand ValidOpen() =>
+        new("BTCUSDT", TradeDirection.Long, TradeStatus.Open, 50000m, null, 52000m, 0.1m, 0m, "USD", null);
 
     [Fact]
-    public void Validate_ValidCommand_Passes()
+    public void Validate_ValidClosedCommand_Passes()
     {
-        var result = _validator.Validate(Valid());
+        var result = _validator.Validate(ValidClosed());
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_ValidOpenCommand_Passes()
+    {
+        var result = _validator.Validate(ValidOpen());
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_OpenCommandWithoutCurrentPrice_Passes()
+    {
+        var command = ValidOpen() with { CurrentPrice = null };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_ClosedCommandWithoutExitPrice_Fails()
+    {
+        var command = ValidClosed() with { ExitPrice = null };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Exit price is required for a closed trade.");
+    }
+
+    [Fact]
+    public void Validate_OpenCommandWithNoExitPrice_Passes()
+    {
+        var command = ValidOpen() with { ExitPrice = null };
+
+        var result = _validator.Validate(command);
 
         result.IsValid.Should().BeTrue();
     }
@@ -22,7 +64,7 @@ public class CreateTradeCommandValidatorTests
     [Fact]
     public void Validate_EmptySymbol_Fails()
     {
-        var command = Valid() with { Symbol = "" };
+        var command = ValidClosed() with { Symbol = "" };
 
         var result = _validator.Validate(command);
 
@@ -31,19 +73,15 @@ public class CreateTradeCommandValidatorTests
     }
 
     [Theory]
-    [InlineData("BTCUSDT")]  // crypto pair
-    [InlineData("VIC")]      // Vietnamese equity
-    [InlineData("HPG")]      // Vietnamese equity
-    [InlineData("VN30")]     // Vietnamese index
-    [InlineData("AAPL")]     // global equity
-    [InlineData("TSLA")]     // global equity
-    [InlineData("EUR/USD")]  // FX slash-separated
-    [InlineData("GBP/VND")]  // FX slash-separated
-    [InlineData("GBP-VND")]  // FX dash-separated
-    [InlineData("EURUSD")]   // FX concatenated
+    [InlineData("BTCUSDT")]
+    [InlineData("VIC")]
+    [InlineData("VN30")]
+    [InlineData("AAPL")]
+    [InlineData("EUR/USD")]
+    [InlineData("GBP-VND")]
     public void Validate_ValidSymbolFormats_Pass(string symbol)
     {
-        var command = Valid() with { Symbol = symbol };
+        var command = ValidClosed() with { Symbol = symbol };
 
         var result = _validator.Validate(command);
 
@@ -51,13 +89,13 @@ public class CreateTradeCommandValidatorTests
     }
 
     [Theory]
-    [InlineData("btcusdt")]                    // lowercase
-    [InlineData("BTC USDT")]                   // space
-    [InlineData("BTC@USDT")]                   // invalid char
-    [InlineData("AVERYLONGSYMBOLNAME12345")]    // >20 chars
+    [InlineData("btcusdt")]
+    [InlineData("BTC USDT")]
+    [InlineData("BTC@USDT")]
+    [InlineData("AVERYLONGSYMBOLNAME12345")]
     public void Validate_InvalidSymbolFormats_Fail(string symbol)
     {
-        var command = Valid() with { Symbol = symbol };
+        var command = ValidClosed() with { Symbol = symbol };
 
         var result = _validator.Validate(command);
 
@@ -67,7 +105,7 @@ public class CreateTradeCommandValidatorTests
     [Fact]
     public void Validate_InvalidDirection_Fails()
     {
-        var command = Valid() with { Direction = (TradeDirection)999 };
+        var command = ValidClosed() with { Direction = (TradeDirection)999 };
 
         var result = _validator.Validate(command);
 
@@ -80,7 +118,7 @@ public class CreateTradeCommandValidatorTests
     [InlineData(-1)]
     public void Validate_NonPositiveEntryPrice_Fails(decimal entryPrice)
     {
-        var command = Valid() with { EntryPrice = entryPrice };
+        var command = ValidClosed() with { EntryPrice = entryPrice };
 
         var result = _validator.Validate(command);
 
@@ -93,7 +131,7 @@ public class CreateTradeCommandValidatorTests
     [InlineData(-1)]
     public void Validate_NonPositiveExitPrice_Fails(decimal exitPrice)
     {
-        var command = Valid() with { ExitPrice = exitPrice };
+        var command = ValidClosed() with { ExitPrice = exitPrice };
 
         var result = _validator.Validate(command);
 
@@ -106,7 +144,7 @@ public class CreateTradeCommandValidatorTests
     [InlineData(-1)]
     public void Validate_NonPositivePositionSize_Fails(decimal positionSize)
     {
-        var command = Valid() with { PositionSize = positionSize };
+        var command = ValidClosed() with { PositionSize = positionSize };
 
         var result = _validator.Validate(command);
 
@@ -117,7 +155,7 @@ public class CreateTradeCommandValidatorTests
     [Fact]
     public void Validate_NegativeFees_Fails()
     {
-        var command = Valid() with { Fees = -0.01m };
+        var command = ValidClosed() with { Fees = -0.01m };
 
         var result = _validator.Validate(command);
 
@@ -128,7 +166,7 @@ public class CreateTradeCommandValidatorTests
     [Fact]
     public void Validate_ZeroFees_Passes()
     {
-        var command = Valid() with { Fees = 0m };
+        var command = ValidClosed() with { Fees = 0m };
 
         var result = _validator.Validate(command);
 

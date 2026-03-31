@@ -31,8 +31,10 @@ public class UpdateTradeCommandHandler(
         trade.Update(
             request.Symbol,
             request.Direction,
+            request.Status,
             request.EntryPrice,
             request.ExitPrice,
+            request.CurrentPrice,
             request.PositionSize,
             request.Fees,
             request.Currency,

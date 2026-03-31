@@ -21,8 +21,8 @@ public class CreateTradeCommandHandler(
         var rateToUsd = await exchangeRateService.GetRateForCurrencyAsync(request.Currency, cancellationToken);
 
         var trade = Trade.Create(
-            user.Id, request.Symbol.ToUpperInvariant(), request.Direction,
-            request.EntryPrice, request.ExitPrice,
+            user.Id, request.Symbol.ToUpperInvariant(), request.Direction, request.Status,
+            request.EntryPrice, request.ExitPrice, request.CurrentPrice,
             request.PositionSize, request.Fees,
             request.Currency, rateToUsd, request.Notes);
 

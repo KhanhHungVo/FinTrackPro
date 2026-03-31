@@ -9,14 +9,37 @@ public class UpdateTradeCommandValidatorTests
     private readonly UpdateTradeCommandValidator _validator = new();
 
     private static UpdateTradeCommand Valid() =>
-        new(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, 50000m, 55000m, 0.1m, 5m, "USD", null);
+        new(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+            50000m, 55000m, null, 0.1m, 5m, "USD", null);
 
     [Fact]
-    public void Validate_ValidCommand_Passes()
+    public void Validate_ValidClosedCommand_Passes()
     {
         var result = _validator.Validate(Valid());
 
         result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_ValidOpenCommand_Passes()
+    {
+        var command = new UpdateTradeCommand(Guid.NewGuid(), "BTCUSDT", TradeDirection.Long, TradeStatus.Open,
+            50000m, null, 52000m, 0.1m, 0m, "USD", null);
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_ClosedCommandWithoutExitPrice_Fails()
+    {
+        var command = Valid() with { ExitPrice = null };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Exit price is required for a closed trade.");
     }
 
     [Fact]

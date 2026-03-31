@@ -1,3 +1,4 @@
+using FinTrackPro.Application.Trading.Commands.ClosePosition;
 using FinTrackPro.Application.Trading.Commands.CreateTrade;
 using FinTrackPro.Application.Trading.Commands.DeleteTrade;
 using FinTrackPro.Application.Trading.Commands.UpdateTrade;
@@ -24,6 +25,13 @@ public class TradesController : BaseApiController
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<TradeDto>> Update(Guid id, UpdateTradeCommand command)
+    {
+        var result = await Mediator.Send(command with { Id = id });
+        return Ok(result);
+    }
+
+    [HttpPatch("{id:guid}/close")]
+    public async Task<ActionResult<TradeDto>> Close(Guid id, ClosePositionCommand command)
     {
         var result = await Mediator.Send(command with { Id = id });
         return Ok(result);

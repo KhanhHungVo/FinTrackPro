@@ -131,7 +131,7 @@ Delete a budget (owner only).
 ## Trades
 
 ### `GET /api/trades`
-Returns all trades for the user, ordered by date descending.
+Returns all trades for the user (open and closed), ordered by date descending.
 
 **Response 200:**
 ```json
@@ -140,33 +140,55 @@ Returns all trades for the user, ordered by date descending.
     "id": "guid",
     "symbol": "BTCUSDT",
     "direction": "Long",
+    "status": "Closed",
     "entryPrice": 60000.0,
     "exitPrice": 65000.0,
+    "currentPrice": null,
     "positionSize": 0.1,
     "fees": 5.0,
     "currency": "USD",
     "rateToUsd": 1.0,
     "result": 495.0,
+    "unrealizedResult": null,
     "notes": null,
     "createdAt": "2026-03-10T14:00:00Z"
+  },
+  {
+    "id": "guid",
+    "symbol": "ETHUSDT",
+    "direction": "Long",
+    "status": "Open",
+    "entryPrice": 2000.0,
+    "exitPrice": null,
+    "currentPrice": 2200.0,
+    "positionSize": 1.0,
+    "fees": 0.0,
+    "currency": "USD",
+    "rateToUsd": 1.0,
+    "result": 0.0,
+    "unrealizedResult": 200.0,
+    "notes": null,
+    "createdAt": "2026-03-15T09:00:00Z"
   }
 ]
 ```
 
-> `result` = `(exitPrice - entryPrice) × positionSize - fees` — computed server-side, not stored.
+> `result` = realized P&L for Closed trades, computed server-side, not stored. `unrealizedResult` = estimated P&L for Open trades with a current price; `null` if no current price.
 
 ---
 
 ### `POST /api/trades`
-Log a new trade. Symbol is validated against Binance `exchangeInfo`. The handler resolves and stores `rateToUsd` at creation time.
+Log a new trade (open or closed). The handler resolves and stores `rateToUsd` at creation time.
 
 **Body:**
 ```json
 {
   "symbol": "BTCUSDT",
   "direction": "Long",
+  "status": "Closed",
   "entryPrice": 60000.0,
   "exitPrice": 65000.0,
+  "currentPrice": null,
   "positionSize": 0.1,
   "fees": 5.0,
   "currency": "USD",
@@ -174,37 +196,62 @@ Log a new trade. Symbol is validated against Binance `exchangeInfo`. The handler
 }
 ```
 
+For an open position, omit `exitPrice` and pass an optional `currentPrice`:
+```json
+{
+  "symbol": "BTCUSDT",
+  "direction": "Long",
+  "status": "Open",
+  "entryPrice": 60000.0,
+  "exitPrice": null,
+  "currentPrice": 62000.0,
+  "positionSize": 0.1,
+  "fees": 0.0,
+  "currency": "USD",
+  "notes": null
+}
+```
+
 **Response 201:** `"guid"`
 
 **Errors:**
-- `400` if symbol is not a valid Binance pair
-- `400` validation failures
+- `400` if `status = Closed` and `exitPrice` is missing/zero
+- `400` other validation failures
 
 ---
 
 ### `PUT /api/trades/{id}`
 Update all editable fields of an existing trade (owner only). Re-resolves `rateToUsd` for the new currency.
 
-**Body:**
-```json
-{
-  "symbol": "ETHUSDT",
-  "direction": "Short",
-  "entryPrice": 2000.0,
-  "exitPrice": 2500.0,
-  "positionSize": 1.0,
-  "fees": 10.0,
-  "currency": "USD",
-  "notes": "Updated note\nSecond line"
-}
-```
+**Body:** same shape as POST body (including `status`, `exitPrice`, `currentPrice`).
 
-**Response 200:** updated `TradeDto` (same shape as GET response, including re-computed `result`)
+**Response 200:** updated `TradeDto` (same shape as GET response)
 
 **Errors:**
 - `400` validation failures (same rules as POST)
 - `403` if trade belongs to another user
 - `404` if trade not found
+
+---
+
+### `PATCH /api/trades/{id}/close`
+Close an open position — sets `status = Closed`, stores `exitPrice`, clears `currentPrice`. Atomic single transaction.
+
+**Body:**
+```json
+{
+  "exitPrice": 65000.0,
+  "fees": 5.0
+}
+```
+
+**Response 200:** updated `TradeDto` with `status = "Closed"`, `exitPrice` set, `currentPrice = null`.
+
+**Errors:**
+- `400` if `exitPrice` is missing or ≤ 0
+- `403` if trade belongs to another user
+- `404` if trade not found
+- `409` if trade is already closed
 
 ---
 

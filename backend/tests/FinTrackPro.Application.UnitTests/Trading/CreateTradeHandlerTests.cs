@@ -33,12 +33,13 @@ public class CreateTradeHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ValidCommand_ReturnsNewGuid()
+    public async Task Handle_ValidClosedCommand_ReturnsNewGuid()
     {
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
 
-        var command = new CreateTradeCommand("BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", null);
+        var command = new CreateTradeCommand("BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+            30000m, 35000m, null, 0.1m, 5m, "USD", null);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -48,13 +49,28 @@ public class CreateTradeHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ValidOpenCommand_ReturnsNewGuid()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+
+        var command = new CreateTradeCommand("BTCUSDT", TradeDirection.Long, TradeStatus.Open,
+            30000m, null, 32000m, 0.1m, 0m, "USD", null);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Should().NotBeEmpty();
+    }
+
+    [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
         var act = async () => await _handler.Handle(
-            new CreateTradeCommand("BTCUSDT", TradeDirection.Long, 30000m, 35000m, 0.1m, 5m, "USD", null),
+            new CreateTradeCommand("BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+                30000m, 35000m, null, 0.1m, 5m, "USD", null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();

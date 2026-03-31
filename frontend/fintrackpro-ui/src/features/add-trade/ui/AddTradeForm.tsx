@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useCreateTrade } from '@/entities/trade'
+import type { TradeStatus } from '@/entities/trade'
 import { useLocaleStore } from '@/features/locale'
 import { cn } from '@/shared/lib/cn'
 import { createTradeSchema, type CreateTradeInput } from '@/shared/lib/tradeSchema'
@@ -15,10 +16,12 @@ export function AddTradeForm() {
   const { t } = useTranslation()
   const { mutate, isPending } = useCreateTrade()
   const defaultCurrency = useLocaleStore((s) => s.currency)
+  const [tradeStatus, setTradeStatus] = useState<TradeStatus>('Open')
   const [direction, setDirection] = useState<'Long' | 'Short'>('Long')
   const [symbol, setSymbol] = useState('')
   const [entryPrice, setEntryPrice] = useState('')
   const [exitPrice, setExitPrice] = useState('')
+  const [currentPrice, setCurrentPrice] = useState('')
   const [positionSize, setPositionSize] = useState('')
   const [fees, setFees] = useState('')
   const [currency, setCurrency] = useState(defaultCurrency)
@@ -33,11 +36,26 @@ export function AddTradeForm() {
   }
 
   function validateField(field: keyof CreateTradeInput, value: unknown) {
-    const result = createTradeSchema.shape[field].safeParse(value)
+    const schema = createTradeSchema.shape
+    if (!(field in schema)) return
+    const fieldSchema = (schema as Record<string, { safeParse: (v: unknown) => { success: boolean; error?: { issues: { message: string }[] } } }>)[field]
+    const result = fieldSchema.safeParse(value)
     if (!result.success) {
-      setFieldErrors((prev) => ({ ...prev, [field]: result.error.issues[0].message }))
+      setFieldErrors((prev) => ({ ...prev, [field]: result.error!.issues[0].message }))
     } else {
       setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
+    }
+  }
+
+  const handleStatusChange = (s: TradeStatus) => {
+    setTradeStatus(s)
+    // Clear price fields and errors when switching
+    if (s === 'Open') {
+      setExitPrice('')
+      setFieldErrors((prev) => { const next = { ...prev }; delete next.exitPrice; return next })
+    } else {
+      setCurrentPrice('')
+      setFieldErrors((prev) => { const next = { ...prev }; delete next.currentPrice; return next })
     }
   }
 
@@ -48,8 +66,10 @@ export function AddTradeForm() {
     const raw = {
       symbol,
       direction,
+      status: tradeStatus,
       entryPrice: parseFloat(entryPrice),
-      exitPrice: parseFloat(exitPrice),
+      exitPrice: tradeStatus === 'Closed' ? (parseFloat(exitPrice) || null) : null,
+      currentPrice: tradeStatus === 'Open' ? (parseFloat(currentPrice) || null) : null,
       positionSize: parseFloat(positionSize),
       fees: parseFloat(fees) || 0,
       currency,
@@ -68,12 +88,13 @@ export function AddTradeForm() {
     }
 
     mutate(
-      { ...result.data, rateToUsd: 1 }, // server resolves actual rate
+      { ...result.data, rateToUsd: 1 } as Parameters<typeof mutate>[0],
       {
         onSuccess: () => {
           setSymbol('')
           setEntryPrice('')
           setExitPrice('')
+          setCurrentPrice('')
           setPositionSize('')
           setFees('')
           setNotes('')
@@ -95,6 +116,28 @@ export function AddTradeForm() {
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-4">
       <h2 className="text-lg font-semibold">{t('trades.addTrade')}</h2>
 
+      {/* Status toggle */}
+      <div className="flex gap-2">
+        {(['Open', 'Closed'] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => handleStatusChange(s)}
+            className={cn(
+              'flex-1 rounded-md py-2 text-sm font-medium',
+              tradeStatus === s
+                ? s === 'Open'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-500 text-white'
+                : 'bg-gray-100 text-gray-700',
+            )}
+          >
+            {s === 'Open' ? t('trades.openPosition') : t('trades.closedTrade')}
+          </button>
+        ))}
+      </div>
+
+      {/* Direction toggle */}
       <div className="flex gap-2">
         {(['Long', 'Short'] as const).map((d) => (
           <button
@@ -158,22 +201,35 @@ export function AddTradeForm() {
             <p className="text-xs text-red-600">{fieldErrors.entryPrice}</p>
           )}
         </div>
-        <div className="flex flex-col gap-1">
-          <input
-            type="number"
-            placeholder={t('trades.exitPrice')}
-            value={exitPrice}
-            onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
-            onBlur={() => validateField('exitPrice', parseFloat(exitPrice))}
-            className={cn(
-              'rounded-md border px-3 py-2 text-sm',
-              fieldErrors.exitPrice && 'border-red-400',
+
+        {tradeStatus === 'Closed' ? (
+          <div className="flex flex-col gap-1">
+            <input
+              type="number"
+              placeholder={t('trades.exitPrice')}
+              value={exitPrice}
+              onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
+              onBlur={() => validateField('exitPrice', parseFloat(exitPrice) || null)}
+              className={cn(
+                'rounded-md border px-3 py-2 text-sm',
+                fieldErrors.exitPrice && 'border-red-400',
+              )}
+            />
+            {fieldErrors.exitPrice && (
+              <p className="text-xs text-red-600">{fieldErrors.exitPrice}</p>
             )}
-          />
-          {fieldErrors.exitPrice && (
-            <p className="text-xs text-red-600">{fieldErrors.exitPrice}</p>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <input
+              type="number"
+              placeholder={t('trades.currentPrice')}
+              value={currentPrice}
+              onChange={(e) => { setCurrentPrice(e.target.value); clearFieldError('currentPrice') }}
+              className="rounded-md border px-3 py-2 text-sm"
+            />
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

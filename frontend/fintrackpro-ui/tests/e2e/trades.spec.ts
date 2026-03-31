@@ -11,6 +11,7 @@ test.describe('Trades', () => {
     // Form is hidden behind a toggle button
     await page.getByRole('button', { name: /add trade/i }).click()
 
+    await page.getByRole('button', { name: /closed trade/i }).click()
     await page.getByPlaceholder('Symbol (e.g. BTCUSDT)').fill('BTCUSDT')
     await page.getByPlaceholder('Entry price').fill('60000')
     await page.getByPlaceholder('Exit price').fill('65000')
