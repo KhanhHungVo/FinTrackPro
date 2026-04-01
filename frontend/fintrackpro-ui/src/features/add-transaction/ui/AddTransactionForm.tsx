@@ -93,12 +93,12 @@ export function AddTransactionForm() {
         required
         className="w-full rounded-md border px-3 py-2 text-sm"
       />
-      <input
-        type="text"
+      <textarea
         placeholder={t('transactions.note')}
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
+        rows={4}
+        className="w-full rounded-md border px-3 py-2 text-sm resize-y"
       />
 
       <button

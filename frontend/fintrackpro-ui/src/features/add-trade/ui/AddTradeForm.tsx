@@ -266,14 +266,14 @@ export function AddTradeForm() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <input
-          type="text"
+        <textarea
           placeholder={t('trades.notes')}
           value={notes}
           onChange={(e) => { setNotes(e.target.value); clearFieldError('notes') }}
           onBlur={() => validateField('notes', notes || null)}
+          rows={4}
           className={cn(
-            'w-full rounded-md border px-3 py-2 text-sm',
+            'w-full rounded-md border px-3 py-2 text-sm resize-y',
             fieldErrors.notes && 'border-red-400',
           )}
         />
