@@ -38,7 +38,7 @@ E2E_USERNAME2="${E2E_USERNAME2:-user2@fintrackpro.dev}"
 E2E_PASSWORD2="${E2E_PASSWORD2:-User2Pass!}"
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-COLLECTION="$REPO_ROOT/docs/postman/FinTrackPro.postman_collection.json"
+COLLECTION="$REPO_ROOT/docs/postman/FinTrackPro.e2e.postman_collection.json"
 ENVIRONMENT="$REPO_ROOT/docs/postman/FinTrackPro.postman_environment.json"
 RESULTS_DIR="$REPO_ROOT/test-results"
 

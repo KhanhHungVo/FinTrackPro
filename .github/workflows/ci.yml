@@ -139,7 +139,7 @@ jobs:
           E2E_USERNAME2: ${{ secrets.E2E_USERNAME2 }}
           E2E_PASSWORD2: ${{ secrets.E2E_PASSWORD2 }}
         run: |
-          newman run docs/postman/FinTrackPro.postman_collection.json \
+          newman run docs/postman/FinTrackPro.e2e.postman_collection.json \
             -e docs/postman/FinTrackPro.postman_environment.json \
             --env-var "baseUrl=http://localhost:5018" \
             --env-var "keycloakUrl=http://localhost:8080" \

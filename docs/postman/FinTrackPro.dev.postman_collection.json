@@ -1,0 +1,816 @@
+{
+  "info": {
+    "_postman_id": "b8e1d4f2-93a7-4c6e-a142-9f3b72c8d045",
+    "name": "FinTrackPro API — Dev",
+    "description": "Developer reference collection for FinTrackPro. Organized by resource — use for endpoint exploration, debugging, and manual testing during development.\n\n**NOT for CI.** Use `FinTrackPro.e2e.postman_collection.json` (via `bash scripts/api-e2e-local.sh`) for CI-gating tests.\n\nTest assertions are lightweight (status code + schema shape). `bearerToken` is minted automatically by the collection Pre-request Script — no manual token setup needed.\n\n**Setup:**\n1. Import `FinTrackPro.postman_environment.json`\n2. Set `testUsername` / `testPassword` env vars if not using the default dev credentials\n3. Run any folder or individual request independently\n\n**Newman (ad hoc):**\n```bash\n# Full dev collection\nnewman run FinTrackPro.dev.postman_collection.json \\\n  -e FinTrackPro.postman_environment.json \\\n  --env-var \"baseUrl=http://localhost:5018\" \\\n  --env-var \"keycloakUrl=http://localhost:8080\" \\\n  --env-var \"testUsername=admin@fintrackpro.dev\" \\\n  --env-var \"testPassword=Admin1234!\" \\\n  -r cli\n\n# Single folder\nnewman run FinTrackPro.dev.postman_collection.json \\\n  -e FinTrackPro.postman_environment.json \\\n  --folder \"Trades\" \\\n  --env-var \"baseUrl=http://localhost:5018\" \\\n  --env-var \"keycloakUrl=http://localhost:8080\" \\\n  --env-var \"testUsername=admin@fintrackpro.dev\" \\\n  --env-var \"testPassword=Admin1234!\"\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Set testMonth once for the whole run (YYYY-MM of today).",
+          "if (!pm.environment.get('testMonth')) {",
+          "    const now = new Date();",
+          "    const month = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');",
+          "    pm.environment.set('testMonth', month);",
+          "}",
+          "",
+          "// Refresh bearerToken if missing or expiring within 30 seconds.",
+          "// Safe to do here (no 401 ordering requirement in the dev collection).",
+          "const expiry = pm.environment.get('_tokenExpiry');",
+          "if (!expiry || Date.now() > parseInt(expiry)) {",
+          "    pm.sendRequest({",
+          "        url: pm.environment.get('keycloakUrl')",
+          "            + '/realms/fintrackpro/protocol/openid-connect/token',",
+          "        method: 'POST',",
+          "        header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
+          "        body: {",
+          "            mode: 'urlencoded',",
+          "            urlencoded: [",
+          "                { key: 'grant_type', value: 'password' },",
+          "                { key: 'client_id',  value: 'fintrackpro-e2e' },",
+          "                { key: 'username',   value: pm.environment.get('testUsername') },",
+          "                { key: 'password',   value: pm.environment.get('testPassword') }",
+          "            ]",
+          "        }",
+          "    }, (err, res) => {",
+          "        if (err) { throw new Error('Token mint failed: ' + err); }",
+          "        const body = res.json();",
+          "        if (!body.access_token) {",
+          "            throw new Error('Token mint failed: ' + JSON.stringify(body));",
+          "        }",
+          "        pm.environment.set('bearerToken', body.access_token);",
+          "        pm.environment.set('_tokenExpiry',",
+          "            String(Date.now() + (body.expires_in - 30) * 1000));",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Manual token mint example. The collection Pre-request Script handles token minting automatically — use this folder only to inspect or test the token endpoint directly.",
+      "item": [
+        {
+          "name": "POST Keycloak token (manual)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "url": "{{keycloakUrl}}/realms/fintrackpro/protocol/openid-connect/token",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password" },
+                { "key": "client_id",  "value": "fintrackpro-e2e" },
+                { "key": "username",   "value": "{{testUsername}}" },
+                { "key": "password",   "value": "{{testPassword}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns access_token', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('access_token');",
+                  "  pm.expect(body).to.have.property('expires_in');",
+                  "  // Optionally capture token for manual use:",
+                  "  // pm.environment.set('bearerToken', body.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Trades",
+      "description": "Individual Trades endpoint requests. Each request is standalone — set `tradeId` manually in the environment before running GET/PUT/DELETE by ID, or run POST first to capture it.",
+      "item": [
+        {
+          "name": "POST /api/trades → 201",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/trades",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 60000.0,\n  \"exitPrice\": 65000.0,\n  \"positionSize\": 0.1,\n  \"fees\": 5.0,\n  \"notes\": \"Sample trade\",\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Returns a GUID and captures tradeId', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('tradeId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array with expected schema', () => {",
+                  "  const trades = pm.response.json();",
+                  "  pm.expect(trades).to.be.an('array');",
+                  "  if (trades.length > 0) {",
+                  "    pm.expect(trades[0]).to.have.property('id');",
+                  "    pm.expect(trades[0]).to.have.property('symbol');",
+                  "    pm.expect(trades[0]).to.have.property('direction');",
+                  "    pm.expect(trades[0]).to.have.property('result');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades/{{tradeId}} → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades/{{tradeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns trade with expected schema', () => {",
+                  "  const trade = pm.response.json();",
+                  "  pm.expect(trade).to.have.property('id');",
+                  "  pm.expect(trade).to.have.property('symbol');",
+                  "  pm.expect(trade).to.have.property('direction');",
+                  "  pm.expect(trade).to.have.property('result');",
+                  "  pm.expect(trade).to.have.property('entryPrice');",
+                  "  pm.expect(trade).to.have.property('exitPrice');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/trades/{{tradeId}} → 200",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/trades/{{tradeId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 60000,\n  \"exitPrice\": 67000,\n  \"positionSize\": 0.1,\n  \"fees\": 5,\n  \"notes\": \"Updated notes\",\n  \"currency\": \"USD\",\n  \"status\": \"Closed\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns updated trade with expected schema', () => {",
+                  "  const trade = pm.response.json();",
+                  "  pm.expect(trade).to.have.property('id');",
+                  "  pm.expect(trade).to.have.property('symbol');",
+                  "  pm.expect(trade).to.have.property('result');",
+                  "  pm.expect(trade).to.have.property('exitPrice');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/trades/{{tradeId}} → 204",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/trades/{{tradeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades/open → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades/open"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array (may be empty)', () => {",
+                  "  const trades = pm.response.json();",
+                  "  pm.expect(trades).to.be.an('array');",
+                  "  if (trades.length > 0) {",
+                  "    pm.expect(trades[0]).to.have.property('id');",
+                  "    pm.expect(trades[0]).to.have.property('symbol');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "description": "Individual Transactions endpoint requests. Set `transactionId` manually or run POST first to capture it.",
+      "item": [
+        {
+          "name": "POST /api/transactions → 201",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 120.50,\n  \"category\": \"Food\",\n  \"note\": \"Sample transaction\",\n  \"budgetMonth\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Returns a GUID and captures transactionId', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('transactionId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array with expected schema', () => {",
+                  "  const txs = pm.response.json();",
+                  "  pm.expect(txs).to.be.an('array');",
+                  "  if (txs.length > 0) {",
+                  "    pm.expect(txs[0]).to.have.property('id');",
+                  "    pm.expect(txs[0]).to.have.property('amount');",
+                  "    pm.expect(txs[0]).to.have.property('category');",
+                  "    pm.expect(txs[0]).to.have.property('budgetMonth');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions?month={{testMonth}} → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions?month={{testMonth}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array filtered by month', () => {",
+                  "  const txs = pm.response.json();",
+                  "  pm.expect(txs).to.be.an('array');",
+                  "  if (txs.length > 0) {",
+                  "    pm.expect(txs[0]).to.have.property('budgetMonth');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/transactions/{{transactionId}} → 200",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/transactions/{{transactionId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 95.00,\n  \"category\": \"Food\",\n  \"note\": \"Updated note\",\n  \"budgetMonth\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns updated transaction with expected schema', () => {",
+                  "  const tx = pm.response.json();",
+                  "  pm.expect(tx).to.have.property('id');",
+                  "  pm.expect(tx).to.have.property('amount');",
+                  "  pm.expect(tx).to.have.property('category');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/transactions/{{transactionId}} → 204",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/transactions/{{transactionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Budgets",
+      "description": "Individual Budgets endpoint requests. Set `budgetId` manually or run POST first to capture it.",
+      "item": [
+        {
+          "name": "POST /api/budgets → 201",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/budgets",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Food\",\n  \"limitAmount\": 500.00,\n  \"month\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Returns a GUID and captures budgetId', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('budgetId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/budgets → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/budgets"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array with expected schema', () => {",
+                  "  const budgets = pm.response.json();",
+                  "  pm.expect(budgets).to.be.an('array');",
+                  "  if (budgets.length > 0) {",
+                  "    pm.expect(budgets[0]).to.have.property('id');",
+                  "    pm.expect(budgets[0]).to.have.property('category');",
+                  "    pm.expect(budgets[0]).to.have.property('limitAmount');",
+                  "    pm.expect(budgets[0]).to.have.property('month');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/budgets?month={{testMonth}} → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/budgets?month={{testMonth}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array filtered by month', () => {",
+                  "  const budgets = pm.response.json();",
+                  "  pm.expect(budgets).to.be.an('array');",
+                  "  if (budgets.length > 0) {",
+                  "    pm.expect(budgets[0]).to.have.property('month');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/budgets/{{budgetId}} → 204",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/budgets/{{budgetId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"limitAmount\": 750.00\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/budgets/{{budgetId}} → 204",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/budgets/{{budgetId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Watched Symbols",
+      "description": "Individual Watched Symbols endpoint requests. Set `watchedSymbolId` manually or run POST first to capture it.",
+      "item": [
+        {
+          "name": "POST /api/watchedsymbols → 201",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/watchedsymbols",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"SOLUSDT\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Returns a GUID and captures watchedSymbolId', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('watchedSymbolId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/watchedsymbols → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/watchedsymbols"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array with expected schema', () => {",
+                  "  const symbols = pm.response.json();",
+                  "  pm.expect(symbols).to.be.an('array');",
+                  "  if (symbols.length > 0) {",
+                  "    pm.expect(symbols[0]).to.have.property('id');",
+                  "    pm.expect(symbols[0]).to.have.property('symbol');",
+                  "    pm.expect(symbols[0]).to.have.property('createdAt');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/watchedsymbols/{{watchedSymbolId}} → 204",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/watchedsymbols/{{watchedSymbolId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Market",
+      "description": "Public market endpoints backed by CoinGecko. No auth required.",
+      "item": [
+        {
+          "name": "GET /api/market/fear-greed → 200, value 0–100, label + timestamp present",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/market/fear-greed"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has required fields with valid value range', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('value');",
+                  "  pm.expect(body).to.have.property('label');",
+                  "  pm.expect(body).to.have.property('timestamp');",
+                  "  pm.expect(body.value).to.be.at.least(0).and.at.most(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/market/trending → 200, non-empty array",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/market/trending"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns non-empty array', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.be.an('array').and.have.length.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Validation & Error Cases",
+      "description": "Negative / bad-input tests. Verifies that FluentValidation rules reject invalid payloads with 400. Moved here from the E2E collection.",
+      "item": [
+        {
+          "name": "POST /api/trades (entryPrice=-1) → 400",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/trades",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": -1,\n  \"exitPrice\": 65000.0,\n  \"positionSize\": 0.1,\n  \"fees\": 5.0,\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for negative entryPrice', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seed trade for symbol-validation test",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/trades",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 1.0,\n  \"exitPrice\": 2.0,\n  \"positionSize\": 0.01,\n  \"fees\": 0.0,\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Seed trade created (201)', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('validationTradeId', pm.response.text().replace(/\"/g, ''));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/trades (symbol=invalid lowercase) → 400",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/trades/{{validationTradeId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"btcusdt\",\n  \"direction\": \"Long\",\n  \"entryPrice\": 100.0,\n  \"exitPrice\": 110.0,\n  \"positionSize\": 1.0,\n  \"fees\": 0.5,\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for lowercase symbol', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup — DELETE validation trade",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/trades/{{validationTradeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Validation trade cleaned up (204)', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/transactions (amount=-50) → 400",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": -50,\n  \"category\": \"Food\",\n  \"budgetMonth\": \"2026-03\",\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for negative amount', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

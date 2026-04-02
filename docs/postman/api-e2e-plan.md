@@ -1,5 +1,48 @@
 # Backend API E2E Tests — Plan & Reference
 
+## Two-Collection Strategy
+
+The Postman collections are split into two files with distinct purposes:
+
+| | `FinTrackPro.e2e.postman_collection.json` | `FinTrackPro.dev.postman_collection.json` |
+|---|---|---|
+| **Purpose** | CI gate — must be green to merge | Developer exploration and manual testing |
+| **Run by** | `scripts/api-e2e-local.sh`, CI `backend-api-e2e` job | Manually in Postman desktop or Newman ad hoc |
+| **Organized by** | Flow (lifecycle, guards, contracts) | Resource (Trades, Transactions, Budgets, etc.) |
+| **Assertions** | Full flow correctness, 403 ownership guards, CoinGecko contract | Lightweight: status code + schema shape only |
+| **Token minting** | Auth folder test script (preserves 401-first ordering) | Collection-level prerequest with expiry cache |
+| **Validation tests** | No (moved to dev) | Yes — `Validation & Error Cases` folder |
+| **`--bail`** | Yes | Optional |
+
+### When to run each
+
+- **E2E collection**: Run before every merge. `bash scripts/api-e2e-local.sh`
+- **Dev collection**: Run when adding a new endpoint, debugging a response shape, or verifying a specific request in isolation.
+
+```bash
+# Dev collection — full run
+newman run docs/postman/FinTrackPro.dev.postman_collection.json \
+  -e docs/postman/FinTrackPro.postman_environment.json \
+  --env-var "baseUrl=http://localhost:5018" \
+  --env-var "keycloakUrl=http://localhost:8080" \
+  --env-var "testUsername=admin@fintrackpro.dev" \
+  --env-var "testPassword=Admin1234!" \
+  -r cli
+
+# Dev collection — single folder
+newman run docs/postman/FinTrackPro.dev.postman_collection.json \
+  -e docs/postman/FinTrackPro.postman_environment.json \
+  --folder "Trades" \
+  --env-var "baseUrl=http://localhost:5018" \
+  --env-var "keycloakUrl=http://localhost:8080" \
+  --env-var "testUsername=admin@fintrackpro.dev" \
+  --env-var "testPassword=Admin1234!"
+```
+
+> **Retired:** `FinTrackPro.postman_collection.json` is superseded by the two collections above.
+
+---
+
 ## Context
 
 The project has solid unit and integration tests (`WebApplicationFactory` + Respawn + real PostgreSQL) but no automated test suite that hits a **real running API process with a real Keycloak-issued JWT**. That gap means the full auth stack (JWT signing, `iss`/`aud` validation, `KeycloakClaimsTransformer`, middleware ordering) is only exercised manually.
@@ -41,16 +84,18 @@ A second user `user2@fintrackpro.dev` (User role only) is added for 403 ownershi
 
 | File | Change |
 |---|---|
-| `docs/postman/FinTrackPro.postman_collection.json` | Add Pre-request Script, Authorization Guards folder, Validation folder |
+| `docs/postman/FinTrackPro.e2e.postman_collection.json` | **New** — CI-gating E2E collection (Auth, lifecycle flows, Authorization Guards, Market) |
+| `docs/postman/FinTrackPro.dev.postman_collection.json` | **New** — Dev reference collection (all endpoints by resource, Validation & Error Cases) |
+| `docs/postman/FinTrackPro.postman_collection.json` | **Retired** — superseded by the two collections above |
 | `docs/postman/FinTrackPro.postman_environment.json` | Add `keycloakUrl`, `testUsername/2`, `testPassword/2`, `bearerToken2` |
-| `scripts/api-e2e-local.sh` | New — local runner (mirrors `e2e-local.sh` pattern) |
-| `.github/workflows/ci.yml` | Add `backend-api-e2e` job |
+| `scripts/api-e2e-local.sh` | Updated `COLLECTION` to reference `FinTrackPro.e2e.postman_collection.json` |
+| `.github/workflows/ci.yml` | Updated Newman `run` path to `FinTrackPro.e2e.postman_collection.json` |
 | `infra/docker/keycloak-realm.json` | Add `user2@fintrackpro.dev` to `users` array |
 | `.gitignore` | Add `test-results/` (lowercase) |
 
 ---
 
-## Collection structure
+## E2E collection structure (`FinTrackPro.e2e.postman_collection.json`)
 
 Folders run in this order (Newman `--bail` stops on first failure):
 
@@ -84,14 +129,25 @@ Authorization Guards/              ← uses bearerToken2 (second user)
   └─ DELETE /api/trades/{{tradeId}} → 403
   └─ DELETE /api/budgets/{{budgetId}}→ 403
 
-Validation/                        ← negative tests not covered elsewhere
-  └─ POST /api/trades  (entryPrice=-1)      → 400
-  └─ PUT  /api/trades  (symbol=btcusdt)     → 400  (lowercase — fails format regex)
-  └─ POST /api/transactions (amount=-50)   → 400
-
-Market/
+Market/                            ← third-party contract verification (CoinGecko)
   └─ GET /api/market/fear-greed     → 200, value 0–100, label + timestamp present
   └─ GET /api/market/trending       → 200, non-empty array
+```
+
+> Validation / negative-input tests live in `FinTrackPro.dev.postman_collection.json` under `Validation & Error Cases/`.
+
+### Dev collection structure (`FinTrackPro.dev.postman_collection.json`)
+
+Organized by resource — requests are standalone (no cross-request flow assertions):
+
+```
+Auth/                        ← manual token mint example
+Trades/                      ← POST, GET list, GET by ID, PUT, DELETE, GET /open
+Transactions/                ← POST, GET, GET ?month=, PUT, DELETE
+Budgets/                     ← POST, GET, GET ?month=, PATCH, DELETE
+Watched Symbols/             ← POST, GET, DELETE
+Market/                      ← fear-greed, trending
+Validation & Error Cases/    ← negative tests (400s): entryPrice=-1, lowercase symbol, amount=-50
 ```
 
 ### Token minting — Pre-request Script
