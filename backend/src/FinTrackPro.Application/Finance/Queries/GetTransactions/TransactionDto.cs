@@ -10,11 +10,12 @@ public record TransactionDto(
     string Currency,
     decimal RateToUsd,
     string Category,
+    Guid? CategoryId,
     string? Note,
     string BudgetMonth,
     DateTime CreatedAt)
 {
     public static explicit operator TransactionDto(Transaction t) => new(
         t.Id, t.Type, t.Amount, t.Currency, t.RateToUsd,
-        t.Category, t.Note, t.BudgetMonth, t.CreatedAt);
+        t.Category, t.CategoryId, t.Note, t.BudgetMonth, t.CreatedAt);
 }

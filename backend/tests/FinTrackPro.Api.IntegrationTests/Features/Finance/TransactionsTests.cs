@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Tests.Common;
 using Tests.Common.Builders;
@@ -14,6 +15,7 @@ public class TransactionsTests : IAsyncLifetime
 {
     private readonly DatabaseFixture _fixture;
     private readonly HttpClient _client;
+    private Guid _expenseCategoryId;
 
     public TransactionsTests(DatabaseFixture fixture)
     {
@@ -25,13 +27,23 @@ public class TransactionsTests : IAsyncLifetime
             new AuthenticationHeaderValue("Bearer", token);
     }
 
-    public async Task InitializeAsync() => await _fixture.ResetAsync();
+    public async Task InitializeAsync()
+    {
+        await _fixture.ResetAsync();
+
+        // Fetch the first expense system category so all tests have a real CategoryId
+        var catResponse = await _client.GetAsync("/api/transaction-categories?type=Expense");
+        catResponse.EnsureSuccessStatusCode();
+        var categories = await catResponse.Content.ReadFromJsonAsync<List<JsonElement>>();
+        _expenseCategoryId = Guid.Parse(categories![0].GetProperty("id").GetString()!);
+    }
+
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task CreateTransaction_ValidRequest_Returns201()
     {
-        var request = TransactionRequestBuilder.Build();
+        var request = TransactionRequestBuilder.Build(categoryId: _expenseCategoryId);
 
         var response = await _client.PostAsJsonAsync("/api/transactions", request);
 
@@ -43,7 +55,7 @@ public class TransactionsTests : IAsyncLifetime
     [Fact]
     public async Task CreateTransaction_ZeroAmount_Returns400()
     {
-        var request = TransactionRequestBuilder.Build(amount: 0m);
+        var request = TransactionRequestBuilder.Build(amount: 0m, categoryId: _expenseCategoryId);
 
         var response = await _client.PostAsJsonAsync("/api/transactions", request);
 
@@ -53,8 +65,8 @@ public class TransactionsTests : IAsyncLifetime
     [Fact]
     public async Task GetTransactions_ReturnsCreatedTransactions()
     {
-        await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build());
-        await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build());
+        await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build(categoryId: _expenseCategoryId));
+        await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build(categoryId: _expenseCategoryId));
 
         var response = await _client.GetAsync("/api/transactions");
 
@@ -69,8 +81,8 @@ public class TransactionsTests : IAsyncLifetime
         var currentMonth = DateTime.UtcNow.ToString("yyyy-MM");
         var otherMonth = DateTime.UtcNow.AddMonths(-1).ToString("yyyy-MM");
 
-        await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build(budgetMonth: currentMonth));
-        await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build(budgetMonth: otherMonth));
+        await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build(budgetMonth: currentMonth, categoryId: _expenseCategoryId));
+        await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build(budgetMonth: otherMonth, categoryId: _expenseCategoryId));
 
         var response = await _client.GetAsync($"/api/transactions?month={currentMonth}");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -82,7 +94,7 @@ public class TransactionsTests : IAsyncLifetime
     [Fact]
     public async Task DeleteTransaction_ExistingId_Returns204()
     {
-        var createResponse = await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build());
+        var createResponse = await _client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build(categoryId: _expenseCategoryId));
         var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
 
         var deleteResponse = await _client.DeleteAsync($"/api/transactions/{id}");
@@ -102,7 +114,7 @@ public class TransactionsTests : IAsyncLifetime
     public async Task CreateTransaction_Unauthenticated_Returns401()
     {
         var unauthClient = _fixture.Factory.CreateClient();
-        var request = TransactionRequestBuilder.Build();
+        var request = TransactionRequestBuilder.Build(categoryId: _expenseCategoryId);
 
         var response = await unauthClient.PostAsJsonAsync("/api/transactions", request);
 
@@ -112,7 +124,7 @@ public class TransactionsTests : IAsyncLifetime
     [Fact]
     public async Task CreateTransaction_InvalidEnumType_Returns400()
     {
-        var json = """{"type":"InvalidType","amount":100,"category":"Food","note":null,"budgetMonth":"2026-03"}""";
+        var json = $$$"""{"type":"InvalidType","amount":100,"categoryId":"{{{_expenseCategoryId}}}","note":null,"budgetMonth":"2026-03","currency":"USD"}""";
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync("/api/transactions", content);
@@ -123,7 +135,7 @@ public class TransactionsTests : IAsyncLifetime
     [Fact]
     public async Task CreateTransaction_InvalidBudgetMonthFormat_Returns400()
     {
-        var request = TransactionRequestBuilder.Build(budgetMonth: "26-3");
+        var request = TransactionRequestBuilder.Build(budgetMonth: "26-3", categoryId: _expenseCategoryId);
 
         var response = await _client.PostAsJsonAsync("/api/transactions", request);
 

@@ -1,6 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
-import type { Transaction } from '../model/types'
+import type { Transaction, TransactionType } from '../model/types'
+
+export interface CreateTransactionPayload {
+  type: TransactionType
+  amount: number
+  currency: string
+  categoryId: string
+  note: string | null
+  budgetMonth: string
+}
 
 export function useTransactions(month?: string) {
   return useQuery({
@@ -16,7 +25,7 @@ export function useTransactions(month?: string) {
 export function useCreateTransaction() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: Omit<Transaction, 'id' | 'createdAt'>) =>
+    mutationFn: (body: CreateTransactionPayload) =>
       apiClient.post('/api/transactions', body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
   })

@@ -1,12 +1,15 @@
 using FinTrackPro.API.Infrastructure;
 using FinTrackPro.API.Middleware;
 using FinTrackPro.Application;
+using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.BackgroundJobs;
 using FinTrackPro.BackgroundJobs.Jobs;
 using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure;
 using FinTrackPro.Infrastructure.Identity;
+using FinTrackPro.Infrastructure.Persistence;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -147,6 +150,16 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = [new HangfireBasicAuthFilter(app.Configuration)]
 });
+
+// Run database migrations and seed system categories on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+
+    var seeder = scope.ServiceProvider.GetRequiredService<IDataSeeder>();
+    await seeder.SeedAsync();
+}
 
 // Register recurring jobs
 RecurringJob.AddOrUpdate<MarketSignalJob>(

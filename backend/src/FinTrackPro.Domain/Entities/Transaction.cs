@@ -15,13 +15,15 @@ public class Transaction : BaseEntity
     public string? Note { get; private set; }
     public string BudgetMonth { get; private set; } = string.Empty; // YYYY-MM
     public DateTime CreatedAt { get; private set; }
+    public Guid? CategoryId { get; private set; }
 
     private Transaction() { }
 
     public static Transaction Create(
         Guid userId, TransactionType type, decimal amount,
         string currency, decimal rateToUsd,
-        string category, string? note, string budgetMonth)
+        string category, string? note, string budgetMonth,
+        Guid? categoryId = null)
     {
         if (amount <= 0)
             throw new DomainException("Amount must be greater than zero.");
@@ -41,7 +43,8 @@ public class Transaction : BaseEntity
             Category = category.Trim(),
             Note = note?.Trim(),
             BudgetMonth = budgetMonth,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CategoryId = categoryId
         };
     }
 }

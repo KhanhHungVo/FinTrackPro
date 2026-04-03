@@ -7,7 +7,7 @@ public record CreateTransactionCommand(
     TransactionType Type,
     decimal Amount,
     string Currency,
-    string Category,
+    Guid CategoryId,
     string? Note,
     string BudgetMonth  // YYYY-MM
 ) : IRequest<Guid>;

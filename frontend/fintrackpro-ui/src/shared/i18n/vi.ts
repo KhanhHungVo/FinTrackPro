@@ -85,6 +85,12 @@ const vi = {
     save: 'Lưu',
     saved: 'Đã lưu cài đặt.',
   },
+  transactionCategories: {
+    categories: 'Danh mục',
+    myCategories: 'Danh mục của tôi',
+    selectCategory: 'Chọn danh mục',
+    loading: 'Đang tải danh mục…',
+  },
 } as const
 
 export default vi

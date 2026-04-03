@@ -18,6 +18,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<WatchedSymbol> WatchedSymbols => Set<WatchedSymbol>();
     public DbSet<Signal> Signals => Set<Signal>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -66,16 +66,17 @@ describe('useCreateTransaction', () => {
     result.current.mutate({
       type: 'Expense',
       amount: 120.5,
-      category: 'Food',
+      categoryId: 'some-category-guid',
       note: 'Grocery run',
       budgetMonth: '2026-03',
-    } as any)
+      currency: 'USD',
+    })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(apiClient.post).toHaveBeenCalledWith('/api/transactions', expect.objectContaining({
       amount: 120.5,
-      category: 'Food',
+      categoryId: 'some-category-guid',
     }))
   })
 })

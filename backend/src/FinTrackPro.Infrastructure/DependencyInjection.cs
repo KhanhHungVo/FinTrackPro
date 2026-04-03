@@ -1,6 +1,7 @@
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Domain.Repositories;
 using FinTrackPro.Infrastructure.Auth;
+using FinTrackPro.Infrastructure.Persistence.Seeders;
 using FinTrackPro.Infrastructure.ExternalServices;
 using FinTrackPro.Infrastructure.ExternalServices.ExchangeRate;
 using FinTrackPro.Infrastructure.Http;
@@ -56,6 +57,8 @@ public static class DependencyInjection
         services.AddScoped<IWatchedSymbolRepository, WatchedSymbolRepository>();
         services.AddScoped<ISignalRepository, SignalRepository>();
         services.AddScoped<INotificationPreferenceRepository, NotificationPreferenceRepository>();
+        services.AddScoped<ITransactionCategoryRepository, TransactionCategoryRepository>();
+        services.AddScoped<IDataSeeder, TransactionCategoryDataSeeder>();
 
         // HTTP logging + resilience options
         services.Configure<HttpLoggingOptions>(configuration.GetSection(HttpLoggingOptions.SectionName));

@@ -21,5 +21,11 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
                .WithMany()
                .HasForeignKey(t => t.UserId)
                .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<TransactionCategory>()
+               .WithMany()
+               .HasForeignKey(t => t.CategoryId)
+               .OnDelete(DeleteBehavior.SetNull)
+               .IsRequired(false);
     }
 }

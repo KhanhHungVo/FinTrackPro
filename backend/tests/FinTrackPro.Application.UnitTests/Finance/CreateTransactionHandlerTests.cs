@@ -15,14 +15,18 @@ public class CreateTransactionHandlerTests
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly ITransactionCategoryRepository _categoryRepository = Substitute.For<ITransactionCategoryRepository>();
     private readonly IExchangeRateService _exchangeRateService = Substitute.For<IExchangeRateService>();
     private readonly CreateTransactionCommandHandler _handler;
 
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
+    private static readonly TransactionCategory SystemCategory =
+        TransactionCategory.Create(null, TransactionType.Expense, "food_beverage", "Food & Beverage", "Ăn uống", "🍜", isSystem: true);
 
     public CreateTransactionHandlerTests()
     {
-        _handler = new CreateTransactionCommandHandler(_context, _currentUser, _userRepository, _exchangeRateService);
+        _handler = new CreateTransactionCommandHandler(
+            _context, _currentUser, _userRepository, _categoryRepository, _exchangeRateService);
 
         _currentUser.UserId.Returns(TestUser.Id);
         _exchangeRateService.GetRateToUsdAsync(Arg.Any<CancellationToken>())
@@ -38,8 +42,10 @@ public class CreateTransactionHandlerTests
     {
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
+        _categoryRepository.GetByIdAsync(SystemCategory.Id, Arg.Any<CancellationToken>())
+            .Returns(SystemCategory);
 
-        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", "Food", null, "2026-03");
+        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", SystemCategory.Id, null, "2026-03");
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -54,10 +60,43 @@ public class CreateTransactionHandlerTests
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
-        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", "Food", null, "2026-03");
+        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", SystemCategory.Id, null, "2026-03");
 
         var act = async () => await _handler.Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_CategoryNotFound_ThrowsNotFoundException()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _categoryRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((TransactionCategory?)null);
+
+        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", Guid.NewGuid(), null, "2026-03");
+
+        var act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_OtherUsersCategoryId_ThrowsAuthorizationException()
+    {
+        var otherUserId = Guid.NewGuid();
+        var userCategory = TransactionCategory.Create(otherUserId, TransactionType.Expense, "custom", "Custom", "Tùy chỉnh", "📌");
+
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _categoryRepository.GetByIdAsync(userCategory.Id, Arg.Any<CancellationToken>())
+            .Returns(userCategory);
+
+        var command = new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", userCategory.Id, null, "2026-03");
+
+        var act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<AuthorizationException>();
     }
 }

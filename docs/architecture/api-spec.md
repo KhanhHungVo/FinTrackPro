@@ -26,7 +26,8 @@ Returns all transactions for the authenticated user.
     "amount": 120.50,
     "currency": "VND",
     "rateToUsd": 25000.0,
-    "category": "Food",
+    "category": "food_beverage",
+    "categoryId": "guid-or-null",
     "note": "Grocery run",
     "budgetMonth": "2026-03",
     "createdAt": "2026-03-12T10:00:00Z"
@@ -45,7 +46,7 @@ Create a new transaction. The handler resolves and stores `rateToUsd` from the e
   "type": "Expense",
   "amount": 120.50,
   "currency": "VND",
-  "category": "Food",
+  "categoryId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "note": "Grocery run",
   "budgetMonth": "2026-03"
 }
@@ -55,7 +56,7 @@ Create a new transaction. The handler resolves and stores `rateToUsd` from the e
 
 **Validation errors (400):**
 - `amount` must be > 0
-- `category` required
+- `categoryId` must be a non-empty GUID (resolved to `category` slug by handler)
 - `budgetMonth` must match `YYYY-MM`
 - `currency` required, max 3 chars
 
@@ -65,6 +66,71 @@ Create a new transaction. The handler resolves and stores `rateToUsd` from the e
 Delete a transaction (owner only).
 
 **Response 204** on success. **404** if not found. **400** if not owner.
+
+---
+
+## Transaction Categories
+
+### `GET /api/transaction-categories`
+Returns system categories + the caller's active custom categories, sorted system-first then by `SortOrder`.
+
+**Query params:**
+| Param | Type | Description |
+|---|---|---|
+| `type` | `Income` \| `Expense` | Filter by type (optional) |
+
+**Response 200:**
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "slug": "food_beverage",
+    "labelEn": "Food & Beverage",
+    "labelVi": "Ăn uống",
+    "icon": "🍜",
+    "type": "Expense",
+    "isSystem": true,
+    "sortOrder": 1
+  }
+]
+```
+
+---
+
+### `POST /api/transaction-categories`
+Create a custom category for the authenticated user.
+
+**Body:**
+```json
+{
+  "type": "Expense",
+  "slug": "pet_care",
+  "labelEn": "Pet Care",
+  "labelVi": "Thú cưng",
+  "icon": "🐶"
+}
+```
+
+**Response 201:** `"guid"`
+
+**Validation errors (400):** `slug` must match `^[a-z][a-z0-9_]{1,98}$`.
+**409** if slug already exists for this user or as a system category.
+
+---
+
+### `PATCH /api/transaction-categories/{id}`
+Update labels/icon of a user-owned custom category.
+
+**Body:** `{ "labelEn": "Pets", "labelVi": "Thú nuôi", "icon": "🐾" }`
+
+**Response 204.** **403** if `isSystem = true` or category belongs to another user. **404** if not found.
+
+---
+
+### `DELETE /api/transaction-categories/{id}`
+Soft-delete (sets `isActive = false`) a user-owned custom category.
+
+**Response 204.** **403** if `isSystem = true`. **404** if not found.
 
 ---
 

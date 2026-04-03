@@ -9,7 +9,7 @@ public class CreateTransactionCommandValidatorTests
     private readonly CreateTransactionCommandValidator _validator = new();
 
     private static CreateTransactionCommand Valid() =>
-        new(TransactionType.Expense, 100m, "USD", "Food", null, "2026-03");
+        new(TransactionType.Expense, 100m, "USD", Guid.NewGuid(), null, "2026-03");
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -55,14 +55,14 @@ public class CreateTransactionCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_EmptyCategory_Fails()
+    public void Validate_EmptyGuidCategoryId_Fails()
     {
-        var command = Valid() with { Category = "" };
+        var command = Valid() with { CategoryId = Guid.Empty };
 
         var result = _validator.Validate(command);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.ErrorMessage == "Category is required.");
+        result.Errors.Should().ContainSingle(e => e.ErrorMessage == "CategoryId is required.");
     }
 
     [Theory]

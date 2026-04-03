@@ -45,12 +45,34 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Amount | numeric(18,2) | NOT NULL |
 | Currency | character varying(3) | NOT NULL, DEFAULT 'USD' |
 | RateToUsd | numeric(18,8) | NOT NULL, DEFAULT 1.0 |
-| Category | character varying(100) | NOT NULL |
+| Category | character varying(100) | NOT NULL (slug from resolved `TransactionCategory`) |
+| CategoryId | uuid | nullable, FK → TransactionCategories, SET NULL on DELETE |
 | Note | character varying(500) | nullable |
 | BudgetMonth | character varying(7) | NOT NULL (YYYY-MM) |
 | CreatedAt | timestamp | NOT NULL |
 
 > `Currency` and `RateToUsd` are stored at creation time. `RateToUsd` = units of the record's currency per 1 USD. Display conversion: `displayAmount = (amount / rateToUsd) × preferredRateToUsd`.
+> `Category` always holds the resolved slug from `TransactionCategory.Slug` for budget-matching compatibility. `CategoryId` is nullable — old rows have `NULL` (Phase 1 migration strategy).
+
+---
+
+### TransactionCategories
+| Column | Type | Constraints |
+|---|---|---|
+| Id | uuid | PK |
+| UserId | uuid | nullable, FK → Users, CASCADE DELETE |
+| Type | integer | NOT NULL (0=Income, 1=Expense) |
+| Slug | character varying(100) | NOT NULL |
+| LabelEn | character varying(100) | NOT NULL |
+| LabelVi | character varying(100) | NOT NULL |
+| Icon | character varying(50) | NOT NULL |
+| IsSystem | boolean | NOT NULL, DEFAULT false |
+| IsActive | boolean | NOT NULL, DEFAULT true |
+| SortOrder | integer | NOT NULL, DEFAULT 0 |
+| CreatedAt | timestamp | NOT NULL |
+| — | — | UNIQUE INDEX (UserId, Slug) |
+
+> `UserId = NULL` = system category (globally unique slug). `UserId = <user>` = user-owned custom category (slug unique per user). System categories are seeded idempotently by `TransactionCategoryDataSeeder` on every startup — 5 Income + 11 Expense = 16 total. System categories cannot be updated or deleted (HTTP 403 via domain guard). Custom categories are soft-deleted (`IsActive = false`).
 
 ---
 

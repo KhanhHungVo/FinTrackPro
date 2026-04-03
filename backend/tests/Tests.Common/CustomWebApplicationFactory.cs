@@ -1,7 +1,8 @@
 using System.Text;
 using FinTrackPro.Application.Common.Interfaces;
-using Microsoft.Extensions.Configuration;
 using FinTrackPro.Infrastructure.Persistence;
+using FinTrackPro.Infrastructure.Persistence.Seeders;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -88,6 +89,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
         await using var db = new ApplicationDbContext(options);
         await db.Database.MigrateAsync();
+
+        var seeder = new TransactionCategoryDataSeeder(db);
+        await seeder.SeedAsync();
     }
 
     /// <summary>

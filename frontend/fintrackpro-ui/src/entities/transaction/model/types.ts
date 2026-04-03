@@ -7,6 +7,7 @@ export interface Transaction {
   currency: string
   rateToUsd: number
   category: string
+  categoryId?: string
   note: string | null
   budgetMonth: string
   createdAt: string

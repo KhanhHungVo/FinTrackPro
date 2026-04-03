@@ -174,6 +174,7 @@ dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrac
 - `docs/decisions/postgres-migration.md` — migration from Azure SQL to PostgreSQL
 - `docs/decisions/integration-test-refactor.md` — SQL Server → PostgreSQL test infra change
 - `docs/decisions/preventing-duplicate-calls-on-fast-clicks.md` — useGuardedMutation hook design rationale
+- `docs/decisions/transaction-category-system.md` — structured TransactionCategory entity (system-seeded defaults + user-custom, three-phase migration strategy)
 
 ### Planned (not yet implemented)
 - `docs/planned/identity-linking-refactor.md` — multi-provider identity linking via UserContextMiddleware

@@ -85,6 +85,12 @@ const en = {
     save: 'Save',
     saved: 'Settings saved.',
   },
+  transactionCategories: {
+    categories: 'Categories',
+    myCategories: 'My Categories',
+    selectCategory: 'Select a category',
+    loading: 'Loading categories…',
+  },
 } as const
 
 export default en

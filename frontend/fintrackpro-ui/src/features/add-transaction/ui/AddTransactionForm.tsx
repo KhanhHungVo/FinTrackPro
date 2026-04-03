@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useCreateTransaction } from '@/entities/transaction'
 import { useLocaleStore } from '@/features/locale'
+import { TransactionCategorySelector, useLastUsedTransactionCategory } from '@/features/select-transaction-category'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
 
@@ -12,10 +13,12 @@ export function AddTransactionForm() {
   const { t } = useTranslation()
   const { mutate, isPending } = useCreateTransaction()
   const defaultCurrency = useLocaleStore((s) => s.currency)
+  const { getLastUsedId, setLastUsedId } = useLastUsedTransactionCategory()
+
   const [type, setType] = useState<'Income' | 'Expense'>('Expense')
   const [amount, setAmount] = useState('')
   const [currency, setCurrency] = useState(defaultCurrency)
-  const [category, setCategory] = useState('')
+  const [categoryId, setCategoryId] = useState(getLastUsedId() ?? '')
   const [note, setNote] = useState('')
   const currentMonth = new Date().toISOString().slice(0, 7)
 
@@ -26,15 +29,14 @@ export function AddTransactionForm() {
         type,
         amount: parseFloat(amount),
         currency,
-        rateToUsd: 1, // server resolves actual rate; field required by type but overridden server-side
-        category,
+        categoryId,
         note: note || null,
         budgetMonth: currentMonth,
       },
       {
         onSuccess: () => {
+          setLastUsedId(categoryId)
           setAmount('')
-          setCategory('')
           setNote('')
         },
         onError: (err) => toast.error(errorToastMessage(err)),
@@ -51,7 +53,7 @@ export function AddTransactionForm() {
           <button
             key={ty}
             type="button"
-            onClick={() => setType(ty)}
+            onClick={() => { setType(ty); setCategoryId('') }}
             className={cn(
               'flex-1 rounded-md py-2 text-sm font-medium',
               type === ty
@@ -85,14 +87,14 @@ export function AddTransactionForm() {
           ))}
         </select>
       </div>
-      <input
-        type="text"
-        placeholder={t('transactions.category')}
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        required
-        className="w-full rounded-md border px-3 py-2 text-sm"
+
+      <TransactionCategorySelector
+        type={type}
+        value={categoryId}
+        onChange={setCategoryId}
+        lastUsedId={getLastUsedId()}
       />
+
       <textarea
         placeholder={t('transactions.note')}
         value={note}
@@ -103,7 +105,7 @@ export function AddTransactionForm() {
 
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || !categoryId}
         className="w-full rounded-md bg-blue-600 py-2 text-sm text-white disabled:opacity-50"
       >
         {isPending ? t('common.loading') : t('transactions.addTransaction')}

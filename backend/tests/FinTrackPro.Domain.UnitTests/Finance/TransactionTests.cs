@@ -12,14 +12,16 @@ public class TransactionTests
     [Fact]
     public void Create_ValidArguments_ReturnsTransaction()
     {
-        var tx = Transaction.Create(UserId, TransactionType.Expense, 100m, "USD", 1.0m, "Food", null, "2026-03");
+        var categoryId = Guid.NewGuid();
+        var tx = Transaction.Create(UserId, TransactionType.Expense, 100m, "USD", 1.0m, "food_beverage", null, "2026-03", categoryId);
 
         tx.Id.Should().NotBeEmpty();
         tx.UserId.Should().Be(UserId);
         tx.Amount.Should().Be(100m);
         tx.Currency.Should().Be("USD");
         tx.RateToUsd.Should().Be(1.0m);
-        tx.Category.Should().Be("Food");
+        tx.Category.Should().Be("food_beverage");
+        tx.CategoryId.Should().Be(categoryId);
         tx.BudgetMonth.Should().Be("2026-03");
         tx.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }

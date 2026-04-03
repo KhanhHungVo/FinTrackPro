@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useTransactions, useDeleteTransaction } from '@/entities/transaction'
 import type { TransactionType } from '@/entities/transaction'
+import { useTransactionCategories } from '@/entities/transaction-category'
 import { AddTransactionForm } from '@/features/add-transaction'
 import { useLocaleStore } from '@/features/locale'
 import { useExchangeRates } from '@/entities/exchange-rate'
@@ -26,6 +27,7 @@ const TYPE_COLORS: Record<TransactionType, string> = {
 export function TransactionsPage() {
   const { t, i18n } = useTranslation()
   const currency = useLocaleStore((s) => s.currency)
+  const language = useLocaleStore((s) => s.language)
   const [month, setMonth] = useState(monthsBack(0))
   const { data: transactions, isLoading } = useTransactions(month)
   const { mutate: deleteTx } = useDeleteTransaction()
@@ -34,6 +36,12 @@ export function TransactionsPage() {
     handleDelete(id, { onError: (err) => toast.error(errorToastMessage(err)) })
   const { data: rates } = useExchangeRates([currency])
   const preferredRate = rates?.[currency] ?? 0
+  const { data: allCategories } = useTransactionCategories()
+  const resolveCategoryLabel = (slug: string) => {
+    const cat = allCategories?.find((c) => c.slug === slug)
+    if (!cat) return slug
+    return `${cat.icon} ${language === 'vi' ? cat.labelVi : cat.labelEn}`
+  }
 
   const income  = transactions?.filter(t => t.type === 'Income').reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate), 0) ?? 0
   const expense = transactions?.filter(t => t.type === 'Expense').reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate), 0) ?? 0
@@ -110,7 +118,7 @@ export function TransactionsPage() {
                     {tx.type === 'Income' ? t('transactions.income') : t('transactions.expense')}
                   </span>
                   <div>
-                    <p className="text-sm font-medium">{tx.category}</p>
+                    <p className="text-sm font-medium">{resolveCategoryLabel(tx.category)}</p>
                     {tx.note && (
                       <p className="text-xs text-gray-400">{tx.note}</p>
                     )}
