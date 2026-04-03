@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a3f7c2d1-58e4-4b9a-bc31-7e6d05f1a820",
     "name": "FinTrackPro API — E2E",
-    "description": "CI-gating E2E collection for FinTrackPro. Runs full lifecycle flows against a real API process with a real Keycloak-issued JWT.\n\nCovers critical paths: Auth, resource CRUD flows, authorization ownership guards, and third-party market contracts (CoinGecko).\n\nValidation / negative-input tests live in `FinTrackPro.dev.postman_collection.json`.\n\n**Setup:**\n1. Import `FinTrackPro.postman_environment.json`\n2. Local test credentials are prefilled for the committed Keycloak test realm\n3. `bearerToken` is minted automatically by the Auth folder test script\n\n**Newman (CI/local):**\n```bash\nbash scripts/api-e2e-local.sh\n\n# Or directly:\nnewman run FinTrackPro.e2e.postman_collection.json \\\n  -e FinTrackPro.postman_environment.json \\\n  --env-var \"baseUrl=http://localhost:5018\" \\\n  --env-var \"keycloakUrl=http://localhost:8080\" \\\n  --env-var \"testUsername=admin@fintrackpro.dev\" \\\n  --env-var \"testPassword=Admin1234!\" \\\n  --env-var \"testUsername2=user2@fintrackpro.dev\" \\\n  --env-var \"testPassword2=User2Pass!\" \\\n  --bail -r cli,junit --reporter-junit-export test-results/newman.xml\n```",
+    "description": "CI-gating E2E collection for FinTrackPro. Runs full lifecycle flows against a real API process with a real Keycloak-issued JWT.\n\nCovers critical paths: Auth, resource CRUD flows, authorization ownership guards, and third-party market contracts (CoinGecko).\n\nValidation / negative-input tests live in `FinTrackPro.dev.postman_collection.json`.\n\n**Setup:**\n1. Import `FinTrackPro.postman_environment.json`\n2. Local test credentials are prefilled for the committed Keycloak test realm\n3. `bearerToken` is minted by the dedicated \"Mint bearerToken\" request in the Auth folder (second item), which POSTs directly to Keycloak so the token is synchronously available before the Trades folder starts\n\n**Newman (CI/local):**\n```bash\nbash scripts/api-e2e-local.sh\n\n# Or directly:\nnewman run FinTrackPro.e2e.postman_collection.json \\\n  -e FinTrackPro.postman_environment.json \\\n  --env-var \"baseUrl=http://localhost:5018\" \\\n  --env-var \"keycloakUrl=http://localhost:8080\" \\\n  --env-var \"testUsername=admin@fintrackpro.dev\" \\\n  --env-var \"testPassword=Admin1234!\" \\\n  --env-var \"testUsername2=user2@fintrackpro.dev\" \\\n  --env-var \"testPassword2=User2Pass!\" \\\n  --bail -r cli,junit --reporter-junit-export test-results/newman.xml\n```",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -49,36 +49,51 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Mint bearerToken (user 1) here — runs after the 401 response so the token",
-                  "// is fully resolved before Newman moves to the next request.",
-                  "pm.sendRequest({",
-                  "    url: pm.environment.get('keycloakUrl')",
-                  "        + '/realms/fintrackpro/protocol/openid-connect/token',",
-                  "    method: 'POST',",
-                  "    header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
-                  "    body: {",
-                  "        mode: 'urlencoded',",
-                  "        urlencoded: [",
-                  "            { key: 'grant_type', value: 'password' },",
-                  "            { key: 'client_id',  value: 'fintrackpro-e2e' },",
-                  "            { key: 'username',   value: pm.environment.get('testUsername') },",
-                  "            { key: 'password',   value: pm.environment.get('testPassword') }",
-                  "        ]",
-                  "    }",
-                  "}, (err, res) => {",
-                  "    if (err) { throw new Error('Token mint failed: ' + err); }",
-                  "    const body = res.json();",
-                  "    if (!body.access_token) {",
-                  "        throw new Error('Token mint failed: ' + JSON.stringify(body));",
-                  "    }",
-                  "    pm.environment.set('bearerToken', body.access_token);",
-                  "    pm.environment.set('_tokenExpiry',",
-                  "        String(Date.now() + (body.expires_in - 30) * 1000));",
-                  "});",
-                  "",
                   "pm.test('Returns 401 when no token provided', () => {",
                   "  pm.response.to.have.status(401);",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mint bearerToken → POST Keycloak /token → 200",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password",          "type": "text" },
+                { "key": "client_id",  "value": "fintrackpro-e2e",   "type": "text" },
+                { "key": "username",   "value": "{{testUsername}}",  "type": "text" },
+                { "key": "password",   "value": "{{testPassword}}",  "type": "text" }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/fintrackpro/protocol/openid-connect/token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Keycloak returns 200 and access_token present', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('access_token');",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "if (!body.access_token) {",
+                  "    throw new Error('Token mint failed: ' + JSON.stringify(body));",
+                  "}",
+                  "pm.environment.set('bearerToken', body.access_token);",
+                  "pm.environment.set('_tokenExpiry',",
+                  "    String(Date.now() + (body.expires_in - 30) * 1000));"
                 ]
               }
             }
@@ -499,57 +514,88 @@
       "description": "Uses bearerToken2 (second user — User role only) to verify ownership guards reject cross-user mutations.",
       "item": [
         {
-          "name": "Seed trade for guard tests",
+          "name": "Refresh bearerToken (user 1) → POST Keycloak /token → 200",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password",          "type": "text" },
+                { "key": "client_id",  "value": "fintrackpro-e2e",   "type": "text" },
+                { "key": "username",   "value": "{{testUsername}}",  "type": "text" },
+                { "key": "password",   "value": "{{testPassword}}",  "type": "text" }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/fintrackpro/protocol/openid-connect/token"
+          },
           "event": [
             {
-              "listen": "prerequest",
+              "listen": "test",
               "script": {
                 "exec": [
-                  "// Mint bearerToken2 (second user) fresh before this folder.",
-                  "pm.sendRequest({",
-                  "    url: pm.environment.get('keycloakUrl')",
-                  "        + '/realms/fintrackpro/protocol/openid-connect/token',",
-                  "    method: 'POST',",
-                  "    header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
-                  "    body: {",
-                  "        mode: 'urlencoded',",
-                  "        urlencoded: [",
-                  "            { key: 'grant_type', value: 'password' },",
-                  "            { key: 'client_id',  value: 'fintrackpro-e2e' },",
-                  "            { key: 'username',   value: pm.environment.get('testUsername') },",
-                  "            { key: 'password',   value: pm.environment.get('testPassword') }",
-                  "        ]",
-                  "    }",
-                  "}, (err, res) => {",
-                  "    if (err) { throw new Error('User1 token refresh failed: ' + err); }",
-                  "    pm.environment.set('bearerToken', res.json().access_token);",
+                  "pm.test('Keycloak returns 200 (user 1 token refresh)', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('access_token');",
                   "});",
                   "",
-                  "pm.sendRequest({",
-                  "    url: pm.environment.get('keycloakUrl')",
-                  "        + '/realms/fintrackpro/protocol/openid-connect/token',",
-                  "    method: 'POST',",
-                  "    header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
-                  "    body: {",
-                  "        mode: 'urlencoded',",
-                  "        urlencoded: [",
-                  "            { key: 'grant_type', value: 'password' },",
-                  "            { key: 'client_id',  value: 'fintrackpro-e2e' },",
-                  "            { key: 'username',   value: pm.environment.get('testUsername2') },",
-                  "            { key: 'password',   value: pm.environment.get('testPassword2') }",
-                  "        ]",
-                  "    }",
-                  "}, (err, res) => {",
-                  "    if (err) { throw new Error('User2 token mint failed: ' + err); }",
-                  "    const body = res.json();",
-                  "    if (!body.access_token) {",
-                  "        throw new Error('User2 token mint failed: ' + JSON.stringify(body));",
-                  "    }",
-                  "    pm.environment.set('bearerToken2', body.access_token);",
-                  "});"
+                  "const body = pm.response.json();",
+                  "if (!body.access_token) {",
+                  "    throw new Error('User1 token refresh failed: ' + JSON.stringify(body));",
+                  "}",
+                  "pm.environment.set('bearerToken', body.access_token);"
                 ]
               }
+            }
+          ]
+        },
+        {
+          "name": "Mint bearerToken2 (user 2) → POST Keycloak /token → 200",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password",           "type": "text" },
+                { "key": "client_id",  "value": "fintrackpro-e2e",    "type": "text" },
+                { "key": "username",   "value": "{{testUsername2}}",  "type": "text" },
+                { "key": "password",   "value": "{{testPassword2}}",  "type": "text" }
+              ]
             },
+            "url": "{{keycloakUrl}}/realms/fintrackpro/protocol/openid-connect/token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Keycloak returns 200 (user 2 token mint)', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('access_token');",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "if (!body.access_token) {",
+                  "    throw new Error('User2 token mint failed: ' + JSON.stringify(body));",
+                  "}",
+                  "pm.environment.set('bearerToken2', body.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seed trade for guard tests",
+          "event": [
             {
               "listen": "test",
               "script": {
