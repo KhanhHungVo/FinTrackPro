@@ -11,6 +11,7 @@ public class DatabaseFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await Factory.InitializeAsync();
+        Factory.CreateClient(); // triggers host build → Program.cs runs MigrateAsync + SeedAsync
 
         await using var conn = new NpgsqlConnection(Factory.ConnectionString);
         await conn.OpenAsync();

@@ -1,12 +1,11 @@
 using System.Text;
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Infrastructure.Persistence;
-using FinTrackPro.Infrastructure.Persistence.Seeders;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
@@ -81,17 +80,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public async Task InitializeAsync()
     {
         await ResetDatabaseAsync();
-
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(ConnectionString,
-                b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
-            .Options;
-
-        await using var db = new ApplicationDbContext(options);
-        await db.Database.MigrateAsync();
-
-        var seeder = new TransactionCategoryDataSeeder(db);
-        await seeder.SeedAsync();
     }
 
     /// <summary>
