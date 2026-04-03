@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FluentAssertions;
 using Tests.Common;
 using Tests.Common.Builders;
@@ -42,7 +43,13 @@ public class AuthorizationTests : IAsyncLifetime
         var token = AuthTokenFactory.GenerateToken("test-keycloak-id", "User");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await client.PostAsJsonAsync("/api/transactions", TransactionRequestBuilder.Build());
+        var catResponse = await client.GetAsync("/api/transaction-categories?type=Expense");
+        catResponse.EnsureSuccessStatusCode();
+        var categories = await catResponse.Content.ReadFromJsonAsync<List<JsonElement>>();
+        var categoryId = Guid.Parse(categories![0].GetProperty("id").GetString()!);
+
+        var response = await client.PostAsJsonAsync("/api/transactions",
+            TransactionRequestBuilder.Build(categoryId: categoryId));
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
     }

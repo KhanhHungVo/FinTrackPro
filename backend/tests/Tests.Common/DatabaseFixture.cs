@@ -1,3 +1,5 @@
+using FinTrackPro.Application.Common.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Respawn;
 
@@ -30,6 +32,11 @@ public class DatabaseFixture : IAsyncLifetime
         await using var conn = new NpgsqlConnection(Factory.ConnectionString);
         await conn.OpenAsync();
         await _respawner.ResetAsync(conn);
+
+        // Re-seed system categories wiped by Respawner
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<IDataSeeder>();
+        await seeder.SeedAsync();
     }
 
     public async Task DisposeAsync()
