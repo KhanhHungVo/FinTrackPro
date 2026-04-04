@@ -20,13 +20,11 @@
       "listen": "prerequest",
       "script": {
         "exec": [
-          "// Set testMonth once for the whole run (YYYY-MM of today) so budget/transaction",
-          "// requests use an isolated month that won't collide with leftover data.",
-          "if (!pm.environment.get('testMonth')) {",
-          "    const now = new Date();",
-          "    const month = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');",
-          "    pm.environment.set('testMonth', month);",
-          "}"
+          "// Always reset testMonth at run start so a stale value from a previous run or",
+          "// --env-export file never causes false collisions.",
+          "const now = new Date();",
+          "const month = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');",
+          "pm.environment.set('testMonth', month);"
         ]
       }
     }
@@ -194,6 +192,8 @@
                   "  pm.expect(trade).to.have.property('result');",
                   "  pm.expect(trade.exitPrice).to.eql(67000.0);",
                   "  pm.expect(trade.notes).to.include('Updated target hit');",
+                  "  // result = (67000 - 60000) * 0.1 - 5 = 695",
+                  "  pm.expect(trade.result).to.be.closeTo(695, 1);",
                   "});"
                 ]
               }
@@ -264,6 +264,34 @@
           },
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Delete any stale Food budget left from a previous failed run to prevent 409.",
+                  "const testMonth = pm.environment.get('testMonth');",
+                  "const token = pm.environment.get('bearerToken');",
+                  "const baseUrl = pm.environment.get('baseUrl');",
+                  "",
+                  "pm.sendRequest({",
+                  "    url: `${baseUrl}/api/budgets/${testMonth}`,",
+                  "    method: 'GET',",
+                  "    header: [{ key: 'Authorization', value: `Bearer ${token}` }]",
+                  "}, (err, res) => {",
+                  "    if (!err && res.code === 200) {",
+                  "        const food = res.json().find(b => b.category === 'Food');",
+                  "        if (food) {",
+                  "            pm.sendRequest({",
+                  "                url: `${baseUrl}/api/budgets/${food.id}`,",
+                  "                method: 'DELETE',",
+                  "                header: [{ key: 'Authorization', value: `Bearer ${token}` }]",
+                  "            }, () => {});",
+                  "        }",
+                  "    }",
+                  "});"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "exec": [
@@ -272,6 +300,30 @@
                   "  const id = pm.response.text().replace(/\"/g, '');",
                   "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
                   "  pm.environment.set('budgetId', id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transaction-categories → 200, capture foodCategoryId",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transaction-categories?type=Expense"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Finds food_beverage category and captures foodCategoryId', () => {",
+                  "  const categories = pm.response.json();",
+                  "  pm.expect(categories).to.be.an('array');",
+                  "  const food = categories.find(c => c.slug === 'food_beverage');",
+                  "  pm.expect(food, 'food_beverage category exists').to.exist;",
+                  "  pm.environment.set('foodCategoryId', food.id);",
                   "});"
                 ]
               }
@@ -291,7 +343,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 120.50,\n  \"category\": \"Food\",\n  \"note\": \"Grocery run\",\n  \"budgetMonth\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 120.50,\n  \"categoryId\": \"{{foodCategoryId}}\",\n  \"note\": \"Grocery run\",\n  \"budgetMonth\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
             }
           },
           "event": [
@@ -329,8 +381,9 @@
                   "  const tx = txs.find(t => t.id === txId);",
                   "  pm.expect(tx, 'created transaction present').to.exist;",
                   "  pm.expect(tx).to.have.property('id');",
-                  "  pm.expect(tx).to.have.property('amount');",
-                  "  pm.expect(tx).to.have.property('category');",
+                  "  pm.expect(tx.amount).to.be.closeTo(120.50, 0.01);",
+                  "  pm.expect(tx.category).to.be.a('string').and.not.equal('');",
+                  "  pm.expect(tx.categoryId).to.eql(pm.environment.get('foodCategoryId'));",
                   "  pm.expect(tx).to.have.property('budgetMonth');",
                   "});"
                 ]
@@ -653,7 +706,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"category\": \"Entertainment\",\n  \"limitAmount\": 200.00,\n  \"month\": \"2026-03\",\n  \"currency\": \"USD\"\n}"
+              "raw": "{\n  \"category\": \"Entertainment\",\n  \"limitAmount\": 200.00,\n  \"month\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
             }
           }
         },
