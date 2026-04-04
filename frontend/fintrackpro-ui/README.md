@@ -90,21 +90,13 @@ npm run test:e2e   # Run Playwright E2E tests (requires E2E_TOKEN env var — us
 
 ### Running E2E tests locally
 
-The Playwright suite requires a JWT minted from the `fintrackpro-e2e` Keycloak client. Use the
-helper script from the repo root instead of calling `npm run test:e2e` directly:
+Run from the **repo root** — see [docs/guides/dev-setup.md (Mode E)](../../docs/guides/dev-setup.md) for full prerequisites and troubleshooting.
 
 ```bash
-# From repo root — mints token and runs all specs
-bash scripts/e2e-local.sh
-
-# Playwright UI mode
-bash scripts/e2e-local.sh --ui
-
-# Single spec
-bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts
+bash scripts/e2e-local.sh                                  # full suite
+bash scripts/e2e-local.sh --ui                             # UI mode
+bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts        # single spec
 ```
-
-See [docs/dev-setup.md — Mode E](../../docs/dev-setup.md#mode-e--running-playwright-e2e-tests-locally) for prerequisites and troubleshooting.
 
 ## Responsive Design
 

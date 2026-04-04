@@ -18,12 +18,8 @@ Run a single Vitest file:
 npx vitest run src/path/to/file.test.ts
 ```
 
-Run E2E tests (from repo root — mints token automatically):
-```bash
-bash scripts/e2e-local.sh
-bash scripts/e2e-local.sh --ui                          # Playwright UI mode
-bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts     # single spec
-```
+Run E2E tests (from repo root — mints token automatically):  
+See root `CLAUDE.md → E2E tests (Playwright)` for commands. Full prerequisites and troubleshooting: `docs/guides/dev-setup.md` (Mode E).
 
 ## Environment Setup
 
