@@ -52,7 +52,7 @@ jobs:
         with:
           name: backend-test-results
           path: backend/**/TestResults/*.trx
-          retention-days: 14
+          retention-days: 7
 
       - name: Docker Build
         run: docker build -t fintrackpro-api:${{ github.sha }} ./backend
@@ -85,7 +85,7 @@ jobs:
         with:
           name: frontend-unit-test-results
           path: frontend/fintrackpro-ui/test-results/junit.xml
-          retention-days: 14
+          retention-days: 7
 
       - name: Build
         run: npm run build
@@ -157,7 +157,7 @@ jobs:
         with:
           name: newman-api-e2e-results
           path: test-results/newman.xml
-          retention-days: 14
+          retention-days: 7
 
   e2e:
     name: Frontend — E2E (Playwright)
