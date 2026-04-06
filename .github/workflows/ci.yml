@@ -25,10 +25,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-test-results
           path: backend/**/TestResults/*.trx
@@ -64,10 +64,10 @@ jobs:
       run:
         working-directory: frontend/fintrackpro-ui
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload unit test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-unit-test-results
           path: frontend/fintrackpro-ui/test-results/junit.xml
@@ -101,7 +101,7 @@ jobs:
     needs: [backend]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Start PostgreSQL + Keycloak
         run: |
@@ -125,7 +125,7 @@ jobs:
             || { echo "API failed to start"; docker compose logs api; exit 1; }
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
@@ -153,7 +153,7 @@ jobs:
 
       - name: Upload Newman results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: newman-api-e2e-results
           path: test-results/newman.xml
@@ -167,7 +167,7 @@ jobs:
       run:
         working-directory: frontend/fintrackpro-ui
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Start PostgreSQL + Keycloak
         working-directory: .
@@ -202,7 +202,7 @@ jobs:
             | sed 's/.*"access_token":"\([^"]*\)".*/\1/')
           echo "E2E_TOKEN=$TOKEN" >> $GITHUB_ENV
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
@@ -227,7 +227,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: frontend/fintrackpro-ui/playwright-report/
