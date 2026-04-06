@@ -1,0 +1,201 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "FinTrackPro — External API Schema Checks",
+    "description": "Validates that third-party APIs used by FinTrackPro still return the expected schema shape.\n\nRun daily in CI via `.github/workflows/external-schema-check.yml`. Also runnable locally for developer verification — no running API or Keycloak required.\n\n**Local run:**\n```bash\n# No API keys (free-tier endpoints only)\nnewman run docs/postman/FinTrackPro.external-schema.postman_collection.json \\\n  -e docs/postman/FinTrackPro.postman_environment.json \\\n  --reporters cli\n\n# With API keys\nnewman run docs/postman/FinTrackPro.external-schema.postman_collection.json \\\n  -e docs/postman/FinTrackPro.postman_environment.json \\\n  --env-var \"coinGeckoApiKey=<your-key>\" \\\n  --env-var \"exchangeRateApiKey=<your-key>\" \\\n  --reporters cli\n```\n\n**Covered endpoints:**\n- CoinGecko `/search/trending` — coins array, item fields\n- Alternative.me Fear & Greed `/fng/` — value, classification, timestamp\n- ExchangeRate-API v6 `/latest/USD` — result=success, USD/EUR/GBP/VND rates (skipped when key absent)\n- Binance `/api/v3/exchangeInfo` — symbols array, symbol/status/baseAsset/quoteAsset fields",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "CoinGecko — trending coins schema",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-cg-demo-api-key",
+            "value": "{{coinGeckoApiKey}}",
+            "description": "Optional Demo/Pro API key. Leave blank for unauthenticated (rate-limited) access.",
+            "disabled": false
+          }
+        ],
+        "url": {
+          "raw": "https://api.coingecko.com/api/v3/search/trending",
+          "protocol": "https",
+          "host": ["api", "coingecko", "com"],
+          "path": ["api", "v3", "search", "trending"]
+        },
+        "description": "Validates that the trending coins response still includes a non-empty `coins` array and that each item exposes the fields the backend depends on."
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Remove the header entirely when no key is configured so we don't send an empty value.",
+              "const key = pm.environment.get('coinGeckoApiKey');",
+              "if (!key) {",
+              "    pm.request.headers.remove('x-cg-demo-api-key');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "",
+              "pm.test('coins array is present and non-empty', () => {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body).to.have.property('coins');",
+              "    pm.expect(body.coins).to.be.an('array').with.length.above(0);",
+              "});",
+              "",
+              "pm.test('first coin item has required fields', () => {",
+              "    const item = pm.response.json().coins[0].item;",
+              "    ['id', 'name', 'symbol', 'market_cap_rank'].forEach(field => {",
+              "        pm.expect(item, `missing field: ${field}`).to.have.property(field);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fear & Greed — index schema",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://api.alternative.me/fng/?limit=1",
+          "protocol": "https",
+          "host": ["api", "alternative", "me"],
+          "path": ["fng", ""],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Validates that the Fear & Greed index response exposes value, value_classification, and timestamp fields."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "",
+              "pm.test('data array is present and non-empty', () => {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body).to.have.property('data');",
+              "    pm.expect(body.data).to.be.an('array').with.length.above(0);",
+              "});",
+              "",
+              "pm.test('entry has required fields', () => {",
+              "    const entry = pm.response.json().data[0];",
+              "    ['value', 'value_classification', 'timestamp'].forEach(field => {",
+              "        pm.expect(entry, `missing field: ${field}`).to.have.property(field);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ExchangeRate-API v6 — USD rates schema",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://v6.exchangerate-api.com/v6/{{exchangeRateApiKey}}/latest/USD",
+          "protocol": "https",
+          "host": ["v6", "exchangerate-api", "com"],
+          "path": ["v6", "{{exchangeRateApiKey}}", "latest", "USD"]
+        },
+        "description": "Validates the ExchangeRate-API v6 response shape. **Skipped automatically when `exchangeRateApiKey` is not set** — the request URL becomes invalid and Newman marks it as errored, which is expected and acceptable in that case.\n\nIn CI the step is conditional on the secret being present (mirrors the `if: env.EXCHANGE_RATE_API_KEY != ''` guard in the original workflow)."
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Skip this request when no API key is configured.",
+              "const key = pm.environment.get('exchangeRateApiKey');",
+              "if (!key) {",
+              "    pm.execution.skipRequest();",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "",
+              "pm.test('result is success', () => {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.result).to.equal('success');",
+              "});",
+              "",
+              "pm.test('conversion_rates contains required currencies', () => {",
+              "    const rates = pm.response.json().conversion_rates;",
+              "    pm.expect(rates).to.be.an('object');",
+              "    ['USD', 'EUR', 'GBP', 'VND'].forEach(currency => {",
+              "        pm.expect(rates, `missing currency: ${currency}`).to.have.property(currency);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Binance — exchangeInfo schema",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://api.binance.com/api/v3/exchangeInfo",
+          "protocol": "https",
+          "host": ["api", "binance", "com"],
+          "path": ["api", "v3", "exchangeInfo"]
+        },
+        "description": "Validates that the Binance exchangeInfo response returns a non-empty symbols array with the fields the backend depends on."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "",
+              "pm.test('symbols array is present and non-empty', () => {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body).to.have.property('symbols');",
+              "    pm.expect(body.symbols).to.be.an('array').with.length.above(0);",
+              "});",
+              "",
+              "pm.test('first symbol has required fields', () => {",
+              "    const s = pm.response.json().symbols[0];",
+              "    ['symbol', 'status', 'baseAsset', 'quoteAsset'].forEach(field => {",
+              "        pm.expect(s, `missing field: ${field}`).to.have.property(field);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -62,6 +62,23 @@ bash scripts/api-e2e-local.sh --verbose                           # full output
 > Full prerequisites, env var overrides, token-flow internals, and troubleshooting: `docs/guides/dev-setup.md` (Mode F).  
 > Collection structure, CI job diagram, and GitHub secrets: `docs/postman/api-e2e-plan.md`.
 
+### External API schema checks (Newman)
+Verifies third-party API schemas (CoinGecko, Fear & Greed, ExchangeRate-API, Binance). No running API or Keycloak required.
+
+```bash
+# No API keys (free-tier endpoints; ExchangeRate step is skipped)
+newman run docs/postman/FinTrackPro.external-schema.postman_collection.json \
+  -e docs/postman/FinTrackPro.postman_environment.json \
+  --reporters cli
+
+# With API keys
+newman run docs/postman/FinTrackPro.external-schema.postman_collection.json \
+  -e docs/postman/FinTrackPro.postman_environment.json \
+  --env-var "coinGeckoApiKey=<your-key>" \
+  --env-var "exchangeRateApiKey=<your-key>" \
+  --reporters cli
+```
+
 ### Infrastructure
 ```bash
 docker compose up -d postgres keycloak    # hybrid dev (recommended)

@@ -17,58 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: CoinGecko trending schema
-        run: |
-          HEADERS=""
-          [ -n "$COINGECKO_API_KEY" ] && HEADERS="-H x-cg-demo-api-key:$COINGECKO_API_KEY"
-          BODY=$(curl -sf $HEADERS "https://api.coingecko.com/api/v3/search/trending")
-          echo "$BODY" | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          coins = data['coins']
-          assert len(coins) > 0, 'coins array is empty'
-          item = coins[0]['item']
-          for field in ['id', 'name', 'symbol', 'market_cap_rank']:
-              assert field in item, f'missing field: {field}'
-          print('CoinGecko schema OK')
-          "
+      - name: Install Newman
+        run: npm install -g newman
 
-      - name: Fear & Greed schema
+      - name: Run external schema checks
         run: |
-          BODY=$(curl -sf "https://api.alternative.me/fng/?limit=1")
-          echo "$BODY" | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          entry = data['data'][0]
-          for field in ['value', 'value_classification', 'timestamp']:
-              assert field in entry, f'missing field: {field}'
-          print('Fear and Greed schema OK')
-          "
-
-      - name: ExchangeRate-API v6 schema
-        if: env.EXCHANGE_RATE_API_KEY != ''
-        run: |
-          BODY=$(curl -sf "https://v6.exchangerate-api.com/v6/$EXCHANGE_RATE_API_KEY/latest/USD")
-          echo "$BODY" | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          assert data.get('result') == 'success', f'unexpected result: {data.get(\"result\")}'
-          rates = data['conversion_rates']
-          for currency in ['USD', 'EUR', 'GBP', 'VND']:
-              assert currency in rates, f'missing currency: {currency}'
-          print('ExchangeRate schema OK')
-          "
-
-      - name: Binance exchangeInfo schema
-        run: |
-          BODY=$(curl -sf "https://api.binance.com/api/v3/exchangeInfo")
-          echo "$BODY" | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          syms = data['symbols']
-          assert len(syms) > 0, 'symbols array is empty'
-          s = syms[0]
-          for field in ['symbol', 'status', 'baseAsset', 'quoteAsset']:
-              assert field in s, f'missing field: {field}'
-          print('Binance schema OK')
-          "
+          newman run docs/postman/FinTrackPro.external-schema.postman_collection.json \
+            -e docs/postman/FinTrackPro.postman_environment.json \
+            --env-var "coinGeckoApiKey=$COINGECKO_API_KEY" \
+            --env-var "exchangeRateApiKey=$EXCHANGE_RATE_API_KEY" \
+            --reporters cli
