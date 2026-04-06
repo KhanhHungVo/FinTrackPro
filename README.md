@@ -100,7 +100,8 @@ See [docs/render-terraform-deploy.md](docs/render-terraform-deploy.md) for the f
 | [docs/api-spec.md](docs/api-spec.md) | REST API endpoints and request/response schemas |
 | [docs/database.md](docs/database.md) | Database schema, tables, relationships, migration commands |
 | [docs/roadmap.md](docs/roadmap.md) | Feature phases and release milestones |
-| [docs/testing.md](docs/testing.md) | Manual end-to-end test scenarios |
+| [backend/tests/README.md](backend/tests/README.md) | Backend test projects, integration test setup, CI filter strategy |
+| [docs/postman/api-e2e-test-cases.md](docs/postman/api-e2e-test-cases.md) | Newman API E2E test inventory — all 31 requests and 44 assertions |
 | [docs/postman/api-e2e-plan.md](docs/postman/api-e2e-plan.md) | Newman API E2E suite — collection structure, CI job, GitHub secrets |
 | [docs/security-hardening.md](docs/security-hardening.md) | Security hardening guide — rate limiting, headers, HTTPS, input validation, JWT storage, XSS, quotas |
 | [docs/auth0-config-as-code-plan.md](docs/auth0-config-as-code-plan.md) | Plan: Auth0 config-as-code via `auth0 deploy` CLI (not yet implemented) |

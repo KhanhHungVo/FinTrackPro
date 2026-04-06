@@ -8,6 +8,7 @@
 | `FinTrackPro.Application.UnitTests` | Unit tests | Every commit | No |
 | `FinTrackPro.Api.IntegrationTests` | Integration tests | Pull request + nightly | PostgreSQL |
 | `FinTrackPro.Infrastructure.UnitTests` | Unit tests | Every commit | No |
+| `FinTrackPro.Infrastructure.UnitTests/ExternalServices/` | Unit tests for CoinGecko, ExchangeRate, FearGreed HTTP clients — uses `MockHttpMessageHandler` | Every commit | No |
 | `Tests.Common` | Shared fixtures | — | — |
 
 ## Running Tests
@@ -78,6 +79,16 @@ dotnet test --filter "Category!=Integration"
 # Integration tests — PR and nightly (requires TEST_DB_CONNECTION_STRING)
 dotnet test --filter "Category=Integration"
 ```
+
+## External API Schema Check (CI)
+
+A separate, non-blocking daily workflow (`.github/workflows/external-schema-check.yml`) hits each third-party API directly and asserts their response shape has not changed:
+- CoinGecko `/search/trending`
+- Fear & Greed `fng/?limit=1`
+- ExchangeRate-API `v6/.../latest/USD` (requires `EXCHANGE_RATE_API_KEY` secret)
+- Binance `exchangeInfo`
+
+Runs at **06:00 UTC** and on `workflow_dispatch`. Set `continue-on-error: true` — informational only, never blocks a PR.
 
 ## Newman API E2E (third test layer)
 

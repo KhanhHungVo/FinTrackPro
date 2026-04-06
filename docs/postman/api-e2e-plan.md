@@ -130,8 +130,8 @@ Authorization Guards/              ← uses bearerToken2 (second user)
   └─ DELETE /api/budgets/{{budgetId}}→ 403
 
 Market/                            ← third-party contract verification (CoinGecko)
-  └─ GET /api/market/fear-greed     → 200, value 0–100, label + timestamp present
-  └─ GET /api/market/trending       → 200, non-empty array
+  └─ GET /api/market/fear-greed     → 200, validates shape when data available (null-safe)
+  └─ GET /api/market/trending       → 200, validates item shape when array non-empty
 ```
 
 > Validation / negative-input tests live in `FinTrackPro.dev.postman_collection.json` under `Validation & Error Cases/`.

@@ -77,8 +77,8 @@ All guard 403 tests use `bearerToken2` (user2 — User role only). Seed resource
 
 | # | Test name | Method | Endpoint | Status | Key assertions |
 |---|---|---|---|---|---|
-| 28 | Fear & Greed index | GET | `/api/market/fear-greed` | 200 | `value` in [0, 100]; `label` and `timestamp` present |
-| 29 | Trending coins | GET | `/api/market/trending` | 200 | Non-empty array |
+| 28 | Fear & Greed index | GET | `/api/market/fear-greed` | 200 | When data available: `value` in [0, 100]; `label` and `timestamp` present (null-safe) |
+| 29 | Trending coins | GET | `/api/market/trending` | 200 | Array; when non-empty: `id`, `name`, `symbol`, `marketCapRank` present |
 
 ---
 
@@ -140,4 +140,4 @@ All guard 403 tests use `bearerToken2` (user2 — User role only). Seed resource
 
 - The `testMonth` variable is always reset at run start (collection pre-request). A stale value in a committed environment file or `--env-export` output will be overwritten every run.
 - The guard seed budget (#22) uses `{{testMonth}}` with category `Entertainment`, which cannot conflict with the spending-flow budget (category `Food`) even when both run in the same month.
-- Market tests (#28, #29) hit live CoinGecko-backed endpoints. Flakiness in these tests indicates a third-party availability issue, not a regression in FinTrackPro.
+- Market tests (#28, #29) hit live CoinGecko-backed endpoints. Assertions are null-safe — a null fear-greed response or empty trending array passes. Flakiness in these tests indicates a third-party availability issue, not a regression in FinTrackPro.
