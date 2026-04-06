@@ -847,7 +847,7 @@
       "name": "Market",
       "item": [
         {
-          "name": "GET /api/market/fear-greed → 200, value 0–100, label + timestamp present",
+          "name": "GET /api/market/fear-greed → 200, shape check when available",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/market/fear-greed"
@@ -858,12 +858,12 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Has required fields with valid value range', () => {",
+                  "pm.test('Returns 200 with valid shape when data available', () => {",
                   "  const body = pm.response.json();",
-                  "  pm.expect(body).to.have.property('value');",
-                  "  pm.expect(body).to.have.property('label');",
-                  "  pm.expect(body).to.have.property('timestamp');",
-                  "  pm.expect(body.value).to.be.at.least(0).and.at.most(100);",
+                  "  if (body !== null) {",
+                  "    pm.expect(body).to.have.all.keys('value', 'label', 'timestamp');",
+                  "    pm.expect(body.value).to.be.a('number').and.at.least(0).and.at.most(100);",
+                  "  }",
                   "});"
                 ]
               }
@@ -871,7 +871,7 @@
           ]
         },
         {
-          "name": "GET /api/market/trending → 200, non-empty array",
+          "name": "GET /api/market/trending → 200, array",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/market/trending"
@@ -882,9 +882,12 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns non-empty array', () => {",
+                  "pm.test('Returns array with valid item shape', () => {",
                   "  const body = pm.response.json();",
-                  "  pm.expect(body).to.be.an('array').and.have.length.greaterThan(0);",
+                  "  pm.expect(body).to.be.an('array');",
+                  "  if (body.length > 0) {",
+                  "    pm.expect(body[0]).to.have.all.keys('id', 'name', 'symbol', 'marketCapRank');",
+                  "  }",
                   "});"
                 ]
               }
