@@ -10,17 +10,12 @@ public class AddWatchedSymbolCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IUserRepository userRepository,
-    IWatchedSymbolRepository watchedSymbolRepository,
-    IBinanceService binanceService) : IRequestHandler<AddWatchedSymbolCommand, Guid>
+    IWatchedSymbolRepository watchedSymbolRepository) : IRequestHandler<AddWatchedSymbolCommand, Guid>
 {
     public async Task<Guid> Handle(AddWatchedSymbolCommand request, CancellationToken cancellationToken)
     {
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
             ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
-
-        var isValid = await binanceService.IsValidSymbolAsync(request.Symbol, cancellationToken);
-        if (!isValid)
-            throw new DomainException($"Symbol '{request.Symbol}' is not a valid Binance trading pair.");
 
         var exists = await watchedSymbolRepository.ExistsAsync(user.Id, request.Symbol, cancellationToken);
         if (exists)
