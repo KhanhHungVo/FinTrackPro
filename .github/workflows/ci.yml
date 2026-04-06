@@ -143,10 +143,10 @@ jobs:
             -e docs/postman/FinTrackPro.postman_environment.json \
             --env-var "baseUrl=http://localhost:5018" \
             --env-var "keycloakUrl=http://localhost:8080" \
-            --env-var "testUsername=$E2E_USERNAME" \
-            --env-var "testPassword=$E2E_PASSWORD" \
-            --env-var "testUsername2=$E2E_USERNAME2" \
-            --env-var "testPassword2=$E2E_PASSWORD2" \
+            --env-var "testUsername=${E2E_USERNAME:-admin@fintrackpro.dev}" \
+            --env-var "testPassword=${E2E_PASSWORD:-Admin1234!}" \
+            --env-var "testUsername2=${E2E_USERNAME2:-user2@fintrackpro.dev}" \
+            --env-var "testPassword2=${E2E_PASSWORD2:-User2Pass!}" \
             --bail \
             -r cli,junit \
             --reporter-junit-export test-results/newman.xml
