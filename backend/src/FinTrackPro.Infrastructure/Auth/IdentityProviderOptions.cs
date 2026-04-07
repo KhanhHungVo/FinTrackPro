@@ -25,4 +25,10 @@ public class IdentityProviderOptions
     /// Client secret for the admin API service account. Set via gitignored override or env var.
     /// </summary>
     public string AdminClientSecret { get; init; } = string.Empty;
+
+    public static class Providers
+    {
+        public const string Keycloak = "keycloak";
+        public const string Auth0    = "auth0";
+    }
 }

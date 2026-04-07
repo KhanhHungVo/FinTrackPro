@@ -30,9 +30,30 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services, IConfiguration configuration)
     {
-        // Database
-        var db = ResolveDatabaseConfiguration(configuration);
+        var db        = ResolveDatabaseConfiguration(configuration);
+        var ro        = configuration.GetSection(HttpResilienceOptions.SectionName).Get<HttpResilienceOptions>() ?? new();
+        var binance   = configuration.GetSection(BinanceOptions.SectionName).Get<BinanceOptions>() ?? new();
+        var fearGreed = configuration.GetSection(FearGreedOptions.SectionName).Get<FearGreedOptions>() ?? new();
+        var cg        = configuration.GetSection(CoinGeckoOptions.SectionName).Get<CoinGeckoOptions>() ?? new();
+        var iam       = configuration.GetSection(IdentityProviderOptions.SectionName).Get<IdentityProviderOptions>() ?? new();
+        var er        = configuration.GetSection(ExchangeRateOptions.SectionName).Get<ExchangeRateOptions>() ?? new();
+        var botToken  = configuration["Telegram:BotToken"];
 
+        AddDatabase(services, db);
+        AddHttpInfrastructure(services, configuration);
+        AddIamServices(services, configuration, iam, ro);
+        services.AddMemoryCache();
+        AddExternalHttpClients(services, configuration, binance, fearGreed, cg, er, ro);
+        AddTelegramBot(services, botToken);
+        services.AddScoped<INotificationService, NotificationService>();
+        AddHangfireStorage(services, db);
+        AddHealthMonitoring(services, db);
+
+        return services;
+    }
+
+    private static void AddDatabase(IServiceCollection services, DatabaseConfiguration db)
+    {
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             if (db.IsPostgres)
@@ -59,24 +80,25 @@ public static class DependencyInjection
         services.AddScoped<INotificationPreferenceRepository, NotificationPreferenceRepository>();
         services.AddScoped<ITransactionCategoryRepository, TransactionCategoryRepository>();
         services.AddScoped<IDataSeeder, TransactionCategoryDataSeeder>();
+    }
 
-        // HTTP logging + resilience options
+    private static void AddHttpInfrastructure(IServiceCollection services, IConfiguration configuration)
+    {
         services.Configure<HttpLoggingOptions>(configuration.GetSection(HttpLoggingOptions.SectionName));
         services.Configure<HttpResilienceOptions>(configuration.GetSection(HttpResilienceOptions.SectionName));
         services.AddTransient<LoggingDelegatingHandler>();
+    }
 
-        var ro = configuration.GetSection(HttpResilienceOptions.SectionName)
-                               .Get<HttpResilienceOptions>() ?? new HttpResilienceOptions();
-        var binanceBaseUrl = configuration["ExternalApis:BinanceBaseUrl"] ?? "https://api.binance.com";
-        var fearGreedBaseUrl = configuration["ExternalApis:FearGreedBaseUrl"] ?? "https://api.alternative.me";
-        var coinGeckoBaseUrl = configuration["ExternalApis:CoinGeckoBaseUrl"] ?? "https://api.coingecko.com";
-
-        // Auth — provider-conditional registration
+    private static void AddIamServices(
+        IServiceCollection services,
+        IConfiguration configuration,
+        IdentityProviderOptions iam,
+        HttpResilienceOptions ro)
+    {
         services.Configure<IdentityProviderOptions>(
             configuration.GetSection(IdentityProviderOptions.SectionName));
 
-        var iamProvider = configuration["IdentityProvider:Provider"] ?? "keycloak";
-        if (iamProvider.Equals("auth0", StringComparison.OrdinalIgnoreCase))
+        if (iam.Provider.Equals(IdentityProviderOptions.Providers.Auth0, StringComparison.OrdinalIgnoreCase))
         {
             services.AddScoped<IClaimsTransformation, Auth0ClaimsTransformer>();
             services.AddHttpClient<IIamProviderService, Auth0ManagementService>()
@@ -91,16 +113,60 @@ public static class DependencyInjection
                     .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
         }
 
-        // Identity services
         services.AddHttpContextAccessor();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<ICurrentUser, CurrentUserAccessor>();
+    }
 
-        // Infrastructure services
-        services.AddScoped<INotificationService, NotificationService>();
+    private static void AddExternalHttpClients(
+        IServiceCollection services,
+        IConfiguration configuration,
+        BinanceOptions binance,
+        FearGreedOptions fearGreed,
+        CoinGeckoOptions cg,
+        ExchangeRateOptions er,
+        HttpResilienceOptions ro)
+    {
+        services.Configure<BinanceOptions>(configuration.GetSection(BinanceOptions.SectionName));
+        services.Configure<FearGreedOptions>(configuration.GetSection(FearGreedOptions.SectionName));
+        services.Configure<CoinGeckoOptions>(configuration.GetSection(CoinGeckoOptions.SectionName));
+        services.Configure<ExchangeRateOptions>(configuration.GetSection(ExchangeRateOptions.SectionName));
 
-        // Telegram Bot
-        var botToken = configuration["Telegram:BotToken"];
+        services.AddHttpClient<IBinanceService, BinanceService>(client =>
+            client.BaseAddress = new Uri(binance.BaseUrl))
+            .AddHttpMessageHandler<LoggingDelegatingHandler>()
+            .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
+
+        services.AddHttpClient<IFearGreedService, FearGreedService>(client =>
+            client.BaseAddress = new Uri(fearGreed.BaseUrl))
+            .AddHttpMessageHandler<LoggingDelegatingHandler>()
+            .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
+
+        services.AddHttpClient<ICoinGeckoService, CoinGeckoService>(client =>
+        {
+            client.BaseAddress = new Uri(cg.BaseUrl);
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+            if (!string.IsNullOrWhiteSpace(cg.ApiKey))
+                client.DefaultRequestHeaders.Add("x-cg-demo-api-key", cg.ApiKey);
+        })
+        .AddHttpMessageHandler<LoggingDelegatingHandler>()
+        .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
+
+        services.AddHttpClient<IExchangeRateClient, ExchangeRateClient>(client =>
+        {
+            client.BaseAddress = new Uri(er.BaseUrl);
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+            // API key is embedded in the URL path by ExchangeRateClient, not sent as a header
+        })
+        .AddHttpMessageHandler<LoggingDelegatingHandler>()
+        .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
+
+        services.AddScoped<IExchangeRateService, ExchangeRateService>();
+    }
+
+    private static void AddTelegramBot(IServiceCollection services, string? botToken)
+    {
         if (string.IsNullOrWhiteSpace(botToken))
         {
             services.AddScoped<INotificationChannel, NullNotificationChannel>();
@@ -110,49 +176,10 @@ public static class DependencyInjection
             services.AddScoped<INotificationChannel, TelegramNotificationChannel>();
             services.AddSingleton<ITelegramBotClient>(_ => new TelegramBotClient(botToken));
         }
+    }
 
-        // Memory cache
-        services.AddMemoryCache();
-
-        // HTTP clients for external APIs
-        services.AddHttpClient<IBinanceService, BinanceService>(client =>
-            client.BaseAddress = new Uri(binanceBaseUrl))
-            .AddHttpMessageHandler<LoggingDelegatingHandler>()
-            .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
-
-        services.AddHttpClient<IFearGreedService, FearGreedService>(client =>
-            client.BaseAddress = new Uri(fearGreedBaseUrl))
-            .AddHttpMessageHandler<LoggingDelegatingHandler>()
-            .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
-
-        services.AddHttpClient<ICoinGeckoService, CoinGeckoService>(client =>
-        {
-            client.BaseAddress = new Uri(coinGeckoBaseUrl);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-
-            var apiKey = configuration["CoinGecko:ApiKey"];
-            if (!string.IsNullOrWhiteSpace(apiKey))
-                client.DefaultRequestHeaders.Add("x-cg-demo-api-key", apiKey);
-        })
-        .AddHttpMessageHandler<LoggingDelegatingHandler>()
-        .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
-
-        services.Configure<ExchangeRateOptions>(
-            configuration.GetSection(ExchangeRateOptions.SectionName));
-
-        services.AddHttpClient<IExchangeRateClient, ExchangeRateClient>(client =>
-        {
-            var baseUrl = configuration["ExchangeRate:BaseUrl"];
-            client.BaseAddress = new Uri(baseUrl!);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-            // API key is embedded in the URL path by ExchangeRateClient, not sent as a header
-        })
-        .AddHttpMessageHandler<LoggingDelegatingHandler>()
-        .AddStandardResilienceHandler(o => ConfigureResilience(o, ro));
-
-        services.AddScoped<IExchangeRateService, ExchangeRateService>();
-
-        // Hangfire — storage selection mirrors the EF Core db-provider check above
+    private static void AddHangfireStorage(IServiceCollection services, DatabaseConfiguration db)
+    {
         services.AddHangfire(config =>
         {
             config
@@ -176,14 +203,15 @@ public static class DependencyInjection
                     });
         });
         services.AddHangfireServer();
+    }
 
+    private static void AddHealthMonitoring(IServiceCollection services, DatabaseConfiguration db)
+    {
         var hc = services.AddHealthChecks();
         if (db.IsPostgres)
             hc.AddNpgSql(db.ConnectionString, name: "postgresql", failureStatus: HealthStatus.Unhealthy);
         else
             hc.AddSqlServer(db.ConnectionString, name: "sqlserver", failureStatus: HealthStatus.Unhealthy);
-
-        return services;
     }
 
     private const int DefaultPostgresPort = 5432;
