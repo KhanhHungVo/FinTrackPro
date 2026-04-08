@@ -21,12 +21,12 @@ export function DashboardPage() {
 
   const income = transactions
     ?.filter((t) => t.type === 'Income')
-    .reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate), 0) ?? 0
+    .reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate, t.currency, currency), 0) ?? 0
   const expense = transactions
     ?.filter((t) => t.type === 'Expense')
-    .reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate), 0) ?? 0
+    .reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate, t.currency, currency), 0) ?? 0
   const totalPnl = trades
-    ?.reduce((s, t) => s + convertAmount(t.result, t.rateToUsd, preferredRate), 0) ?? 0
+    ?.reduce((s, t) => s + convertAmount(t.result, t.rateToUsd, preferredRate, t.currency, currency), 0) ?? 0
 
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-6 space-y-6">

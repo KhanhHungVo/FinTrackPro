@@ -58,7 +58,7 @@ export function BudgetsPage() {
   transactions
     ?.filter((t) => t.type === 'Expense')
     .forEach((t) => {
-      const converted = convertAmount(t.amount, t.rateToUsd, preferredRate)
+      const converted = convertAmount(t.amount, t.rateToUsd, preferredRate, t.currency, currency)
       spentByCategory[t.category] = (spentByCategory[t.category] ?? 0) + converted
     })
 
@@ -93,7 +93,7 @@ export function BudgetsPage() {
         <ul className="space-y-3">
           {budgets?.map((budget) => {
             // Display budget limit in user's preferred currency
-            const limitInPreferred = convertAmount(budget.limitAmount, budget.rateToUsd, preferredRate)
+            const limitInPreferred = convertAmount(budget.limitAmount, budget.rateToUsd, preferredRate, budget.currency, currency)
             const spent = spentByCategory[budget.category] ?? 0
             const pct = Math.min((spent / limitInPreferred) * 100, 100)
             const overrun = spent > limitInPreferred

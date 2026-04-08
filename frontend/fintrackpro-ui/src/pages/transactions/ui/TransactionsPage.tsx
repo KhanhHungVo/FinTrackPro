@@ -43,8 +43,8 @@ export function TransactionsPage() {
     return `${cat.icon} ${language === 'vi' ? cat.labelVi : cat.labelEn}`
   }
 
-  const income  = transactions?.filter(t => t.type === 'Income').reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate), 0) ?? 0
-  const expense = transactions?.filter(t => t.type === 'Expense').reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate), 0) ?? 0
+  const income  = transactions?.filter(t => t.type === 'Income').reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate, t.currency, currency), 0) ?? 0
+  const expense = transactions?.filter(t => t.type === 'Expense').reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate, t.currency, currency), 0) ?? 0
   const net = income - expense
 
   // Build last 6 months for the selector
@@ -100,7 +100,7 @@ export function TransactionsPage() {
       ) : (
         <ul className="space-y-2">
           {transactions?.map((tx) => {
-            const displayAmount = convertAmount(tx.amount, tx.rateToUsd, preferredRate)
+            const displayAmount = convertAmount(tx.amount, tx.rateToUsd, preferredRate, tx.currency, currency)
             return (
               <li
                 key={tx.id}
