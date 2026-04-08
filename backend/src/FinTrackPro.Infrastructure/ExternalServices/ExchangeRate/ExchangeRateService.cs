@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace FinTrackPro.Infrastructure.ExternalServices.ExchangeRate;
 
-public class ExchangeRateService(
+public sealed class ExchangeRateService(
     IExchangeRateClient client,
     IMemoryCache cache,
     IOptions<ExchangeRateOptions> options,

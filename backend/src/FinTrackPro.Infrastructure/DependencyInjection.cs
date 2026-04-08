@@ -209,9 +209,9 @@ public static class DependencyInjection
     {
         var hc = services.AddHealthChecks();
         if (db.IsPostgres)
-            hc.AddNpgSql(db.ConnectionString, name: "postgresql", failureStatus: HealthStatus.Unhealthy);
+            hc.AddNpgSql(db.ConnectionString, name: db.HealthCheckName, failureStatus: HealthStatus.Unhealthy);
         else
-            hc.AddSqlServer(db.ConnectionString, name: "sqlserver", failureStatus: HealthStatus.Unhealthy);
+            hc.AddSqlServer(db.ConnectionString, name: db.HealthCheckName, failureStatus: HealthStatus.Unhealthy);
     }
 
     private const int DefaultPostgresPort = 5432;
@@ -276,5 +276,8 @@ public static class DependencyInjection
         o.CircuitBreaker.MinimumThroughput = ro.CircuitBreakerMinimumThroughput;
     }
 
-    private sealed record DatabaseConfiguration(bool IsPostgres, string ConnectionString);
+    private sealed record DatabaseConfiguration(bool IsPostgres, string ConnectionString)
+    {
+        public string HealthCheckName => IsPostgres ? "postgresql" : "sqlserver";
+    }
 }

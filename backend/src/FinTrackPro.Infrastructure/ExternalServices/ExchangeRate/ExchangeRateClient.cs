@@ -4,7 +4,7 @@ using FinTrackPro.Infrastructure.ExternalServices.ExchangeRate;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-public class ExchangeRateClient : IExchangeRateClient
+public sealed class ExchangeRateClient : IExchangeRateClient
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;

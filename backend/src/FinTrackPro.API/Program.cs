@@ -4,18 +4,26 @@ using FinTrackPro.Application;
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.BackgroundJobs;
 using FinTrackPro.BackgroundJobs.Jobs;
-using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure;
+using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure.Identity;
 using FinTrackPro.Infrastructure.Persistence;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
 
+const string CorsPolicyName = "AllowFrontend";
+const string BearerScheme   = "Bearer";
+
 var builder = WebApplication.CreateBuilder(args);
+
+var iam      = builder.Configuration.GetSection(IdentityProviderOptions.SectionName).Get<IdentityProviderOptions>() ?? new();
+var keycloak = builder.Configuration.GetSection(KeycloakOptions.SectionName).Get<KeycloakOptions>() ?? new();
+var auth0    = builder.Configuration.GetSection(Auth0Options.SectionName).Get<Auth0Options>() ?? new();
 
 // Serilog
 builder.Host.UseSerilog((ctx, lc) => lc
@@ -33,38 +41,7 @@ builder.Services.AddProblemDetails();
 // Business-rule validation flows through ValidationBehavior → ExceptionHandlingMiddleware.
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(o =>
-    {
-        o.InvalidModelStateResponseFactory = ctx =>
-        {
-            var logger = ctx.HttpContext.RequestServices
-                .GetRequiredService<ILogger<Program>>();
-
-            var errors = ctx.ModelState
-                .Where(e => e.Value?.Errors.Count > 0)
-                .ToDictionary(
-                    e => e.Key,
-                    e => e.Value!.Errors.Select(x => x.ErrorMessage).ToArray());
-
-            logger.LogWarning(
-                "Model binding failed for {Method} {Path}: {@Errors}",
-                ctx.HttpContext.Request.Method,
-                ctx.HttpContext.Request.Path,
-                errors);
-
-            var problem = new ValidationProblemDetails(errors)
-            {
-                Status = StatusCodes.Status400BadRequest,
-                Title  = "Validation failed",
-                Instance = ctx.HttpContext.Request.Path
-            };
-            problem.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier;
-
-            return new BadRequestObjectResult(problem)
-            {
-                ContentTypes = { "application/problem+json" }
-            };
-        };
-    })
+        o.InvalidModelStateResponseFactory = HandleInvalidModelState)
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(
         new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
@@ -72,54 +49,14 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 
 // Authentication — JWT Bearer (Keycloak or Auth0)
-var iamProvider = builder.Configuration["IdentityProvider:Provider"] ?? "keycloak";
-var audience    = builder.Configuration["IdentityProvider:Audience"]!;
-
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        if (iamProvider == "auth0")
-        {
-            var domain    = builder.Configuration["Auth0:Domain"];
-            var authority = $"https://{domain}/";
-            // Auth0 OIDC discovery lives at the standard path under the Authority.
-            options.Authority            = authority;
-            options.Audience             = audience;
-            options.RequireHttpsMetadata = true;
-            options.MapInboundClaims     = false;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidIssuer   = authority,
-                ValidAudience = audience,
-            };
-        }
-        else // keycloak (default)
-        {
-            var authority       = builder.Configuration["Keycloak:Authority"] ?? throw new InvalidOperationException("Keycloak:Authority is required");
-            var metadataAddress = builder.Configuration["Keycloak:MetadataAddress"];
-            // Authority validates the `iss` claim in tokens (always the public URL).
-            // MetadataAddress is where the API fetches signing keys — differs in Docker
-            // (uses container hostname) vs hybrid dev (same as Authority base URL).
-            options.Authority            = authority;
-            options.MetadataAddress      = metadataAddress ?? authority;
-            options.Audience             = audience;
-            options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-            // Preserve original claim names from the JWT (e.g. "sub", "realm_access")
-            // Without this, ASP.NET Core remaps "sub" → ClaimTypes.NameIdentifier
-            options.MapInboundClaims = false;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidIssuer   = authority,
-                ValidAudience = audience,
-            };
-        }
-    });
+builder.Services.AddAuthentication(BearerScheme)
+    .AddJwtBearer(BearerScheme, ConfigureJwt);
 
 builder.Services.AddAuthorization();
 
 // CORS — allow frontend SPA
 builder.Services.AddCors(options =>
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy(CorsPolicyName, policy =>
         policy.WithOrigins(builder.Configuration["Cors:Origins"]?.Split(',') ?? ["http://localhost:5173"])
               .AllowAnyHeader()
               .AllowAnyMethod()));
@@ -130,7 +67,7 @@ builder.Services.AddBackgroundJobServices();
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseCors("AllowFrontend");
+app.UseCors(CorsPolicyName);
 
 if (app.Environment.IsDevelopment())
 {
@@ -183,6 +120,76 @@ RecurringJob.AddOrUpdate<ExchangeRateSyncJob>(
 //     Cron.Daily);
 
 app.Run();
+
+// ── Local functions ──────────────────────────────────────────────────────────
+
+void ConfigureJwt(JwtBearerOptions options)
+{
+    if (iam.Provider.Equals(IdentityProviderOptions.Providers.Auth0, StringComparison.OrdinalIgnoreCase))
+    {
+        // Auth0 OIDC discovery lives at the standard path under the Authority.
+        options.Authority            = auth0.Authority;
+        options.Audience             = iam.Audience;
+        options.RequireHttpsMetadata = true;
+        options.MapInboundClaims     = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer   = auth0.Authority,
+            ValidAudience = iam.Audience,
+        };
+    }
+    else // keycloak (default)
+    {
+        if (string.IsNullOrWhiteSpace(keycloak.Authority))
+            throw new InvalidOperationException("Keycloak:Authority is required");
+
+        // Authority validates the `iss` claim in tokens (always the public URL).
+        // ResolvedMetadataAddress differs in Docker (container hostname) vs hybrid dev (same as Authority).
+        options.Authority            = keycloak.Authority;
+        options.MetadataAddress      = keycloak.ResolvedMetadataAddress;
+        options.Audience             = iam.Audience;
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        // Preserve original claim names from the JWT (e.g. "sub", "realm_access")
+        // Without this, ASP.NET Core remaps "sub" → ClaimTypes.NameIdentifier
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer   = keycloak.Authority,
+            ValidAudience = iam.Audience,
+        };
+    }
+}
+
+IActionResult HandleInvalidModelState(ActionContext ctx)
+{
+    var logger = ctx.HttpContext.RequestServices
+        .GetRequiredService<ILogger<Program>>();
+
+    var errors = ctx.ModelState
+        .Where(e => e.Value?.Errors.Count > 0)
+        .ToDictionary(
+            e => e.Key,
+            e => e.Value!.Errors.Select(x => x.ErrorMessage).ToArray());
+
+    logger.LogWarning(
+        "Model binding failed for {Method} {Path}: {@Errors}",
+        ctx.HttpContext.Request.Method,
+        ctx.HttpContext.Request.Path,
+        errors);
+
+    var problem = new ValidationProblemDetails(errors)
+    {
+        Status   = StatusCodes.Status400BadRequest,
+        Title    = "Validation failed",
+        Instance = ctx.HttpContext.Request.Path
+    };
+    problem.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier;
+
+    return new BadRequestObjectResult(problem)
+    {
+        ContentTypes = { "application/problem+json" }
+    };
+}
 
 // Required for WebApplicationFactory<Program> in integration tests
 public partial class Program { }
