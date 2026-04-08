@@ -282,10 +282,10 @@ upgrade modal.
 |---|---|
 | `Application/Common/Options/SubscriptionPlanOptions.cs` | **Create** — `PlanLimits` + `SubscriptionPlanOptions` |
 | `Application/Common/Options/PaymentGatewayOptions.cs` | **Create** — `Provider` + `PriceId`; provider-neutral |
-| `Application/Common/Interfaces/ICurrentUserService.cs` | **Modify** — add `bool IsAdmin { get; }` |
+| `Application/Common/Interfaces/ICurrentUser.cs` | **Modify** — add `bool IsAdmin { get; }` to the existing interface |
 | `Application/Common/Interfaces/ISubscriptionLimitService.cs` | **Create** — 7 `Enforce*Async` methods |
 | `Application/Common/Interfaces/IPaymentGatewayService.cs` | **Create** — `CreateCustomerAsync`, `CreateCheckoutSessionAsync`, `CreateBillingPortalSessionAsync` |
-| `Application/Common/Interfaces/IPaymentWebhookHandler.cs` | **Create** — `HandleAsync(payload, signature, ct)` → `PaymentWebhookResult` |
+| `Application/Common/Interfaces/IPaymentWebhookHandler.cs` | **Create** — `HandleAsync(payload, headers, ct)` → `PaymentWebhookResult`; accepts `IHeaderDictionary` so the controller has zero provider-specific logic |
 | `Application/Subscription/Queries/GetSubscriptionStatus/GetSubscriptionStatusQuery.cs` | **Create** |
 | `Application/Subscription/Queries/GetSubscriptionStatus/SubscriptionStatusDto.cs` | **Create** — `Plan`, `IsActive`, `ExpiresAt` only; no provider-specific fields |
 | `Application/Subscription/Queries/GetSubscriptionStatus/GetSubscriptionStatusQueryHandler.cs` | **Create** |
@@ -302,7 +302,7 @@ upgrade modal.
 ### Infrastructure
 | File | Action |
 |---|---|
-| `Infrastructure/Identity/CurrentUserService.cs` | **Create** — implement `ICurrentUserService` via `IHttpContextAccessor`; `IsAdmin` checks `ClaimTypes.Role` |
+| `Infrastructure/Identity/CurrentUserAccessor.cs` | **Modify** — existing implementation of `ICurrentUser`; add `IsAdmin` by checking `ClaimTypes.Role` in the current `HttpContext` claims |
 | `Infrastructure/Services/SubscriptionLimitService.cs` | **Create** — implements `ISubscriptionLimitService`; admin bypass + `-1` sentinel + count queries |
 | `Infrastructure/Stripe/StripeOptions.cs` | **Create** — Stripe-specific credentials only (`SecretKey`, `WebhookSecret`) |
 | `Infrastructure/Stripe/StripePaymentGatewayService.cs` | **Create** — implements `IPaymentGatewayService` using `Stripe.net` NuGet |
@@ -313,7 +313,7 @@ upgrade modal.
 | `Infrastructure/Persistence/Repositories/BudgetRepository.cs` | **Modify** — implement `CountByUserAndMonthAsync` |
 | `Infrastructure/Persistence/Repositories/TradeRepository.cs` | **Modify** — implement `CountByUserAsync` |
 | `Infrastructure/Persistence/Repositories/WatchedSymbolRepository.cs` | **Modify** — implement `CountByUserAsync` |
-| `Infrastructure/DependencyInjection.cs` | **Modify** — register `ICurrentUserService`, `ISubscriptionLimitService`; configure `SubscriptionPlanOptions` + `PaymentGatewayOptions`; select `IPaymentGatewayService` + `IPaymentWebhookHandler` implementation based on `PaymentGateway:Provider` (mirrors IAM provider selection pattern) |
+| `Infrastructure/DependencyInjection.cs` | **Modify** — read `PaymentGatewayOptions` at top of `AddInfrastructureServices`; add new private `AddPaymentGateway(services, configuration, pg)` helper (mirrors `AddIamServices` pattern); inside it: configure `SubscriptionPlanOptions` + `PaymentGatewayOptions`, register `ISubscriptionLimitService`, and select `IPaymentGatewayService` + `IPaymentWebhookHandler` based on `pg.Provider` with `OrdinalIgnoreCase` comparison |
 
 ### API
 | File | Action |
@@ -336,7 +336,7 @@ dotnet ef migrations add AddSubscriptionFieldsToAppUser \
 
 ### SubscriptionLimitService — admin bypass and `-1` sentinel
 ```csharp
-private bool IsUnlimited(AppUser user) => _currentUserService.IsAdmin;
+private bool IsUnlimited(AppUser user) => _currentUser.IsAdmin;
 
 private PlanLimits GetLimits(AppUser user) => user.Plan switch {
     SubscriptionPlan.Pro => _options.Value.Pro,
@@ -359,14 +359,35 @@ public async Task EnforceBudgetLimitAsync(AppUser user, IBudgetRepository repo,
 ```
 
 ### DependencyInjection — provider selection (mirrors IAM pattern)
+
+Read options at the top of `AddInfrastructureServices` alongside the existing reads, then call the new helper:
+
 ```csharp
-var provider = config["PaymentGateway:Provider"];
-if (provider == "stripe") {
-    services.Configure<StripeOptions>(config.GetSection(StripeOptions.SectionName));
-    services.AddScoped<IPaymentGatewayService, StripePaymentGatewayService>();
-    services.AddScoped<IPaymentWebhookHandler, StripeWebhookHandler>();
+// in AddInfrastructureServices — alongside existing options reads on lines 34–39:
+var pg = configuration.GetSection(PaymentGatewayOptions.SectionName).Get<PaymentGatewayOptions>() ?? new();
+
+// call site (alongside AddIamServices, AddExternalHttpClients, etc.):
+AddPaymentGateway(services, configuration, pg);
+```
+
+```csharp
+private static void AddPaymentGateway(
+    IServiceCollection services,
+    IConfiguration configuration,
+    PaymentGatewayOptions pg)
+{
+    services.Configure<PaymentGatewayOptions>(configuration.GetSection(PaymentGatewayOptions.SectionName));
+    services.Configure<SubscriptionPlanOptions>(configuration.GetSection(SubscriptionPlanOptions.SectionName));
+    services.AddScoped<ISubscriptionLimitService, SubscriptionLimitService>();
+
+    if (pg.Provider.Equals("stripe", StringComparison.OrdinalIgnoreCase))
+    {
+        services.Configure<StripeOptions>(configuration.GetSection(StripeOptions.SectionName));
+        services.AddScoped<IPaymentGatewayService, StripePaymentGatewayService>();
+        services.AddScoped<IPaymentWebhookHandler, StripeWebhookHandler>();
+    }
+    // Future: else if (pg.Provider.Equals("paddle", StringComparison.OrdinalIgnoreCase)) { ... }
 }
-// Future: else if (provider == "paddle") { ... }
 ```
 
 ### PaymentWebhookController — no provider-specific logic
@@ -375,17 +396,20 @@ if (provider == "stripe") {
 public async Task<IActionResult> HandleWebhook(
     [FromServices] IPaymentWebhookHandler handler, CancellationToken ct)
 {
-    var payload   = await new StreamReader(Request.Body).ReadToEndAsync();
-    var signature = Request.Headers["Stripe-Signature"].ToString(); // header key stays in handler
-    var result    = await handler.HandleAsync(payload, signature, ct);
+    var payload = await new StreamReader(Request.Body).ReadToEndAsync();
+    // Pass the full header dictionary — the handler extracts whatever header its provider requires.
+    // No provider-specific header name (e.g. "Stripe-Signature") appears here.
+    var result  = await handler.HandleAsync(payload, Request.Headers, ct);
     return result.SignatureValid ? Ok() : BadRequest();
 }
 ```
 
 ### StripeWebhookHandler (Infrastructure) — all Stripe-specific logic isolated here
 ```csharp
-public async Task<PaymentWebhookResult> HandleAsync(string payload, string signature, CancellationToken ct)
+public async Task<PaymentWebhookResult> HandleAsync(string payload, IHeaderDictionary headers, CancellationToken ct)
 {
+    // "Stripe-Signature" header name is Stripe-specific — it lives here, not in the controller.
+    var signature = headers["Stripe-Signature"].ToString();
     Event stripeEvent;
     try {
         stripeEvent = EventUtility.ConstructEvent(payload, signature, _stripeOptions.WebhookSecret);
