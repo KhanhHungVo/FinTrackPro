@@ -31,3 +31,8 @@ terraform.tfplan
 # Misc
 .DS_Store
 Thumbs.db
+
+# Developer tooling (per-machine, not shared)
+.claude/
+.vscode/
+AGENTS.md
