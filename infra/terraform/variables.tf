@@ -91,3 +91,40 @@ variable "vite_auth0_client_id" {
   type        = string
   description = "Auth0 SPA application client ID (fintrackpro-spa)"
 }
+
+# ── Frontend bank-transfer / admin contact vars (VITE_*) ──────────────────────
+variable "vite_admin_telegram" {
+  type        = string
+  description = "Telegram handle shown in the bank transfer modal (e.g. your_handle)"
+}
+
+variable "vite_admin_email" {
+  type        = string
+  description = "Admin email shown in the bank transfer modal"
+}
+
+variable "vite_bank_name" {
+  type        = string
+  description = "Bank name displayed in the transfer details (e.g. Techcombank)"
+}
+
+variable "vite_bank_account_number" {
+  type        = string
+  description = "Bank account number displayed in the transfer details — public-safe (same as on an invoice)"
+}
+
+variable "vite_bank_account_name" {
+  type        = string
+  description = "Account holder name displayed in the transfer details"
+}
+
+variable "vite_bank_transfer_amount" {
+  type        = string
+  default     = "99000"
+  description = "Monthly Pro plan price in VND displayed in the bank transfer modal"
+}
+
+variable "vite_bank_qr_url" {
+  type        = string
+  description = "Direct URL to the bank transfer QR image (hosted externally, e.g. postimages.org or GitHub release asset)"
+}

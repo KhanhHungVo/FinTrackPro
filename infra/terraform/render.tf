@@ -86,6 +86,14 @@ resource "render_static_site" "frontend" {
     VITE_API_BASE_URL    = { value = var.vite_api_base_url }
     VITE_AUTH0_DOMAIN    = { value = var.vite_auth0_domain }
     VITE_AUTH0_CLIENT_ID = { value = var.vite_auth0_client_id }
+
+    VITE_ADMIN_TELEGRAM       = { value = var.vite_admin_telegram }
+    VITE_ADMIN_EMAIL          = { value = var.vite_admin_email }
+    VITE_BANK_NAME            = { value = var.vite_bank_name }
+    VITE_BANK_ACCOUNT_NUMBER  = { value = var.vite_bank_account_number }
+    VITE_BANK_ACCOUNT_NAME    = { value = var.vite_bank_account_name }
+    VITE_BANK_TRANSFER_AMOUNT = { value = var.vite_bank_transfer_amount }
+    VITE_BANK_QR_URL          = { value = var.vite_bank_qr_url }
   }
 
   routes = [

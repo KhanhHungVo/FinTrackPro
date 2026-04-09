@@ -27,7 +27,19 @@ vite_api_base_url    = "https://fintrackpro-api.onrender.com"
 vite_auth0_domain    = "dev-xxxx.us.auth0.com"
 vite_auth0_client_id = "your-spa-client-id"
 
+# ── Frontend bank transfer / admin contact ─────────────────────────────────────
+# Public-safe values — same as printing on an invoice.
+vite_admin_telegram       = "your_telegram_handle"
+vite_admin_email          = "admin@fintrackpro.dev"
+vite_bank_name            = "Techcombank"
+vite_bank_account_number  = "your_account_number"
+vite_bank_account_name    = "Your Full Name"
+# vite_bank_transfer_amount defaults to "99000" — override here only if different.
+# vite_bank_transfer_amount = "99000"
+vite_bank_qr_url          = "https://i.postimg.cc/your-image-url.jpg"
+
 # Sensitive variables (render_api_key, auth0_m2m_client_secret, coingecko_api_key,
-# exchangerate_api_key, telegram_bot_token, hangfire_dashboard_password)
+# exchangerate_api_key, telegram_bot_token, hangfire_dashboard_password,
+# stripe_secret_key, stripe_webhook_secret)
 # should be set as sensitive Terraform Cloud workspace variables,
 # NOT stored here.
