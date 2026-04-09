@@ -29,13 +29,13 @@ public class TransactionCategoriesTests : IAsyncLifetime
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
-    public async Task GetTransactionCategories_Authenticated_Returns16SystemCategories()
+    public async Task GetTransactionCategories_Authenticated_Returns17SystemCategories()
     {
         var response = await _client.GetAsync("/api/transaction-categories");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var categories = await response.Content.ReadFromJsonAsync<List<JsonElement>>();
-        categories.Should().HaveCount(16);
+        categories.Should().HaveCount(17);
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class TransactionCategoriesTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var categories = await response.Content.ReadFromJsonAsync<List<JsonElement>>();
-        categories.Should().HaveCount(11);
+        categories.Should().HaveCount(12);
         categories!.Select(c => c.GetProperty("type").GetString()).Should().AllBe("Expense");
     }
 
