@@ -2,10 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { env } from '@/shared/config/env'
 
 interface BankTransferDetailsProps {
-  showTransferNote?: boolean
+  showTransferAmountWithNote?: boolean
 }
 
-export function BankTransferDetails({ showTransferNote = false }: BankTransferDetailsProps) {
+export function BankTransferDetails({ showTransferAmountWithNote = false }: BankTransferDetailsProps) {
   const { t } = useTranslation()
 
   return (
@@ -39,18 +39,20 @@ export function BankTransferDetails({ showTransferNote = false }: BankTransferDe
             <span>{env.BANK_ACCOUNT_NAME}</span>
           </div>
         )}
-        <div className="flex justify-between">
-          <span className="font-medium">{t('bankTransfer.amountLabel')}</span>
-          <span>
-            {Number(env.BANK_TRANSFER_AMOUNT).toLocaleString('vi-VN')} VND /{' '}
-            {t('pricing.perMonth')}
-          </span>
-        </div>
-        {showTransferNote && (
-          <div className="flex justify-between">
-            <span className="font-medium">{t('bankTransfer.noteLabel')}</span>
-            <span className="italic">{t('bankTransfer.noteHint')}</span>
-          </div>
+        {showTransferAmountWithNote && (
+          <>
+            <div className="flex justify-between">
+              <span className="font-medium">{t('bankTransfer.amountLabel')}</span>
+              <span>
+                {Number(env.BANK_TRANSFER_AMOUNT).toLocaleString('vi-VN')} VND /{' '}
+                {t('pricing.perMonth')}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium">{t('bankTransfer.noteLabel')}</span>
+              <span className="italic">{t('bankTransfer.noteHint')}</span>
+            </div>
+          </>
         )}
       </div>
     </>
