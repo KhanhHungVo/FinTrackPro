@@ -95,16 +95,19 @@ variable "vite_auth0_client_id" {
 # ── Frontend bank-transfer / admin contact vars (VITE_*) ──────────────────────
 variable "vite_admin_telegram" {
   type        = string
+  default     = ""
   description = "Telegram handle shown in the bank transfer modal (e.g. your_handle)"
 }
 
 variable "vite_admin_email" {
   type        = string
+  default     = "admin@fintrackpro.dev"
   description = "Admin email shown in the bank transfer modal"
 }
 
 variable "vite_bank_name" {
   type        = string
+  default     = "Techcombank"
   description = "Bank name displayed in the transfer details (e.g. Techcombank)"
 }
 
@@ -126,5 +129,6 @@ variable "vite_bank_transfer_amount" {
 
 variable "vite_bank_qr_url" {
   type        = string
+  default     = ""
   description = "Direct URL to the bank transfer QR image (hosted externally, e.g. postimages.org or GitHub release asset)"
 }
