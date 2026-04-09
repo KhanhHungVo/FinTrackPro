@@ -106,8 +106,9 @@ ALTER TABLE "Transactions"
 | healthcare     | Healthcare          | Sức khỏe          | 🏥   | 7     |
 | education      | Education           | Giáo dục          | 📚   | 8     |
 | travel         | Travel              | Du lịch           | ✈️   | 9     |
-| family_child   | Family & Children   | Gia đình & trẻ em | 👨‍👩‍👧 | 10    |
-| other_expense  | Other Expense       | Chi tiêu khác     | 📦   | 11    |
+| family         | Family              | Gia đình          | 👨‍👩‍👧 | 10    |
+| children       | Children            | Trẻ em            | 🧒   | 11    |
+| other_expense  | Other Expense       | Chi tiêu khác     | 📦   | 12    |
 
 ---
 

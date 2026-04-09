@@ -23,9 +23,10 @@ public class TransactionCategoryDataSeeder(ApplicationDbContext context) : IData
         (TransactionType.Expense, "entertainment",  "Entertainment",     "Giải trí",           "🎬",  6),
         (TransactionType.Expense, "healthcare",     "Healthcare",        "Sức khỏe",           "🏥",  7),
         (TransactionType.Expense, "education",      "Education",         "Giáo dục",           "📚",  8),
-        (TransactionType.Expense, "travel",         "Travel",            "Du lịch",            "✈️",  9),
-        (TransactionType.Expense, "family_child",   "Family & Children", "Gia đình & trẻ em",  "👨‍👩‍👧", 10),
-        (TransactionType.Expense, "other_expense",  "Other Expense",     "Chi tiêu khác",      "📦", 11),
+        (TransactionType.Expense, "travel",         "Travel",    "Du lịch",   "✈️",  9),
+        (TransactionType.Expense, "family",         "Family",    "Gia đình",  "👨‍👩‍👧", 10),
+        (TransactionType.Expense, "children",       "Children",  "Trẻ em",    "🧒",  11),
+        (TransactionType.Expense, "other_expense",  "Other Expense", "Chi tiêu khác", "📦", 12),
     ];
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
