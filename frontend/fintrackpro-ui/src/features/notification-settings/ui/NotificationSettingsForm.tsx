@@ -50,11 +50,11 @@ export function NotificationSettingsForm() {
         <h2 className="text-lg font-semibold">{t('notifications.title')}</h2>
 
         <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800 space-y-1">
-          <p className="font-medium">Setup steps:</p>
+          <p className="font-medium">{t('notifications.setupSteps')}</p>
           <ol className="list-decimal list-inside space-y-0.5">
-            <li>Open Telegram and start <strong>your FinTrackPro Bot</strong></li>
-            <li>Send <code>/start</code> — the bot replies with your Chat ID</li>
-            <li>Paste the Chat ID below and save</li>
+            <li>{t('notifications.setupStep1')}</li>
+            <li dangerouslySetInnerHTML={{ __html: t('notifications.setupStep2').replace('/start', '<code>/start</code>') }} />
+            <li>{t('notifications.setupStep3')}</li>
           </ol>
         </div>
 
@@ -62,7 +62,7 @@ export function NotificationSettingsForm() {
           <label className="block text-sm font-medium mb-1">{t('notifications.telegramChatId')}</label>
           <input
             type="text"
-            placeholder="e.g. 123456789"
+            placeholder={t('notifications.chatIdPlaceholder')}
             value={chatId}
             onChange={(e) => setChatId(e.target.value)}
             required
@@ -77,7 +77,7 @@ export function NotificationSettingsForm() {
             onChange={(e) => setEnabled(e.target.checked)}
             className="h-4 w-4 rounded"
           />
-          <span className="text-sm">Enable notifications</span>
+          <span className="text-sm">{t('notifications.enableNotifications')}</span>
         </label>
 
         <button
@@ -92,7 +92,7 @@ export function NotificationSettingsForm() {
       {isFreePlan && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-white/80 p-6">
           <p className="text-sm font-medium text-gray-700 text-center">
-            Telegram notifications are a Pro feature.
+            {t('notifications.proFeatureNotice')}
           </p>
           <UpgradeButton />
         </div>

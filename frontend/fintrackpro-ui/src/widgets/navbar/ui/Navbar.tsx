@@ -18,6 +18,7 @@ function useNavLinks() {
 }
 
 export function Navbar() {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const displayName = useAuthStore((s) => s.displayName)
@@ -96,7 +97,7 @@ export function Navbar() {
                     onClick={() => { setOpen(false); logout() }}
                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
                   >
-                    Sign out
+                    {t('common.signOut')}
                   </button>
                 </div>
               </>

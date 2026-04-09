@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next'
 import { usePlanLimitStore } from '../model/planLimitStore'
 import { UpgradeButton } from './UpgradeButton'
 
 export function PlanLimitModal() {
+  const { t } = useTranslation()
   const open = usePlanLimitStore((s) => s.open)
   const title = usePlanLimitStore((s) => s.title)
   const clear = usePlanLimitStore((s) => s.clear)
@@ -17,7 +19,7 @@ export function PlanLimitModal() {
           <button
             onClick={clear}
             className="ml-4 text-gray-400 hover:text-gray-600"
-            aria-label="Close"
+            aria-label={t('donation.dismiss')}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path
@@ -30,7 +32,7 @@ export function PlanLimitModal() {
           </button>
         </div>
         <p className="mt-2 text-sm text-gray-600">
-          Upgrade to Pro for unlimited access to budgets, transactions, trades, and more.
+          {t('planLimitModal.description')}
         </p>
         <div className="mt-5 flex flex-col gap-2">
           <UpgradeButton className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50" />
@@ -38,7 +40,7 @@ export function PlanLimitModal() {
             onClick={clear}
             className="w-full rounded-md border py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
-            Maybe later
+            {t('stripeUnavailable.maybeLater')}
           </button>
         </div>
       </div>

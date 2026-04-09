@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useCreateCheckoutSession } from '@/entities/subscription'
 import { StripeUnavailableModal } from './StripeUnavailableModal'
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function UpgradeButton({ className }: Props) {
+  const { t } = useTranslation()
   const { mutate, isPending } = useCreateCheckoutSession()
   const [stripeDown, setStripeDown] = useState(false)
 
@@ -39,7 +41,7 @@ export function UpgradeButton({ className }: Props) {
           'rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50'
         }
       >
-        {isPending ? 'Loading…' : 'Upgrade to Pro'}
+        {isPending ? t('common.loading') : t('subscription.upgradeToPro')}
       </button>
       <StripeUnavailableModal open={stripeDown} onClose={() => setStripeDown(false)} />
     </>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useFearGreed } from '@/entities/signal'
 
 const CX = 150
@@ -62,6 +63,7 @@ function getActiveZone(value: number): number {
 }
 
 export function FearGreedWidget() {
+  const { t } = useTranslation()
   const { data, isLoading } = useFearGreed()
 
   if (isLoading) return <div className="animate-pulse h-44 rounded-lg bg-gray-100" />
@@ -81,7 +83,7 @@ export function FearGreedWidget() {
 
   return (
     <div className="rounded-lg border p-4 text-center">
-      <p className="text-sm text-gray-500 mb-1">Fear &amp; Greed Index</p>
+      <p className="text-sm text-gray-500 mb-1">{t('market.fearGreedIndex')}</p>
 
       <svg viewBox="0 0 300 185" className="w-full max-w-[340px] mx-auto">
         {/* Arc segments */}

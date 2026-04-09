@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useTrendingCoins } from '@/entities/signal'
 
 const COINGECKO_BASE = 'https://www.coingecko.com/en/coins'
@@ -14,21 +15,22 @@ function SkeletonRow() {
 }
 
 export function TrendingCoinsWidget() {
+  const { t } = useTranslation()
   const { data: coins, isLoading } = useTrendingCoins()
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div className="flex items-baseline justify-between px-4 pt-3.5 pb-2.5 border-b border-gray-100">
-        <h2 className="text-sm font-medium text-gray-700 m-0">Trending Coins</h2>
+        <h2 className="text-sm font-medium text-gray-700 m-0">{t('market.trendingCoins')}</h2>
         <span className="font-mono text-[9px] text-gray-500 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 tracking-[0.08em] uppercase">
-          Live
+          {t('market.live')}
         </span>
       </div>
 
       <div className="grid [grid-template-columns:48px_1fr_68px_24px] px-4 py-1.5 border-b border-gray-100">
-        <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400">Rank</span>
-        <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400">Name</span>
-        <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 text-right">Symbol</span>
+        <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400">{t('market.rank')}</span>
+        <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400">{t('market.name')}</span>
+        <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 text-right">{t('trades.symbol')}</span>
         <span />
       </div>
 
@@ -42,7 +44,7 @@ export function TrendingCoinsWidget() {
                   href={`${COINGECKO_BASE}/${coin.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title={`View ${coin.name} on CoinGecko`}
+                  title={`${coin.name} — CoinGecko`}
                 >
                   <span className="font-mono text-[11px] text-gray-400 tracking-[0.02em]">
                     #{coin.marketCapRank}
@@ -80,7 +82,7 @@ export function TrendingCoinsWidget() {
             <circle cx="12" cy="12" r="10" stroke="#9ca3af" strokeWidth="1.5" />
             <path d="M12 8v4M12 16h.01" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
-          Powered by CoinGecko
+          {t('market.poweredBy')}
         </a>
       </div>
     </div>

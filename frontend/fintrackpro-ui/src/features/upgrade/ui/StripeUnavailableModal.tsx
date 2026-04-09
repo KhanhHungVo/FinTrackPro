@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useBankTransferStore } from '../model/bankTransferStore'
 
 interface Props {
@@ -6,6 +7,7 @@ interface Props {
 }
 
 export function StripeUnavailableModal({ open, onClose }: Props) {
+  const { t } = useTranslation()
   const openBankTransfer = useBankTransferStore((s) => s.openModal)
 
   if (!open) return null
@@ -21,12 +23,12 @@ export function StripeUnavailableModal({ open, onClose }: Props) {
       <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-white p-5 shadow-xl sm:p-6">
         <div className="flex items-start justify-between">
           <h2 className="text-base font-semibold text-gray-900">
-            Card payment temporarily unavailable
+            {t('stripeUnavailable.title')}
           </h2>
           <button
             onClick={onClose}
             className="ml-4 text-gray-400 hover:text-gray-600"
-            aria-label="Close"
+            aria-label={t('donation.dismiss')}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path
@@ -39,20 +41,20 @@ export function StripeUnavailableModal({ open, onClose }: Props) {
           </button>
         </div>
         <p className="mt-2 text-sm text-gray-600">
-          You can upgrade via bank transfer instead.
+          {t('stripeUnavailable.message')}
         </p>
         <div className="mt-5 flex flex-col gap-2">
           <button
             onClick={handleViewQr}
             className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
-            View Bank Transfer QR
+            {t('stripeUnavailable.viewQr')}
           </button>
           <button
             onClick={onClose}
             className="w-full rounded-md border py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
-            Maybe later
+            {t('stripeUnavailable.maybeLater')}
           </button>
         </div>
       </div>

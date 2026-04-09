@@ -9,6 +9,7 @@ interface TransactionCategorySelectorProps {
   value: string
   onChange: (id: string) => void
   lastUsedId?: string | null
+  showManageLink?: boolean
 }
 
 export function TransactionCategorySelector({
@@ -16,6 +17,7 @@ export function TransactionCategorySelector({
   value,
   onChange,
   lastUsedId,
+  showManageLink = true,
 }: TransactionCategorySelectorProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -61,7 +63,7 @@ export function TransactionCategorySelector({
         )}
       </select>
 
-      <div className="mt-1.5 flex items-center gap-1">
+      {showManageLink && <div className="mt-1.5 flex items-center gap-1">
         <svg
           width="12"
           height="12"
@@ -81,7 +83,7 @@ export function TransactionCategorySelector({
         >
           {t('transactionCategories.manageCategories')}
         </button>
-      </div>
+      </div>}
     </div>
   )
 }

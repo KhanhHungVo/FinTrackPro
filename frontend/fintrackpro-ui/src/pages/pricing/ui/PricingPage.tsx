@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useSubscriptionStatus, useCreatePortalSession } from '@/entities/subscription'
 import { UpgradeButton, useBankTransferStore } from '@/features/upgrade'
@@ -83,6 +84,7 @@ function FeatureRow({ label, included }: Feature) {
 }
 
 export function PricingPage() {
+  const { t } = useTranslation()
   const { data: status } = useSubscriptionStatus()
   const { mutate: createPortal, isPending: portalPending } = useCreatePortalSession()
   const navigate = useNavigate()
@@ -106,10 +108,10 @@ export function PricingPage() {
       {/* Header */}
       <div className="space-y-1.5 text-center">
         <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-          Simple, transparent pricing
+          {t('pricing.title')}
         </h1>
         <p className="text-sm text-gray-500 sm:text-base">
-          Start free. Upgrade when you need more.
+          {t('pricing.subtitle')}
         </p>
       </div>
 
@@ -117,8 +119,8 @@ export function PricingPage() {
       <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:items-center">
         <span className="text-lg leading-none">🎉</span>
         <p className="text-sm text-amber-900">
-          <span className="font-semibold">Launch campaign — Pro is free right now.</span>{' '}
-          All accounts are upgraded to Pro at no cost. No card required.
+          <span className="font-semibold">{t('pricing.launchNotice')}</span>{' '}
+          {t('pricing.launchDescription')}
         </p>
       </div>
 
@@ -132,16 +134,16 @@ export function PricingPage() {
         >
           <div className="mb-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Free</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('subscription.free')}</h2>
               {!isPro && (
                 <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                  Current plan
+                  {t('pricing.currentPlan')}
                 </span>
               )}
             </div>
             <p className="mt-2 text-3xl font-bold text-gray-900">
               $0
-              <span className="text-base font-normal text-gray-400"> / mo</span>
+              <span className="text-base font-normal text-gray-400"> {t('pricing.perMonth')}</span>
             </p>
           </div>
 
@@ -155,7 +157,7 @@ export function PricingPage() {
             disabled
             className="mt-6 w-full cursor-not-allowed rounded-lg border py-2.5 text-sm font-medium text-gray-400"
           >
-            {!isPro ? 'Current plan' : 'Downgrade'}
+            {!isPro ? t('pricing.currentPlan') : t('pricing.downgrade')}
           </button>
         </div>
 
@@ -168,24 +170,24 @@ export function PricingPage() {
           <div className="mb-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-gray-900">Pro</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t('subscription.pro')}</h2>
                 <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                  Popular
+                  {t('pricing.popular')}
                 </span>
               </div>
               {isPro && (
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                  Active
+                  {t('subscription.active')}
                 </span>
               )}
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <p className="text-3xl font-bold text-gray-900">
                 99,000 ₫
-                <span className="text-base font-normal text-gray-400"> / mo</span>
+                <span className="text-base font-normal text-gray-400"> {t('pricing.perMonth')}</span>
               </p>
             </div>
-            <p className="mt-1 text-xs text-gray-400">≈ $4 USD · billed monthly</p>
+            <p className="mt-1 text-xs text-gray-400">{t('pricing.usdNote')}</p>
           </div>
 
           <ul className="flex-1 space-y-3">
@@ -200,7 +202,7 @@ export function PricingPage() {
               disabled={portalPending}
               className="mt-6 w-full rounded-lg border border-blue-500 py-2.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 disabled:opacity-50"
             >
-              {portalPending ? 'Loading…' : 'Manage subscription'}
+              {portalPending ? t('common.loading') : t('subscription.manageSubscription')}
             </button>
           ) : (
             <div className="mt-6 flex flex-col gap-2">
@@ -209,7 +211,7 @@ export function PricingPage() {
                 onClick={openBankTransfer}
                 className="w-full py-1.5 text-sm text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline"
               >
-                or pay via bank transfer →
+                {t('bankTransfer.orPayViaTransfer')}
               </button>
             </div>
           )}
@@ -221,7 +223,7 @@ export function PricingPage() {
           onClick={() => navigate(-1)}
           className="text-sm text-gray-400 transition-colors hover:text-gray-600"
         >
-          ← Back
+          {t('pricing.back')}
         </button>
       </div>
     </div>

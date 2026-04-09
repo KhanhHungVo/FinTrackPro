@@ -67,7 +67,7 @@ export function DashboardPage() {
 
       {/* Signals */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">Recent Signals</h2>
+        <h2 className="text-lg font-semibold mb-3">{t('dashboard.recentSignals')}</h2>
         <SignalsList />
       </div>
     </div>
