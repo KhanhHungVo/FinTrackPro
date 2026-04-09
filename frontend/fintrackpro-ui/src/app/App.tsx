@@ -11,15 +11,17 @@ import { SettingsPage } from '@/pages/settings'
 import { PricingPage } from '@/pages/pricing'
 import { PlanLimitModal, BankTransferModal } from '@/features/upgrade'
 import { NotFoundPage } from '@/shared/ui/NotFoundPage'
+import { DonationFooter } from '@/shared/ui/DonationFooter'
 import './styles/globals.css'
 
 function AppLayout() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-gray-50">
       <Navbar />
-      <main>
+      <main className="flex-1">
         <Outlet />
       </main>
+      <DonationFooter />
     </div>
   )
 }
