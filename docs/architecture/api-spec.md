@@ -519,8 +519,85 @@ The `errors` field is only present for validation failures. The `traceId` field 
 | HTTP Status | Cause |
 |---|---|
 | 400 | Validation failure (`ValidationException`) or domain validation (`DomainException`) |
+| 402 | Plan limit exceeded (`PlanLimitExceededException`) — see Subscription section |
 | 403 | Ownership check failed (`AuthorizationException`) |
 | 404 | Entity not found (`NotFoundException`) |
 | 409 | State conflict (`ConflictException`) |
 | 401 | Missing or invalid JWT |
+
+---
+
+## Subscription
+
+### `GET /api/subscription/status`
+Returns the current user's subscription state. Requires `[Authorize]`.
+
+**Response 200:**
+```json
+{
+  "plan": "Pro",
+  "isActive": true,
+  "expiresAt": "2027-04-06T00:00:00Z"
+}
+```
+
+`plan` is `"Free"` or `"Pro"`. `expiresAt` is `null` for Free users. `isActive` is `false` if the Pro subscription has lapsed.
+
+---
+
+### `POST /api/subscription/checkout`
+Creates a payment gateway Checkout session. Requires `[Authorize]`.
+
+**Body:**
+```json
+{ "successUrl": "https://app.fintrackpro.dev/settings?subscribed=1", "cancelUrl": "https://app.fintrackpro.dev/pricing" }
+```
+
+**Response 200:**
+```json
+{ "sessionUrl": "https://checkout.stripe.com/pay/cs_test_..." }
+```
+
+Lazily creates the payment customer record on first call. The frontend redirects to `sessionUrl`.
+
+---
+
+### `POST /api/subscription/portal`
+Creates a payment gateway Customer Portal session for self-serve management. Requires `[Authorize]`.
+
+**Body:**
+```json
+{ "returnUrl": "https://app.fintrackpro.dev/settings" }
+```
+
+**Response 200:**
+```json
+{ "portalUrl": "https://billing.stripe.com/session/..." }
+```
+
+---
+
+### `POST /api/payment/webhook`
+Receives payment gateway lifecycle events. `[AllowAnonymous]`. Signature verification is delegated to `IPaymentWebhookHandler` — the controller has no provider-specific logic. Returns `400` on invalid signature, `200` on success.
+
+Handled event types (Stripe defaults):
+- `customer.subscription.updated` / `invoice.payment_succeeded` → activate Pro
+- `customer.subscription.deleted` / `invoice.payment_failed` → revert to Free
+
+---
+
+### `402` Plan Limit Error Response
+Returned when any per-plan limit is exceeded:
+
+```json
+{
+  "status": 402,
+  "title": "Budget limit of 3 reached for your current plan.",
+  "instance": "/api/budgets",
+  "traceId": "...",
+  "feature": ["budget"]
+}
+```
+
+The `feature` field identifies which limit was hit. Possible values: `"transaction"`, `"budget"`, `"trade"`, `"watchlist"`, `"transaction_history"`, `"signal_history"`, `"telegram"`. The frontend uses this to open a targeted upgrade modal.
 | 500 | Unhandled server error |

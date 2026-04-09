@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/features/auth'
+import { PlanBadge } from '@/features/plan-badge'
 import { cn } from '@/shared/lib/cn'
 import { LocaleSettingsDropdown } from './LocaleSettingsDropdown'
 
@@ -87,6 +88,9 @@ export function Navbar() {
                   <div className="border-b px-4 py-2">
                     <p className="truncate text-sm font-medium text-gray-900">{displayName}</p>
                     <p className="truncate text-xs text-gray-500">{email}</p>
+                    <div className="mt-2">
+                      <PlanBadge />
+                    </div>
                   </div>
                   <button
                     onClick={() => { setOpen(false); logout() }}

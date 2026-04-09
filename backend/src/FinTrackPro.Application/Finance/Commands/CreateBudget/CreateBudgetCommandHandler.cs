@@ -12,12 +12,16 @@ public class CreateBudgetCommandHandler(
     ICurrentUser currentUser,
     IUserRepository userRepository,
     IBudgetRepository budgetRepository,
+    ISubscriptionLimitService subscriptionLimitService,
     IExchangeRateService exchangeRateService) : IRequestHandler<CreateBudgetCommand, Guid>
 {
     public async Task<Guid> Handle(CreateBudgetCommand request, CancellationToken cancellationToken)
     {
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
             ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
+
+        await subscriptionLimitService.EnforceBudgetLimitAsync(
+            user, budgetRepository, request.Month, cancellationToken);
 
         if (await budgetRepository.ExistsAsync(user.Id, request.Category, request.Month, cancellationToken))
             throw new ConflictException($"A budget for category '{request.Category}' in {request.Month} already exists.");

@@ -8,6 +8,7 @@ import { useLocaleStore } from '@/features/locale'
 import { useExchangeRates } from '@/entities/exchange-rate'
 import { convertAmount } from '@/shared/lib/convertAmount'
 import { formatCurrency } from '@/shared/lib/formatCurrency'
+import { FreePlanAdBanner } from '@/shared/ui/FreePlanAdBanner'
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
@@ -29,7 +30,9 @@ export function DashboardPage() {
     ?.reduce((s, t) => s + convertAmount(t.result, t.rateToUsd, preferredRate, t.currency, currency), 0) ?? 0
 
   return (
-    <div className="mx-auto max-w-5xl p-4 md:p-6 space-y-6">
+    <>
+      <FreePlanAdBanner />
+      <div className="mx-auto max-w-5xl p-4 md:p-6 space-y-6">
       <h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
 
       {/* Finance summary */}
@@ -68,5 +71,6 @@ export function DashboardPage() {
         <SignalsList />
       </div>
     </div>
+    </>
   )
 }

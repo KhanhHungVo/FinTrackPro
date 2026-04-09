@@ -15,6 +15,7 @@ public class CreateBudgetHandlerTests
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IBudgetRepository _budgetRepository = Substitute.For<IBudgetRepository>();
+    private readonly ISubscriptionLimitService _limitService = Substitute.For<ISubscriptionLimitService>();
     private readonly IExchangeRateService _exchangeRateService = Substitute.For<IExchangeRateService>();
     private readonly CreateBudgetCommandHandler _handler;
 
@@ -22,7 +23,7 @@ public class CreateBudgetHandlerTests
 
     public CreateBudgetHandlerTests()
     {
-        _handler = new CreateBudgetCommandHandler(_context, _currentUser, _userRepository, _budgetRepository, _exchangeRateService);
+        _handler = new CreateBudgetCommandHandler(_context, _currentUser, _userRepository, _budgetRepository, _limitService, _exchangeRateService);
         _currentUser.UserId.Returns(TestUser.Id);
         _exchangeRateService.GetRateToUsdAsync(Arg.Any<CancellationToken>())
             .Returns(new Dictionary<string, decimal> { ["EUR"] = 0.92m, ["GBP"] = 0.79m });
@@ -72,5 +73,19 @@ public class CreateBudgetHandlerTests
         var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "USD", "2026-03"), CancellationToken.None);
 
         await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task Handle_LimitExceeded_ThrowsPlanLimitExceededException()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _limitService
+            .EnforceBudgetLimitAsync(Arg.Any<AppUser>(), Arg.Any<IBudgetRepository>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new PlanLimitExceededException("budget", "Budget limit reached.")));
+
+        var act = async () => await _handler.Handle(new CreateBudgetCommand("Food", 500m, "USD", "2026-03"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>();
     }
 }

@@ -129,6 +129,10 @@ Roles (`User`, `Admin`) are stored only in the IAM provider — never in the dat
 | `Telegram__BotToken` | env var only |
 | `CoinGecko__ApiKey` | `appsettings.Development.json` / env — Demo or Pro API key; required for `/market/trending` endpoint |
 | `ExchangeRate__ApiKey` | `appsettings.Development.json` / env — ExchangeRate-API v6 key; required for fiat rate sync |
+| `PaymentGateway__Provider` | `appsettings.json` — `"stripe"` (default); swap to add future providers |
+| `PaymentGateway__PriceId` | `appsettings.json` / env — logical Pro plan price identifier (provider-neutral) |
+| `Stripe__SecretKey` | env var / `dotnet user-secrets` — Stripe API secret key |
+| `Stripe__WebhookSecret` | env var / `dotnet user-secrets` — Stripe webhook endpoint signing secret |
 | `VITE_AUTH_PROVIDER` | `frontend/fintrackpro-ui/.env` (`"keycloak"` or `"auth0"`) |
 | `VITE_API_BASE_URL` | `frontend/fintrackpro-ui/.env` |
 | `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` (Keycloak mode) |
@@ -141,6 +145,8 @@ Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string>" --project backend/src/FinTrackPro.API
 dotnet user-secrets set "IdentityProvider:AdminClientSecret" "<secret>" --project backend/src/FinTrackPro.API
 dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrackPro.API
+dotnet user-secrets set "Stripe:SecretKey" "<sk_test_...>" --project backend/src/FinTrackPro.API
+dotnet user-secrets set "Stripe:WebhookSecret" "<whsec_...>" --project backend/src/FinTrackPro.API
 ```
 
 ## Ports (local hybrid dev)
@@ -175,6 +181,7 @@ dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrac
 - `docs/decisions/transaction-category-system.md` — structured TransactionCategory entity (system-seeded defaults + user-custom, three-phase migration strategy)
 
 ### Planned (not yet implemented)
+- `docs/planned/monetisation-subscription-design.md` — Freemium subscription system with Stripe (fully implemented: backend + frontend)
 - `docs/planned/identity-linking-refactor.md` — multi-provider identity linking via UserContextMiddleware
 - `docs/planned/auth0-config-as-code.md` — Auth0 CLI deploy automation
 - `docs/planned/frontend-error-handling.md` — consistent error handling and form validation

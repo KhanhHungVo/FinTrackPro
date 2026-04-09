@@ -11,6 +11,7 @@ export type ApiErrorKind =
   | { type: 'forbidden' } // 403
   | { type: 'not_found' } // 404
   | { type: 'conflict'; message: string } // 409
+  | { type: 'plan_limit'; feature: string; title: string } // 402 subscription limit
   | { type: 'server_error' } // 5xx
   | { type: 'network' } // no response
   | { type: 'unknown'; message: string }
@@ -21,6 +22,12 @@ export function classifyApiError(error: unknown): ApiErrorKind {
 
   const { status, data } = error.response
   if (status === 400) return { type: 'validation', details: data as ProblemDetails }
+  if (status === 402) {
+    const feature =
+      (data as { extensions?: { feature?: string[] } })?.extensions?.feature?.[0] ?? 'unknown'
+    const title = (data as { title?: string })?.title ?? 'Plan limit reached.'
+    return { type: 'plan_limit', feature, title }
+  }
   if (status === 403) return { type: 'forbidden' }
   if (status === 404) return { type: 'not_found' }
   if (status === 409)

@@ -1,4 +1,5 @@
 using FinTrackPro.Domain.Common;
+using FinTrackPro.Domain.Enums;
 
 namespace FinTrackPro.Domain.Entities;
 
@@ -12,6 +13,12 @@ public class AppUser : AggregateRoot
     public string PreferredCurrency { get; private set; } = "USD";
     public DateTime CreatedAt { get; private set; }
     public bool IsActive { get; private set; } = true;
+
+    // Subscription
+    public SubscriptionPlan Plan { get; private set; } = SubscriptionPlan.Free;
+    public string? PaymentCustomerId { get; private set; }
+    public string? PaymentSubscriptionId { get; private set; }
+    public DateTime? SubscriptionExpiresAt { get; private set; }
 
     public IReadOnlyCollection<UserIdentity> Identities => _identities.AsReadOnly();
 
@@ -60,4 +67,22 @@ public class AppUser : AggregateRoot
     }
 
     public void Deactivate() => IsActive = false;
+
+    public void SetPaymentCustomerId(string customerId)
+        => PaymentCustomerId = customerId;
+
+    public void ActivateSubscription(string subscriptionId, DateTime expiresAt)
+    {
+        Plan                   = SubscriptionPlan.Pro;
+        PaymentSubscriptionId  = subscriptionId;
+        SubscriptionExpiresAt  = expiresAt;
+    }
+
+    public void CancelSubscription()
+    {
+        Plan                  = SubscriptionPlan.Free;
+        PaymentSubscriptionId = null;
+        SubscriptionExpiresAt = null;
+        // PaymentCustomerId is intentionally kept so re-subscription reuses the same customer record.
+    }
 }

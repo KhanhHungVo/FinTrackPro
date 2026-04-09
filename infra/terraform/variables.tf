@@ -58,6 +58,24 @@ variable "hangfire_dashboard_password" {
   description = "Password for the Hangfire dashboard Basic Auth (username: hangfire-admin)"
 }
 
+# ── Stripe ─────────────────────────────────────────────────────────────────────
+variable "stripe_secret_key" {
+  type        = string
+  sensitive   = true
+  description = "Stripe secret API key (sk_live_... or sk_test_...)"
+}
+
+variable "stripe_webhook_secret" {
+  type        = string
+  sensitive   = true
+  description = "Stripe webhook endpoint signing secret (whsec_...)"
+}
+
+variable "stripe_price_id" {
+  type        = string
+  description = "Stripe Price ID for the Pro plan (price_...)"
+}
+
 # ── Frontend build-time vars (VITE_*) ─────────────────────────────────────────
 variable "vite_api_base_url" {
   type        = string

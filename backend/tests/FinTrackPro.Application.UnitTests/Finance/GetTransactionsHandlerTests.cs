@@ -13,6 +13,7 @@ public class GetTransactionsHandlerTests
 {
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
+    private readonly ISubscriptionLimitService _limitService = Substitute.For<ISubscriptionLimitService>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly GetTransactionsQueryHandler _handler;
 
@@ -20,7 +21,7 @@ public class GetTransactionsHandlerTests
 
     public GetTransactionsHandlerTests()
     {
-        _handler = new GetTransactionsQueryHandler(_userRepository, _transactionRepository, _currentUser);
+        _handler = new GetTransactionsQueryHandler(_userRepository, _transactionRepository, _limitService, _currentUser);
         _currentUser.UserId.Returns(TestUser.Id);
     }
 
@@ -75,5 +76,19 @@ public class GetTransactionsHandlerTests
         var act = async () => await _handler.Handle(new GetTransactionsQuery(), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_HistoryLimitExceeded_ThrowsPlanLimitExceededException()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _limitService
+            .EnforceTransactionHistoryAccessAsync(Arg.Any<AppUser>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new PlanLimitExceededException("transaction_history", "History access denied.")));
+
+        var act = async () => await _handler.Handle(new GetTransactionsQuery("2025-01"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>();
     }
 }

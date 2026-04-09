@@ -12,6 +12,9 @@ public class TransactionRepository(ApplicationDbContext context) : ITransactionR
     public Task<Transaction?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.Transactions.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
+    public Task<int> CountByUserAndMonthAsync(Guid userId, string month, CancellationToken cancellationToken = default) =>
+        context.Transactions.CountAsync(t => t.UserId == userId && t.BudgetMonth == month, cancellationToken);
+
     public void Add(Transaction transaction) => context.Transactions.Add(transaction);
     public void Remove(Transaction transaction) => context.Transactions.Remove(transaction);
 }

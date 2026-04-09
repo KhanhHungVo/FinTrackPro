@@ -16,6 +16,8 @@ public class CreateTransactionHandlerTests
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly ITransactionCategoryRepository _categoryRepository = Substitute.For<ITransactionCategoryRepository>();
+    private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
+    private readonly ISubscriptionLimitService _limitService = Substitute.For<ISubscriptionLimitService>();
     private readonly IExchangeRateService _exchangeRateService = Substitute.For<IExchangeRateService>();
     private readonly CreateTransactionCommandHandler _handler;
 
@@ -26,7 +28,7 @@ public class CreateTransactionHandlerTests
     public CreateTransactionHandlerTests()
     {
         _handler = new CreateTransactionCommandHandler(
-            _context, _currentUser, _userRepository, _categoryRepository, _exchangeRateService);
+            _context, _currentUser, _userRepository, _categoryRepository, _transactionRepository, _limitService, _exchangeRateService);
 
         _currentUser.UserId.Returns(TestUser.Id);
         _exchangeRateService.GetRateToUsdAsync(Arg.Any<CancellationToken>())
@@ -98,5 +100,21 @@ public class CreateTransactionHandlerTests
         var act = async () => await _handler.Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<AuthorizationException>();
+    }
+
+    [Fact]
+    public async Task Handle_LimitExceeded_ThrowsPlanLimitExceededException()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _limitService
+            .EnforceMonthlyTransactionLimitAsync(Arg.Any<AppUser>(), Arg.Any<ITransactionRepository>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new PlanLimitExceededException("transaction", "Monthly transaction limit reached.")));
+
+        var act = async () => await _handler.Handle(
+            new CreateTransactionCommand(TransactionType.Expense, 100m, "USD", SystemCategory.Id, null, "2026-03"),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>();
     }
 }

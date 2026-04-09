@@ -14,6 +14,7 @@ public class SaveNotificationPreferenceHandlerTests
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly INotificationPreferenceRepository _preferenceRepository = Substitute.For<INotificationPreferenceRepository>();
+    private readonly ISubscriptionLimitService _limitService = Substitute.For<ISubscriptionLimitService>();
     private readonly SaveNotificationPreferenceCommandHandler _handler;
 
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
@@ -21,7 +22,7 @@ public class SaveNotificationPreferenceHandlerTests
     public SaveNotificationPreferenceHandlerTests()
     {
         _handler = new SaveNotificationPreferenceCommandHandler(
-            _context, _currentUser, _userRepository, _preferenceRepository);
+            _context, _currentUser, _userRepository, _preferenceRepository, _limitService);
         _currentUser.UserId.Returns(TestUser.Id);
         _context.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
     }
@@ -70,5 +71,34 @@ public class SaveNotificationPreferenceHandlerTests
             new SaveNotificationPreferenceCommand("123456789", true), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_IsEnabledTrue_LimitExceeded_ThrowsPlanLimitExceededException()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _limitService
+            .EnforceTelegramAsync(Arg.Any<AppUser>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new PlanLimitExceededException("telegram", "Telegram not available on Free plan.")));
+
+        var act = async () => await _handler.Handle(
+            new SaveNotificationPreferenceCommand("123456789", true), CancellationToken.None);
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>();
+    }
+
+    [Fact]
+    public async Task Handle_IsEnabledFalse_SkipsTelegramLimitCheck()
+    {
+        var existing = NotificationPreference.CreateTelegram(TestUser.Id, "111111111");
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _preferenceRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(existing);
+
+        await _handler.Handle(new SaveNotificationPreferenceCommand("111111111", false), CancellationToken.None);
+
+        await _limitService.DidNotReceive().EnforceTelegramAsync(Arg.Any<AppUser>(), Arg.Any<CancellationToken>());
     }
 }

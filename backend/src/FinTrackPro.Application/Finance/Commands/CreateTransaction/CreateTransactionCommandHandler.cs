@@ -12,12 +12,18 @@ public class CreateTransactionCommandHandler(
     ICurrentUser currentUser,
     IUserRepository userRepository,
     ITransactionCategoryRepository categoryRepository,
+    ITransactionRepository transactionRepository,
+    ISubscriptionLimitService subscriptionLimitService,
     IExchangeRateService exchangeRateService) : IRequestHandler<CreateTransactionCommand, Guid>
 {
     public async Task<Guid> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
             ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
+
+        if (!string.IsNullOrWhiteSpace(request.BudgetMonth))
+            await subscriptionLimitService.EnforceMonthlyTransactionLimitAsync(
+                user, transactionRepository, request.BudgetMonth, cancellationToken);
 
         var category = await categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken)
             ?? throw new NotFoundException(nameof(TransactionCategory), request.CategoryId);

@@ -14,6 +14,7 @@ public class AddWatchedSymbolHandlerTests
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IWatchedSymbolRepository _watchedSymbolRepository = Substitute.For<IWatchedSymbolRepository>();
+    private readonly ISubscriptionLimitService _limitService = Substitute.For<ISubscriptionLimitService>();
     private readonly AddWatchedSymbolCommandHandler _handler;
 
     private static readonly AppUser TestUser = AppUser.Create("test@dev.com", "Test");
@@ -21,7 +22,7 @@ public class AddWatchedSymbolHandlerTests
     public AddWatchedSymbolHandlerTests()
     {
         _handler = new AddWatchedSymbolCommandHandler(
-            _context, _currentUser, _userRepository, _watchedSymbolRepository);
+            _context, _currentUser, _userRepository, _watchedSymbolRepository, _limitService);
         _currentUser.UserId.Returns(TestUser.Id);
         _context.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
     }
@@ -66,5 +67,19 @@ public class AddWatchedSymbolHandlerTests
             new AddWatchedSymbolCommand("BTCUSDT"), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_LimitExceeded_ThrowsPlanLimitExceededException()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _limitService
+            .EnforceWatchlistLimitAsync(Arg.Any<AppUser>(), Arg.Any<IWatchedSymbolRepository>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new PlanLimitExceededException("watchlist", "Watchlist limit reached.")));
+
+        var act = async () => await _handler.Handle(new AddWatchedSymbolCommand("BTCUSDT"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>();
     }
 }

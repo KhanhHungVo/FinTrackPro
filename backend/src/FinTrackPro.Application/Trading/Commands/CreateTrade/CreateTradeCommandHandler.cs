@@ -11,12 +11,16 @@ public class CreateTradeCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IUserRepository userRepository,
+    ITradeRepository tradeRepository,
+    ISubscriptionLimitService subscriptionLimitService,
     IExchangeRateService exchangeRateService) : IRequestHandler<CreateTradeCommand, Guid>
 {
     public async Task<Guid> Handle(CreateTradeCommand request, CancellationToken cancellationToken)
     {
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
             ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
+
+        await subscriptionLimitService.EnforceTradeLimitAsync(user, tradeRepository, cancellationToken);
 
         var rateToUsd = await exchangeRateService.GetRateForCurrencyAsync(request.Currency, cancellationToken);
 

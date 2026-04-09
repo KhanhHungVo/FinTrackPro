@@ -1,4 +1,5 @@
 using FinTrackPro.Application.Common.Interfaces;
+using FinTrackPro.Application.Common.Options;
 using FinTrackPro.Domain.Repositories;
 using FinTrackPro.Infrastructure.Auth;
 using FinTrackPro.Infrastructure.Persistence.Seeders;
@@ -9,6 +10,7 @@ using FinTrackPro.Infrastructure.Identity;
 using FinTrackPro.Infrastructure.Persistence;
 using FinTrackPro.Infrastructure.Persistence.Repositories;
 using FinTrackPro.Infrastructure.Services;
+using FinTrackPro.Infrastructure.Stripe;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Hangfire.SqlServer;
@@ -37,6 +39,7 @@ public static class DependencyInjection
         var cg        = configuration.GetSection(CoinGeckoOptions.SectionName).Get<CoinGeckoOptions>() ?? new();
         var iam       = configuration.GetSection(IdentityProviderOptions.SectionName).Get<IdentityProviderOptions>() ?? new();
         var er        = configuration.GetSection(ExchangeRateOptions.SectionName).Get<ExchangeRateOptions>() ?? new();
+        var pg        = configuration.GetSection(PaymentGatewayOptions.SectionName).Get<PaymentGatewayOptions>() ?? new();
         var botToken  = configuration["Telegram:BotToken"];
 
         AddDatabase(services, db);
@@ -45,6 +48,7 @@ public static class DependencyInjection
         services.AddMemoryCache();
         AddExternalHttpClients(services, configuration, binance, fearGreed, cg, er, ro);
         AddTelegramBot(services, botToken);
+        AddPaymentGateway(services, configuration, pg);
         services.AddScoped<INotificationService, NotificationService>();
         AddHangfireStorage(services, db);
         AddHealthMonitoring(services, db);
@@ -274,6 +278,24 @@ public static class DependencyInjection
         o.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(ro.CircuitBreakerBreakDurationSeconds);
         o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(ro.CircuitBreakerSamplingDurationSeconds);
         o.CircuitBreaker.MinimumThroughput = ro.CircuitBreakerMinimumThroughput;
+    }
+
+    private static void AddPaymentGateway(
+        IServiceCollection services,
+        IConfiguration configuration,
+        PaymentGatewayOptions pg)
+    {
+        services.Configure<PaymentGatewayOptions>(configuration.GetSection(PaymentGatewayOptions.SectionName));
+        services.Configure<SubscriptionPlanOptions>(configuration.GetSection(SubscriptionPlanOptions.SectionName));
+        services.AddScoped<ISubscriptionLimitService, SubscriptionLimitService>();
+
+        if (pg.Provider.Equals("stripe", StringComparison.OrdinalIgnoreCase))
+        {
+            services.Configure<StripeOptions>(configuration.GetSection(StripeOptions.SectionName));
+            services.AddScoped<IPaymentGatewayService, StripePaymentGatewayService>();
+            services.AddScoped<IPaymentWebhookHandler, StripeWebhookHandler>();
+        }
+        // Future: else if (pg.Provider.Equals("paddle", StringComparison.OrdinalIgnoreCase)) { ... }
     }
 
     private sealed record DatabaseConfiguration(bool IsPostgres, string ConnectionString)

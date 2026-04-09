@@ -10,12 +10,16 @@ public class AddWatchedSymbolCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IUserRepository userRepository,
-    IWatchedSymbolRepository watchedSymbolRepository) : IRequestHandler<AddWatchedSymbolCommand, Guid>
+    IWatchedSymbolRepository watchedSymbolRepository,
+    ISubscriptionLimitService subscriptionLimitService) : IRequestHandler<AddWatchedSymbolCommand, Guid>
 {
     public async Task<Guid> Handle(AddWatchedSymbolCommand request, CancellationToken cancellationToken)
     {
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
             ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
+
+        await subscriptionLimitService.EnforceWatchlistLimitAsync(
+            user, watchedSymbolRepository, cancellationToken);
 
         var exists = await watchedSymbolRepository.ExistsAsync(user.Id, request.Symbol, cancellationToken);
         if (exists)

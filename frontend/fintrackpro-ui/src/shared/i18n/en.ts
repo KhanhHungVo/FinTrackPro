@@ -75,6 +75,7 @@ const en = {
   },
   settings: {
     title: 'Settings',
+    subscription: 'Subscription',
     notifications: 'Notifications',
     watchlist: 'Signal Watchlist',
     preferences: 'Preferences',

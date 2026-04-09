@@ -75,6 +75,7 @@ const vi = {
   },
   settings: {
     title: 'Cài đặt',
+    subscription: 'Gói dịch vụ',
     notifications: 'Thông báo',
     watchlist: 'Danh sách theo dõi',
     preferences: 'Tuỳ chọn',

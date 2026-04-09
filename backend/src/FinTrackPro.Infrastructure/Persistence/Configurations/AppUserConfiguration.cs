@@ -1,4 +1,5 @@
 using FinTrackPro.Domain.Entities;
+using FinTrackPro.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -15,5 +16,11 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.Property(u => u.PreferredCurrency).HasMaxLength(3).IsRequired().HasDefaultValue("USD");
         builder.Property(u => u.IsActive).IsRequired().HasDefaultValue(true);
         builder.HasIndex(u => u.Email);
+
+        // Subscription
+        builder.Property(u => u.Plan).IsRequired().HasDefaultValue(SubscriptionPlan.Free);
+        builder.Property(u => u.PaymentCustomerId).HasMaxLength(100);
+        builder.Property(u => u.PaymentSubscriptionId).HasMaxLength(100);
+        builder.HasIndex(u => u.PaymentCustomerId).HasDatabaseName("IX_AppUsers_PaymentCustomerId");
     }
 }

@@ -2,6 +2,7 @@ import axios from 'axios'
 import { env } from '@/shared/config/env'
 import { authAdapter } from '@/shared/lib/auth'
 import { useAuthStore } from '@/features/auth'
+import { usePlanLimitStore } from '@/features/upgrade'
 
 export const apiClient = axios.create({
   baseURL: env.API_BASE_URL,
@@ -22,11 +23,18 @@ apiClient.interceptors.request.use(async (config) => {
   return config
 })
 
+// On 402: open the plan-limit upgrade modal with the feature name from the response.
 // On 401: attempt a silent token refresh and retry once; otherwise force re-login.
 // The _retried flag prevents the retried request from triggering another retry loop.
 apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
+    if (error.response?.status === 402) {
+      const data = error.response.data
+      const feature = data?.extensions?.feature?.[0] ?? 'unknown'
+      const title = data?.title ?? 'Plan limit reached.'
+      usePlanLimitStore.getState().setLimit(feature, title)
+    }
     if (error.response?.status === 401 && !error.config._retried) {
       // In E2E bypass mode the Keycloak SDK is never initialized —
       // refreshToken() would throw, and logout() would destroy the injected token.

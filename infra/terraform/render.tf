@@ -61,6 +61,11 @@ resource "render_web_service" "api" {
     ExchangeRate__ApiKey                = { value = var.exchangerate_api_key }
     Telegram__BotToken                  = { value = var.telegram_bot_token }
     Hangfire__Password                  = { value = var.hangfire_dashboard_password }
+
+    PaymentGateway__Provider   = { value = "stripe" }
+    PaymentGateway__PriceId    = { value = var.stripe_price_id }
+    Stripe__SecretKey          = { value = var.stripe_secret_key }
+    Stripe__WebhookSecret      = { value = var.stripe_webhook_secret }
   }
 }
 

@@ -10,12 +10,16 @@ public class SaveNotificationPreferenceCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IUserRepository userRepository,
-    INotificationPreferenceRepository preferenceRepository) : IRequestHandler<SaveNotificationPreferenceCommand>
+    INotificationPreferenceRepository preferenceRepository,
+    ISubscriptionLimitService subscriptionLimitService) : IRequestHandler<SaveNotificationPreferenceCommand>
 {
     public async Task Handle(SaveNotificationPreferenceCommand request, CancellationToken cancellationToken)
     {
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
             ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
+
+        if (request.IsEnabled)
+            await subscriptionLimitService.EnforceTelegramAsync(user, cancellationToken);
 
         var existing = await preferenceRepository.GetByUserAsync(user.Id, cancellationToken);
         if (existing is null)

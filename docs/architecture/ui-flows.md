@@ -384,6 +384,61 @@ None — Dashboard is read-only.
 
 ---
 
+---
+
+## Subscription UI Flows
+
+### PlanBadge (Navbar — user dropdown)
+
+- Free users: gray pill `Free ▸` — clicking navigates to `/pricing`
+- Pro users: blue pill `Pro` (display-only)
+- Rendered inside the user avatar dropdown in the Navbar
+
+### FreePlanAdBanner (Dashboard — Free users only)
+
+- Full-width gradient banner shown at the top of the Dashboard page body
+- Hidden for Pro users (returns `null` when `plan === 'Pro'`)
+- "Upgrade to Pro →" button navigates to `/pricing`
+
+### Upgrade Flow (triggered by any 402 response)
+
+```
+User action hits plan limit
+  → API returns 402 with { extensions.feature, title }
+  → 402 interceptor in shared/api/client.ts calls planLimitStore.setLimit(feature, title)
+  → PlanLimitModal opens (mounted globally in App.tsx)
+  → User clicks "Upgrade to Pro"
+  → POST /api/subscription/checkout → { sessionUrl }
+  → window.location.href = sessionUrl  (Stripe Checkout)
+  → Stripe redirects back to /settings?subscribed=1
+  → SubscriptionSection detects query param → toast "You're now on Pro!"
+```
+
+### Pricing Page (`/pricing`)
+
+- Two cards: Free (highlighted when current plan) and Pro (highlighted when current plan)
+- Free card has a disabled "Current plan" button
+- Pro card: "Upgrade to Pro" button for Free users; "Manage subscription" (→ Stripe portal) for Pro users
+- Accessed via `FreePlanAdBanner`, `PlanBadge` click, or direct URL
+
+### Manage Subscription Flow (Pro users)
+
+```
+Settings → Subscription section → "Manage subscription"
+  → POST /api/subscription/portal → { portalUrl }
+  → window.location.href = portalUrl  (Stripe Customer Portal)
+  → User manages billing, cancels, or updates payment method
+  → Stripe redirects back to /settings
+```
+
+### Telegram Notifications Paywall (Free users)
+
+- `NotificationSettingsForm` renders with `opacity-50 pointer-events-none` overlay when plan is Free
+- A centered overlay shows "Telegram notifications are a Pro feature." + `UpgradeButton`
+- Pro users see the normal form with no overlay
+
+---
+
 ## Component States — Summary Reference
 
 | Component | Loading | Empty | Error |

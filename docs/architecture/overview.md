@@ -57,9 +57,15 @@ graph TD
 - Zero external dependencies
 
 ### Application (`FinTrackPro.Application`)
-- CQRS commands and queries via MediatR
+- CQRS commands and queries via MediatR — feature groups: `Finance/`, `Trading/`, `Notifications/`, `Subscription/`
 - FluentValidation validators
-- Service interfaces (`ICurrentUser`, `IIdentityService`, `INotificationService`, `IBinanceService`, `IExchangeRateService`, etc.)
+- Service interfaces:
+  - `ICurrentUser` — resolved user identity (`UserId`, `IsAdmin`)
+  - `IIdentityService`, `INotificationService`, `IBinanceService`, `IExchangeRateService`, etc.
+  - `ISubscriptionLimitService` — enforces per-plan feature limits; throws `PlanLimitExceededException` (→ HTTP 402)
+  - `IPaymentGatewayService` — provider-neutral checkout / portal / customer creation
+  - `IPaymentWebhookHandler` — provider-neutral webhook processing; accepts raw payload + headers dict
+- Strongly-typed options: `SubscriptionPlanOptions` (limits per tier), `PaymentGatewayOptions` (provider + price ID)
 - DTOs (explicit `operator` conversions, no AutoMapper)
 - Pipeline behaviors: `ValidationBehavior` → `LoggingBehavior`
 
@@ -76,6 +82,10 @@ graph TD
   - `Auth0ClaimsTransformer` — reads `https://fintrackpro.dev/roles` custom claim (set by Auth0 post-login Action)
   - `KeycloakAdminService` (`IIamProviderService`) — calls Keycloak Admin REST API via client-credentials
   - `Auth0ManagementService` (`IIamProviderService`) — calls Auth0 Management API v2 via client-credentials
+- **Payment gateway abstraction** — selected at startup via `PaymentGateway:Provider` config key (same pattern as IAM):
+  - `StripePaymentGatewayService` (`IPaymentGatewayService`) — Stripe.net v51 wrapper for customer, checkout, portal
+  - `StripeWebhookHandler` (`IPaymentWebhookHandler`) — Stripe-specific signature verification + event dispatch; all Stripe header names isolated here
+  - `SubscriptionLimitService` (`ISubscriptionLimitService`) — admin bypass + `-1` sentinel; reads `SubscriptionPlanOptions` from config
 - `IMemoryCache` for external API responses
 - **Cancellation semantics** — all infrastructure services let `OperationCanceledException` propagate
   (via `catch (Exception ex) when (ex is not OperationCanceledException)`). This ensures Hangfire
@@ -108,12 +118,12 @@ app → pages → widgets → features → entities → shared
 
 | Layer | Contents |
 |---|---|
-| `app/` | QueryProvider, AuthProvider, LocaleProvider, BrowserRouter + Outlet layout, global CSS, i18n initialization |
-| `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage — all translated via `useTranslation()`, amounts converted via `convertAmount()` + `formatCurrency()` |
-| `widgets/` | Navbar (translated links + LocaleSettingsDropdown), FearGreedWidget, SignalsList, TrendingCoinsWidget |
-| `features/` | AddTransactionForm, AddTradeForm, EditTradeModal, AddBudgetForm (all include currency selector), NotificationSettingsForm, WatchlistManager, authStore (Zustand), localeStore (Zustand + persist — `language`, `currency`) |
-| `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference, exchange-rate, user-preferences — types + React Query hooks |
-| `shared/` | Axios client (Bearer injection + redirect on 401), `auth/` adapter (Keycloak or Auth0), env config, `cn()`, `formatCurrency()`, `convertAmount()`, i18n resources (en/vi) |
+| `app/` | QueryProvider, AuthProvider, LocaleProvider, BrowserRouter + Outlet layout, global CSS, i18n initialization; mounts `<PlanLimitModal />` globally |
+| `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage, PricingPage — all translated via `useTranslation()`, amounts converted via `convertAmount()` + `formatCurrency()` |
+| `widgets/` | Navbar (translated links + LocaleSettingsDropdown + PlanBadge in user dropdown), FearGreedWidget, SignalsList, TrendingCoinsWidget |
+| `features/` | AddTransactionForm, AddTradeForm, EditTradeModal, AddBudgetForm (all include currency selector), NotificationSettingsForm (disabled overlay for Free users), WatchlistManager, authStore (Zustand), localeStore (Zustand + persist — `language`, `currency`), `upgrade/` (planLimitStore, PlanLimitModal, UpgradeButton, SubscriptionSection), `plan-badge/` (PlanBadge pill) |
+| `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference, exchange-rate, user-preferences, subscription — types + React Query hooks |
+| `shared/` | Axios client (Bearer injection + 402 interceptor → planLimitStore + redirect on 401), `auth/` adapter (Keycloak or Auth0), env config, `cn()`, `formatCurrency()`, `convertAmount()`, `FreePlanAdBanner`, i18n resources (en/vi) |
 
 ### Responsive Design
 

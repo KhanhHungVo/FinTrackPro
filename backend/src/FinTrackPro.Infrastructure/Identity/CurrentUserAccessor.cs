@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Common.Models;
+using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Http;
 
 namespace FinTrackPro.Infrastructure.Identity;
@@ -15,4 +17,7 @@ public class CurrentUserAccessor(IHttpContextAccessor httpContextAccessor) : ICu
             ? u.UserId
             : throw new InvalidOperationException(
                 "Current user is not available. Ensure UserContextMiddleware ran before the handler.");
+
+    public bool IsAdmin =>
+        httpContextAccessor.HttpContext?.User.IsInRole(UserRole.Admin) ?? false;
 }

@@ -15,6 +15,8 @@ public class CreateTradeHandlerTests
     private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly ITradeRepository _tradeRepository = Substitute.For<ITradeRepository>();
+    private readonly ISubscriptionLimitService _limitService = Substitute.For<ISubscriptionLimitService>();
     private readonly IExchangeRateService _exchangeRateService = Substitute.For<IExchangeRateService>();
     private readonly CreateTradeCommandHandler _handler;
 
@@ -22,7 +24,7 @@ public class CreateTradeHandlerTests
 
     public CreateTradeHandlerTests()
     {
-        _handler = new CreateTradeCommandHandler(_context, _currentUser, _userRepository, _exchangeRateService);
+        _handler = new CreateTradeCommandHandler(_context, _currentUser, _userRepository, _tradeRepository, _limitService, _exchangeRateService);
         _currentUser.UserId.Returns(TestUser.Id);
         _exchangeRateService.GetRateToUsdAsync(Arg.Any<CancellationToken>())
             .Returns(new Dictionary<string, decimal> { ["EUR"] = 0.92m, ["GBP"] = 0.79m });
@@ -74,5 +76,22 @@ public class CreateTradeHandlerTests
             CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_LimitExceeded_ThrowsPlanLimitExceededException()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _limitService
+            .EnforceTradeLimitAsync(Arg.Any<AppUser>(), Arg.Any<ITradeRepository>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new PlanLimitExceededException("trade", "Trade limit reached.")));
+
+        var act = async () => await _handler.Handle(
+            new CreateTradeCommand("BTCUSDT", TradeDirection.Long, TradeStatus.Closed,
+                30000m, 35000m, null, 0.1m, 5m, "USD", null),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>();
     }
 }

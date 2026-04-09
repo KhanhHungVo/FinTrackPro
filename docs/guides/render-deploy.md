@@ -47,8 +47,12 @@ In workspace → **Variables** tab, add each as a **Terraform variable**.
 | `auth0_m2m_client_secret` | Auth0 M2M app client secret | Yes |
 | `cors_origins` | `https://fintrackpro-ui.onrender.com` (update after first deploy) | No |
 | `coingecko_api_key` | CoinGecko Demo or Pro API key | Yes |
+| `exchangerate_api_key` | ExchangeRate-API v6 key | Yes |
 | `telegram_bot_token` | Telegram bot token — leave `""` if unused | Yes |
 | `hangfire_dashboard_password` | Strong password for Hangfire Basic Auth | Yes |
+| `stripe_secret_key` | Stripe secret API key (`sk_live_...` or `sk_test_...`) | Yes |
+| `stripe_webhook_secret` | Stripe webhook endpoint signing secret (`whsec_...`) | Yes |
+| `stripe_price_id` | Stripe Price ID for the Pro plan (`price_...`) | No |
 | `vite_api_base_url` | `https://fintrackpro-api.onrender.com` (update after first deploy) | No |
 | `vite_auth0_domain` | Same as `auth0_domain` | No |
 | `vite_auth0_client_id` | Auth0 SPA app client ID | No |

@@ -17,6 +17,9 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
                 u => u.Email == email.Trim().ToLowerInvariant(),
                 cancellationToken);
 
+    public Task<AppUser?> GetByPaymentCustomerIdAsync(string customerId, CancellationToken cancellationToken = default) =>
+        context.Users.FirstOrDefaultAsync(u => u.PaymentCustomerId == customerId, cancellationToken);
+
     public Task<List<AppUser>> GetAllAsync(CancellationToken cancellationToken = default) =>
         context.Users.ToListAsync(cancellationToken);
 

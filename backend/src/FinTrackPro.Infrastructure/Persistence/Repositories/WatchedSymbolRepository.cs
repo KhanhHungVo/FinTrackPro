@@ -19,6 +19,9 @@ public class WatchedSymbolRepository(ApplicationDbContext context) : IWatchedSym
         context.WatchedSymbols.AnyAsync(
             w => w.UserId == userId && w.Symbol == symbol.ToUpperInvariant(), cancellationToken);
 
+    public Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        context.WatchedSymbols.CountAsync(w => w.UserId == userId, cancellationToken);
+
     public void Add(WatchedSymbol watchedSymbol) => context.WatchedSymbols.Add(watchedSymbol);
     public void Remove(WatchedSymbol watchedSymbol) => context.WatchedSymbols.Remove(watchedSymbol);
 }

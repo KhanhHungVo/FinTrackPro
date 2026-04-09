@@ -12,6 +12,9 @@ public class TradeRepository(ApplicationDbContext context) : ITradeRepository
     public Task<Trade?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.Trades.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
+    public Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        context.Trades.CountAsync(t => t.UserId == userId, cancellationToken);
+
     public void Add(Trade trade) => context.Trades.Add(trade);
     public void Remove(Trade trade) => context.Trades.Remove(trade);
 }

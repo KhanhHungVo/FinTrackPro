@@ -20,6 +20,14 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | IsActive | boolean | NOT NULL, DEFAULT true |
 | PreferredLanguage | character varying(10) | NOT NULL, DEFAULT 'en' |
 | PreferredCurrency | character varying(3) | NOT NULL, DEFAULT 'USD' |
+| Plan | integer | NOT NULL, DEFAULT 0 (0=Free, 1=Pro) |
+| PaymentCustomerId | character varying(100) | nullable, INDEX (`IX_AppUsers_PaymentCustomerId`) |
+| PaymentSubscriptionId | character varying(100) | nullable |
+| SubscriptionExpiresAt | timestamp | nullable |
+
+> **Subscription fields** — added by migration `AddSubscriptionFieldsToAppUser`. All existing users default to `Plan = Free (0)`. `PaymentCustomerId` is indexed for fast webhook lookup. `PaymentCustomerId` is retained on `CancelSubscription()` so re-subscription reuses the same customer record.
+>
+> Plan state is the single source of truth for access control. Payment gateway webhooks are the only path that changes `Plan` — never a direct API call.
 
 ---
 

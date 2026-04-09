@@ -52,6 +52,11 @@ public class ExceptionHandlingMiddleware(
                 "Validation failed",
                 LogLevel.Warning,
                 ve.Errors),
+            PlanLimitExceededException => (
+                (HttpStatusCode)402,
+                exception.Message,
+                LogLevel.Information,
+                (IDictionary<string, string[]>)new Dictionary<string, string[]>()),
             AuthorizationException ae => (
                 HttpStatusCode.Forbidden,
                 ae.Message,
@@ -102,6 +107,10 @@ public class ExceptionHandlingMiddleware(
 
         if (errors.Count > 0)
             problem.Extensions["errors"] = errors;
+
+        // 402 — expose the feature identifier so the frontend can open a targeted upgrade modal.
+        if (exception is PlanLimitExceededException planEx)
+            problem.Extensions["feature"] = new[] { planEx.Feature };
 
         if (env.IsDevelopment() && statusCode == HttpStatusCode.InternalServerError)
             problem.Detail = exception.ToString();
