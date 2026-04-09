@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { env } from '@/shared/config/env'
 
-export function BankTransferDetails() {
+interface BankTransferDetailsProps {
+  showTransferNote?: boolean
+}
+
+export function BankTransferDetails({ showTransferNote = false }: BankTransferDetailsProps) {
   const { t } = useTranslation()
 
   return (
@@ -42,10 +46,12 @@ export function BankTransferDetails() {
             {t('pricing.perMonth')}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="font-medium">{t('bankTransfer.noteLabel')}</span>
-          <span className="italic">{t('bankTransfer.noteHint')}</span>
-        </div>
+        {showTransferNote && (
+          <div className="flex justify-between">
+            <span className="font-medium">{t('bankTransfer.noteLabel')}</span>
+            <span className="italic">{t('bankTransfer.noteHint')}</span>
+          </div>
+        )}
       </div>
     </>
   )

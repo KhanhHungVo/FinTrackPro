@@ -61,7 +61,7 @@ export function BankTransferModal() {
           )}
         </div>
 
-        <BankTransferDetails />
+        <BankTransferDetails showTransferNote />
 
         <button
           onClick={closeModal}
