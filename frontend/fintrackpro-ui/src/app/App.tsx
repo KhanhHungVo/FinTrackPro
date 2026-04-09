@@ -9,7 +9,7 @@ import { BudgetsPage } from '@/pages/budgets'
 import { TradesPage } from '@/pages/trades'
 import { SettingsPage } from '@/pages/settings'
 import { PricingPage } from '@/pages/pricing'
-import { PlanLimitModal } from '@/features/upgrade'
+import { PlanLimitModal, BankTransferModal } from '@/features/upgrade'
 import { NotFoundPage } from '@/shared/ui/NotFoundPage'
 import './styles/globals.css'
 
@@ -33,6 +33,7 @@ export function App() {
             <Toaster position="top-right" richColors />
             <BrowserRouter>
               <PlanLimitModal />
+              <BankTransferModal />
               <Routes>
                 <Route element={<AppLayout />}>
                   <Route index element={<Navigate to="/dashboard" replace />} />

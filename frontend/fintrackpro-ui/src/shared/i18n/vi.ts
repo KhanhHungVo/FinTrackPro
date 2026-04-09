@@ -92,6 +92,24 @@ const vi = {
     selectCategory: 'Chọn danh mục',
     loading: 'Đang tải danh mục…',
   },
+  bankTransfer: {
+    orPayViaTransfer: 'hoặc thanh toán qua chuyển khoản →',
+    contactNotice: 'Vui lòng liên hệ admin trước khi chuyển khoản để xác nhận nâng cấp gói.',
+    telegramButton: 'Telegram',
+    emailButton: 'Email admin',
+    bankLabel: 'Ngân hàng',
+    accountLabel: 'Số tài khoản',
+    holderLabel: 'Chủ tài khoản',
+    amountLabel: 'Số tiền',
+    noteLabel: 'Nội dung chuyển khoản',
+    noteHint: 'email đăng ký của bạn',
+  },
+  stripeUnavailable: {
+    title: 'Thanh toán thẻ tạm thời không khả dụng',
+    message: 'Bạn có thể nâng cấp qua chuyển khoản ngân hàng.',
+    viewQr: 'Xem mã QR chuyển khoản',
+    maybeLater: 'Để sau',
+  },
 } as const
 
 export default vi

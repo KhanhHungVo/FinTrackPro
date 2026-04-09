@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { useSubscriptionStatus, useCreatePortalSession } from '@/entities/subscription'
-import { UpgradeButton } from '@/features/upgrade'
+import { UpgradeButton, useBankTransferStore } from '@/features/upgrade'
 
 const FREE_FEATURES = [
   '50 transactions / month',
@@ -30,6 +30,7 @@ export function PricingPage() {
   const { mutate: createPortal, isPending: portalPending } = useCreatePortalSession()
   const navigate = useNavigate()
   const isPro = status?.plan === 'Pro'
+  const openBankTransfer = useBankTransferStore((s) => s.openModal)
 
   function handleManage() {
     createPortal(
@@ -111,7 +112,15 @@ export function PricingPage() {
               {portalPending ? 'Loading…' : 'Manage subscription'}
             </button>
           ) : (
-            <UpgradeButton className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50" />
+            <div className="flex flex-col items-center gap-2">
+              <UpgradeButton className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50" />
+              <button
+                onClick={openBankTransfer}
+                className="text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                or pay via bank transfer →
+              </button>
+            </div>
           )}
         </div>
       </div>

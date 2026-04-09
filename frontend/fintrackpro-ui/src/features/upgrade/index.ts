@@ -1,4 +1,6 @@
 export { usePlanLimitStore } from './model/planLimitStore'
+export { useBankTransferStore } from './model/bankTransferStore'
 export { PlanLimitModal } from './ui/PlanLimitModal'
+export { BankTransferModal } from './ui/BankTransferModal'
 export { SubscriptionSection } from './ui/SubscriptionSection'
 export { UpgradeButton } from './ui/UpgradeButton'

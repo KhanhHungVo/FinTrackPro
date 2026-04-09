@@ -92,6 +92,24 @@ const en = {
     selectCategory: 'Select a category',
     loading: 'Loading categories…',
   },
+  bankTransfer: {
+    orPayViaTransfer: 'or pay via bank transfer →',
+    contactNotice: 'Please contact admin before transferring to confirm your plan upgrade.',
+    telegramButton: 'Telegram',
+    emailButton: 'Email admin',
+    bankLabel: 'Bank',
+    accountLabel: 'Account',
+    holderLabel: 'Holder',
+    amountLabel: 'Amount',
+    noteLabel: 'Transfer note',
+    noteHint: 'your registered email',
+  },
+  stripeUnavailable: {
+    title: 'Card payment temporarily unavailable',
+    message: 'You can upgrade via bank transfer instead.',
+    viewQr: 'View Bank Transfer QR',
+    maybeLater: 'Maybe later',
+  },
 } as const
 
 export default en

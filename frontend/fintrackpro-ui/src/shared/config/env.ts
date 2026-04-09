@@ -10,4 +10,13 @@ export const env = {
   AUTH0_DOMAIN: import.meta.env.VITE_AUTH0_DOMAIN ?? '',
   AUTH0_CLIENT_ID: import.meta.env.VITE_AUTH0_CLIENT_ID ?? '',
   AUTH0_AUDIENCE: import.meta.env.VITE_AUTH0_AUDIENCE ?? '',
+  // Admin contact (bank transfer payment flow)
+  ADMIN_TELEGRAM: import.meta.env.VITE_ADMIN_TELEGRAM ?? '',
+  ADMIN_EMAIL: import.meta.env.VITE_ADMIN_EMAIL ?? '',
+  // Bank transfer details
+  BANK_NAME: import.meta.env.VITE_BANK_NAME ?? '',
+  BANK_ACCOUNT_NUMBER: import.meta.env.VITE_BANK_ACCOUNT_NUMBER ?? '',
+  BANK_ACCOUNT_NAME: import.meta.env.VITE_BANK_ACCOUNT_NAME ?? '',
+  BANK_TRANSFER_AMOUNT: import.meta.env.VITE_BANK_TRANSFER_AMOUNT ?? '99000',
+  BANK_QR_URL: import.meta.env.VITE_BANK_QR_URL ?? '',
 } as const
