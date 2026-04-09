@@ -10,7 +10,7 @@ export function BankTransferModal() {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/50" onClick={closeModal} />
-      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-white p-6 shadow-xl">
+      <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-white p-5 shadow-xl max-h-[90dvh] overflow-y-auto sm:p-6">
         <div className="flex items-start justify-between">
           <h2 className="text-base font-semibold text-gray-900">Pay via Bank Transfer</h2>
           <button
