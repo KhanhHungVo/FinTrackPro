@@ -2,75 +2,114 @@
 
 ## Context
 
-FinTrackPro currently has no revenue model — all features are available to every authenticated
-user at no cost. This document describes the design for a Freemium subscription system with
-two initial plans (Free and Pro), payment-gateway-agnostic billing, and config-driven feature
-limits that can be adjusted without code changes.
+FinTrackPro uses a two-tier Freemium model (Free / Pro). The payment gateway (Stripe by default) is selected via `PaymentGateway:Provider` and sits behind interfaces in the Application layer — the same provider-swap pattern as IAM providers. Plan state is stored in the DB on `AppUser`, orthogonal to IAM roles.
 
-The payment gateway (Stripe by default) is selected via a single config key
-(`PaymentGateway:Provider`) and sits entirely behind interfaces in the Application layer —
-the same pattern used for IAM providers (`IdentityProvider:Provider`). Swapping to a
-different billing provider (e.g. Paddle, LemonSqueezy) requires only a new Infrastructure
-implementation and a config change; no Application or Domain code changes.
-
-Key design constraints:
-- **Roles ≠ Plans** — `User` / `Admin` roles stay in the IAM provider (Keycloak/Auth0). Plan
-  (`Free` / `Pro`) is stored only in the DB on `AppUser`. The two are orthogonal.
-- **Admin bypass** — users with the `Admin` IAM role are exempt from all limits regardless
-  of their subscription plan.
-- **Config-driven limits** — every per-tier limit lives in `appsettings.json` under
-  `SubscriptionPlans`. Setting any value to `-1` means unlimited, enabling easy limit
-  relaxation during development or launch without code deploys.
-- **Extensible tiers** — adding a future `Premium` tier requires only extending the enum and
-  adding a config section; no schema migration is needed.
+Key constraints:
+- **Roles ≠ Plans** — `User`/`Admin` roles are IAM-only. `Plan` (`Free`/`Pro`) is DB-only.
+- **Admin bypass** — `Admin` IAM role exempts from all limits regardless of plan.
+- **Config-driven limits** — all per-tier limits live in `SubscriptionPlans` in `appsettings.json`; `-1` means unlimited.
+- **Extensible tiers** — adding a `Premium` tier requires only extending the enum and config; no schema migration.
 
 ---
 
-## 1. System Architecture Overview
+## 0. Prerequisites & Initial Setup
+
+### 0.1 Stripe Setup
+
+1. **Create a Stripe account** at [stripe.com](https://stripe.com) and complete identity verification.
+2. **Create a Product and Price**
+   - Dashboard → Products → Add product → name "FinTrackPro Pro"
+   - Add a recurring price (e.g. 9 USD / month)
+   - Copy the **Price ID** (looks like `price_1Abc...`)
+3. **Register a Webhook endpoint**
+   - Dashboard → Developers → Webhooks → Add endpoint
+   - URL: `https://<your-domain>/api/payment/webhook`
+   - Events to listen to: `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
+   - Copy the **Webhook Signing Secret** (looks like `whsec_...`)
+4. **Collect your keys** from Dashboard → Developers → API keys:
+   - **Secret key** (`sk_live_...` / `sk_test_...`)
+   - **Publishable key** (not needed by the backend — ignore for now)
+5. **Enable the Customer Portal** (optional but required for "Manage subscription")
+   - Dashboard → Settings → Billing → Customer portal → Activate
+
+#### Where to put the keys
+
+| Value | Where |
+|---|---|
+| `Stripe:SecretKey` | `dotnet user-secrets` (dev) or env var (prod) |
+| `Stripe:WebhookSecret` | `dotnet user-secrets` (dev) or env var (prod) |
+| `PaymentGateway:PriceId` | `appsettings.json` → `"PaymentGateway": { "PriceId": "price_1Abc..." }` |
+
+```bash
+# Local dev — run from repo root
+dotnet user-secrets set "Stripe:SecretKey"     "sk_test_..."  --project backend/src/FinTrackPro.API
+dotnet user-secrets set "Stripe:WebhookSecret" "whsec_..."    --project backend/src/FinTrackPro.API
+```
+
+> **Test mode tip:** use `sk_test_*` / `whsec_test_*` keys during development. Stripe's test card `4242 4242 4242 4242` triggers a successful checkout without real charges.
+
+---
+
+### 0.2 Bank Transfer Setup
+
+All bank transfer details are purely frontend — no backend changes required.
+
+#### 1. Prepare the QR image
+
+Generate a VietQR (or your bank's static transfer QR) and save it as:
 
 ```
-Domain:         SubscriptionPlan enum + AppUser subscription fields + PlanLimitExceededException
-Application:    ISubscriptionLimitService + SubscriptionPlanOptions + Subscription CQRS
-                IPaymentGatewayService + IPaymentWebhookHandler interfaces
-Infrastructure: SubscriptionLimitService + StripePaymentGatewayService + StripeWebhookHandler
-                CurrentUserService (IsAdmin)
-                Repository count methods (ITransactionRepository, IBudgetRepository,
-                ITradeRepository, IWatchedSymbolRepository)
+frontend/fintrackpro-ui/src/shared/assets/bank-qr.png
+```
+
+The file is already imported by `BankTransferModal.tsx` at that exact path. Replace the placeholder image with your real QR; the build will bundle it automatically.
+
+#### 2. Set the environment variables
+
+Copy `.env.example` → `.env` (if you haven't already) and fill in the bank transfer section:
+
+```dotenv
+# frontend/fintrackpro-ui/.env
+
+VITE_ADMIN_TELEGRAM=your_telegram_handle      # without the "@" — rendered as t.me/<handle>
+VITE_ADMIN_EMAIL=admin@yourapp.dev
+
+VITE_BANK_NAME=Techcombank
+VITE_BANK_ACCOUNT_NUMBER=1234567890
+VITE_BANK_ACCOUNT_NAME=Nguyen Van A
+VITE_BANK_TRANSFER_AMOUNT=99000               # monthly price in VND; shown as "99,000 VND / month"
+```
+
+`VITE_ADMIN_TELEGRAM` and `VITE_ADMIN_EMAIL` are optional — their contact buttons in `BankTransferModal` render only when the variable is set.
+
+#### 3. Verify in the UI
+
+1. Start the dev server: `npm run dev`
+2. Navigate to `/pricing` → click "or pay via bank transfer →"
+3. Confirm the modal shows your QR image, bank details, and contact buttons.
+
+---
+
+## 1. System Architecture
+
+```
+Domain:         SubscriptionPlan enum · AppUser subscription fields · PlanLimitExceededException
+Application:    ISubscriptionLimitService · SubscriptionPlanOptions · Subscription CQRS
+                IPaymentGatewayService · IPaymentWebhookHandler
+Infrastructure: SubscriptionLimitService · StripePaymentGatewayService · StripeWebhookHandler
+                CurrentUserService (IsAdmin) · Repository count methods
 API:            SubscriptionController (GET status, POST checkout, POST portal)
                 PaymentWebhookController (POST /api/payment/webhook — AllowAnonymous)
-                ExceptionHandlingMiddleware 402 mapping
-Frontend:       entities/subscription/ + features/plan-badge/ + features/upgrade/
-                pages/pricing/ + FreePlanAdBanner + paywall guards on forms
+                ExceptionHandlingMiddleware (402 mapping)
+Frontend:       entities/subscription/ · features/plan-badge/ · features/upgrade/
+                pages/pricing/ · FreePlanAdBanner · paywall guards on forms
 ```
 
-### Naming Convention
-
-Follows the existing codebase pattern at every layer:
-
-| Layer | Convention | Example |
-|---|---|---|
-| Domain enum | PascalCase | `SubscriptionPlan` |
-| Domain exception | `{Name}Exception` | `PlanLimitExceededException` |
-| App options class | `{Name}Options` | `SubscriptionPlanOptions` |
-| App interface | `I{Name}Service` | `ISubscriptionLimitService`, `IPaymentGatewayService` |
-| App folder | `Subscription/` | `Application/Subscription/` |
-| Command/Query | `{Action}{Noun}Command` | `CreateCheckoutSessionCommand` |
-| DTO | `{Noun}Dto` | `SubscriptionStatusDto` |
-| Controller | `{Noun}Controller` | `SubscriptionController` |
-| API route | kebab-case | `/api/subscription/status` |
-| Frontend entity | kebab-case | `entities/subscription/` |
-| React Query key | kebab-case | `['subscription-status']` |
-
-**Key invariants:**
-- Subscription state is always read from the DB — never from the JWT claim
-- All limit checks throw `PlanLimitExceededException` (→ HTTP 402) with a `feature` field
-  so the frontend can open a targeted upgrade modal
-- Payment gateway webhooks are the single source of truth for plan activation/deactivation
-- `AppUser.PaymentCustomerId` is retained on `CancelSubscription()` so users can re-subscribe
-  without the payment provider creating duplicate customer records
-- The active payment gateway is selected by `PaymentGateway:Provider` in config — mirrors
-  the `IdentityProvider:Provider` pattern; no Application or Domain code changes needed to
-  swap providers
+Key invariants:
+- Subscription state is always read from the DB — never from the JWT.
+- All limit checks throw `PlanLimitExceededException` (→ HTTP 402) with a `feature` field so the frontend can open a targeted upgrade modal.
+- Webhooks are the single source of truth for plan activation/deactivation.
+- `AppUser.PaymentCustomerId` is retained on cancellation to prevent duplicate customer records on re-subscription.
 
 ---
 
@@ -87,14 +126,11 @@ Follows the existing codebase pattern at every layer:
 | Telegram notifications | disabled | enabled |
 | Dashboard ads | shown | hidden |
 
-All values are configurable in `appsettings.json`. Set any numeric limit to `-1` for
-unlimited. Boolean `TelegramNotificationsEnabled` controls the Telegram paywall.
+All values are configurable in `appsettings.json`. Set any numeric limit to `-1` for unlimited.
 
 ---
 
 ## 3. Configuration
-
-### `appsettings.json` additions
 
 ```json
 "SubscriptionPlans": {
@@ -127,110 +163,39 @@ unlimited. Boolean `TelegramNotificationsEnabled` controls the Telegram paywall.
 }
 ```
 
-> `PaymentGateway:PriceId` is the logical Pro plan price identifier — provider-neutral concept.
-> `Stripe:SecretKey` and `Stripe:WebhookSecret` are provider-specific credentials that live in
-> their own section (same pattern as `Keycloak:` / `Auth0:`).
-> To add a future provider, add its own config section and set `PaymentGateway:Provider`.
-
-> Dev/launch tip: override all Free limits to `-1` in `appsettings.Development.json` to run
-> without any restrictions. No code changes required.
-
-### Strongly-typed options
-
-**`Application/Common/Options/SubscriptionPlanOptions.cs`** (Application layer — no infra dependency):
-```csharp
-public class PlanLimits {
-    public int  MonthlyTransactionLimit      { get; init; }
-    public int  TransactionHistoryDays       { get; init; }
-    public int  ActiveBudgetLimit            { get; init; }
-    public int  TotalTradeLimit              { get; init; }
-    public int  WatchlistSymbolLimit         { get; init; }
-    public int  SignalHistoryDays            { get; init; }
-    public bool TelegramNotificationsEnabled { get; init; }
-}
-public class SubscriptionPlanOptions {
-    public const string SectionName = "SubscriptionPlans";
-    public PlanLimits Free { get; init; } = new();
-    public PlanLimits Pro  { get; init; } = new();
-    // Future: public PlanLimits Premium { get; init; } = new();
-}
-```
-
-**`Application/Common/Options/PaymentGatewayOptions.cs`** (Application layer — provider-neutral):
-```csharp
-public class PaymentGatewayOptions {
-    public const string SectionName = "PaymentGateway";
-    public string Provider { get; init; } = "stripe";
-    public string PriceId  { get; init; } = "";   // logical Pro plan price ID
-}
-```
-
-**`Infrastructure/Stripe/StripeOptions.cs`** (Infrastructure layer — Stripe-specific credentials):
-```csharp
-public class StripeOptions {
-    public const string SectionName = "Stripe";
-    public string SecretKey     { get; init; } = "";
-    public string WebhookSecret { get; init; } = "";
-}
-```
+Strongly-typed options: `SubscriptionPlanOptions` + `PlanLimits` (Application layer), `PaymentGatewayOptions` (Application, provider-neutral), `StripeOptions` (Infrastructure, Stripe-specific). Dev tip: override all Free limits to `-1` in `appsettings.Development.json` to disable enforcement without code changes.
 
 ---
 
 ## 4. API Contract
 
-### GET /api/subscription/status
-Returns the current user's subscription state. Requires `[Authorize]`.
-
-**Response 200:**
+### GET /api/subscription/status — `[Authorize]`
 ```json
-{
-  "plan": "Pro",
-  "isActive": true,
-  "expiresAt": "2027-04-06T00:00:00Z"
-}
+{ "plan": "Pro", "isActive": true, "expiresAt": "2027-04-06T00:00:00Z" }
 ```
 
-> `PaymentCustomerId` / `PaymentSubscriptionId` are internal implementation details and are
-> intentionally excluded from the public API contract. The frontend never needs them — it
-> redirects to provider-issued URLs returned by the checkout and portal endpoints.
-
-### POST /api/subscription/checkout
-Creates a Stripe Checkout session. Requires `[Authorize]`.
-
-**Request:**
+### POST /api/subscription/checkout — `[Authorize]`
 ```json
+// Request
 { "successUrl": "https://app.fintrackpro.dev/settings?subscribed=1", "cancelUrl": "https://app.fintrackpro.dev/pricing" }
-```
-
-**Response 200:**
-```json
+// Response
 { "sessionUrl": "https://checkout.stripe.com/pay/cs_test_..." }
 ```
 
-### POST /api/subscription/portal
-Creates a Stripe Customer Portal session for self-serve management. Requires `[Authorize]`.
-
-**Request:**
+### POST /api/subscription/portal — `[Authorize]`
 ```json
+// Request
 { "returnUrl": "https://app.fintrackpro.dev/settings" }
-```
-
-**Response 200:**
-```json
+// Response
 { "portalUrl": "https://billing.stripe.com/session/..." }
 ```
 
-### POST /api/payment/webhook
-Receives payment gateway lifecycle events. `[AllowAnonymous]`. Signature verification is
-delegated to `IPaymentWebhookHandler` — the controller has no provider-specific logic.
-Returns `400` on invalid signature, `200` on successful processing.
+### POST /api/payment/webhook — `[AllowAnonymous]`
+Delegates to `IPaymentWebhookHandler`. Returns `400` on invalid signature, `200` on success.
 
-Handled events (Stripe defaults — other providers map equivalent events):
-- `customer.subscription.updated` / `invoice.payment_succeeded` → activate Pro
-- `customer.subscription.deleted` / `invoice.payment_failed` → revert to Free
+Handled events: `customer.subscription.updated` / `invoice.payment_succeeded` → activate Pro; `customer.subscription.deleted` / `invoice.payment_failed` → revert to Free.
 
-### 402 Plan Limit Error Response
-When any limit is exceeded, the API returns:
+### 402 Plan Limit Error
 ```json
 {
   "status": 402,
@@ -240,203 +205,72 @@ When any limit is exceeded, the API returns:
 }
 ```
 
-The `feature` field identifies which limit was hit so the frontend can open a targeted
-upgrade modal.
+---
+
+## 5. Backend Components
+
+**Domain**
+- `Domain/Enums/SubscriptionPlan.cs` — `Free = 0`, `Pro = 1`
+- `Domain/Entities/AppUser.cs` — 4 subscription fields (`Plan`, `PaymentCustomerId`, `PaymentSubscriptionId`, `SubscriptionExpiresAt`) + `ActivateSubscription()`, `CancelSubscription()`, `SetPaymentCustomerId()`
+- `Domain/Exceptions/PlanLimitExceededException.cs` — inherits `DomainException`, carries `string Feature`
+- `Domain/Repositories/IUserRepository.cs` — `GetByPaymentCustomerIdAsync`
+- Repository count methods: `ITransactionRepository.CountByUserAndMonthAsync`, `IBudgetRepository.CountByUserAndMonthAsync`, `ITradeRepository.CountByUserAsync`, `IWatchedSymbolRepository.CountByUserAsync`
+
+**Application**
+- `Application/Common/Options/` — `SubscriptionPlanOptions.cs`, `PaymentGatewayOptions.cs`
+- `Application/Common/Interfaces/ICurrentUser.cs` — `bool IsAdmin { get; }` added
+- `Application/Common/Interfaces/ISubscriptionLimitService.cs` — 7 `Enforce*Async` methods
+- `Application/Common/Interfaces/IPaymentGatewayService.cs` — `CreateCustomerAsync`, `CreateCheckoutSessionAsync`, `CreateBillingPortalSessionAsync`
+- `Application/Common/Interfaces/IPaymentWebhookHandler.cs` — `HandleAsync(payload, headers, ct)` → `PaymentWebhookResult`
+- `Application/Subscription/` — CQRS: `GetSubscriptionStatusQuery` + `SubscriptionStatusDto`, `CreateCheckoutSessionCommand`, `CreateBillingPortalSessionCommand`
+- Handlers with limit guards: `CreateTransactionCommandHandler`, `CreateBudgetCommandHandler`, `GetTransactionsQueryHandler`, `CreateTradeCommandHandler`, `AddWatchedSymbolCommandHandler`, `GetSignalsQueryHandler`, `UpdateNotificationPreferenceCommandHandler`
+
+**Infrastructure**
+- `Infrastructure/Identity/CurrentUserAccessor.cs` — `IsAdmin` via `ClaimTypes.Role`
+- `Infrastructure/Services/SubscriptionLimitService.cs` — admin bypass + `-1` sentinel + count queries
+- `Infrastructure/Stripe/` — `StripeOptions.cs`, `StripePaymentGatewayService.cs`, `StripeWebhookHandler.cs`
+- `Infrastructure/Persistence/Configurations/AppUserConfiguration.cs` — 4 column configs + `HasIndex(u => u.PaymentCustomerId)`
+- Repository implementations: `UserRepository`, `TransactionRepository`, `BudgetRepository`, `TradeRepository`, `WatchedSymbolRepository`
+- `Infrastructure/DependencyInjection.cs` — `AddPaymentGateway()` helper; provider selected by `PaymentGateway:Provider` with `OrdinalIgnoreCase`
+
+**API**
+- `API/Middleware/ExceptionHandlingMiddleware.cs` — 402 case for `PlanLimitExceededException`
+- `API/Controllers/SubscriptionController.cs` — GET status, POST checkout, POST portal
+- `API/Controllers/PaymentWebhookController.cs` — `[AllowAnonymous]`; delegates entirely to `IPaymentWebhookHandler`
+
+EF migration: `AddSubscriptionFieldsToAppUser`
 
 ---
 
-## 5. Migration Strategy
+## 6. Frontend Components
 
-### Phase 1 — AppUser extension (implement now)
-- Add `Plan`, `PaymentCustomerId`, `PaymentSubscriptionId`, `SubscriptionExpiresAt` to `AppUser`
-- All existing users default to `Plan = Free` (DB default value `0`)
-- Add index on `PaymentCustomerId` for webhook lookup performance
-- Generate migration: `AddSubscriptionFieldsToAppUser`
+**`entities/subscription/`** — `SubscriptionPlan` type, `SubscriptionStatus` interface, React Query hooks (`useSubscriptionStatus`, `useCreateCheckoutSession`, `useCreatePortalSession`)
 
-### Phase 2 — Soft launch (config only, no code)
-- Set all Free limits to `-1` in `appsettings.Development.json` / production env vars
-- Validate full Stripe checkout + webhook flow in staging before enforcing limits
+**`features/plan-badge/`** — `PlanBadge`: gray Free pill with arrow icon (clickable → `/pricing`) / blue Pro pill (display-only)
 
-### Phase 3 — Enforcement
-- Remove the `-1` overrides from production config
-- Free tier limits are now active
+**`features/upgrade/`**
+- `model/planLimitStore.ts` — Zustand: `{ open, feature, setLimit(feature), clear() }`
+- `model/bankTransferStore.ts` — Zustand: `{ open, openModal(), closeModal() }`
+- `ui/UpgradeButton.tsx` — initiates Stripe checkout; on error shows toast and opens `StripeUnavailableModal`
+- `ui/PlanLimitModal.tsx` — subscribes to `planLimitStore`; targeted upgrade CTA when `open === true`
+- `ui/BankTransferModal.tsx` — controlled by `bankTransferStore`; QR + contact + bank details
+- `ui/StripeUnavailableModal.tsx` — shown inside `UpgradeButton` on checkout error; routes to `BankTransferModal`
+- `ui/SubscriptionSection.tsx` — current plan, expiry, upgrade/manage buttons; handles `?subscribed=1` toast
 
----
+**`pages/pricing/`** — two-card layout (Free / Pro); highlights active plan; UpgradeButton + bank transfer link for Free users; "Manage subscription" for Pro users
 
-## 6. Backend Implementation — File by File
-
-### Domain
-| File | Action |
-|---|---|
-| `Domain/Enums/SubscriptionPlan.cs` | **Create** — `Free = 0`, `Pro = 1` |
-| `Domain/Entities/AppUser.cs` | **Modify** — add 4 subscription fields (`Plan`, `PaymentCustomerId`, `PaymentSubscriptionId`, `SubscriptionExpiresAt`) + `ActivateSubscription()` + `CancelSubscription()` + `SetPaymentCustomerId()` |
-| `Domain/Exceptions/PlanLimitExceededException.cs` | **Create** — inherits `DomainException`, carries `string Feature` |
-| `Domain/Repositories/IUserRepository.cs` | **Modify** — add `GetByPaymentCustomerIdAsync` |
-| `Domain/Repositories/ITransactionRepository.cs` | **Modify** — add `CountByUserAndMonthAsync` |
-| `Domain/Repositories/IBudgetRepository.cs` | **Modify** — add `CountByUserAndMonthAsync` |
-| `Domain/Repositories/ITradeRepository.cs` | **Modify** — add `CountByUserAsync` |
-| `Domain/Repositories/IWatchedSymbolRepository.cs` | **Modify** — add `CountByUserAsync` |
-
-### Application
-| File | Action |
-|---|---|
-| `Application/Common/Options/SubscriptionPlanOptions.cs` | **Create** — `PlanLimits` + `SubscriptionPlanOptions` |
-| `Application/Common/Options/PaymentGatewayOptions.cs` | **Create** — `Provider` + `PriceId`; provider-neutral |
-| `Application/Common/Interfaces/ICurrentUser.cs` | **Modify** — add `bool IsAdmin { get; }` to the existing interface |
-| `Application/Common/Interfaces/ISubscriptionLimitService.cs` | **Create** — 7 `Enforce*Async` methods |
-| `Application/Common/Interfaces/IPaymentGatewayService.cs` | **Create** — `CreateCustomerAsync`, `CreateCheckoutSessionAsync`, `CreateBillingPortalSessionAsync` |
-| `Application/Common/Interfaces/IPaymentWebhookHandler.cs` | **Create** — `HandleAsync(payload, headers, ct)` → `PaymentWebhookResult`; accepts `IHeaderDictionary` so the controller has zero provider-specific logic |
-| `Application/Subscription/Queries/GetSubscriptionStatus/GetSubscriptionStatusQuery.cs` | **Create** |
-| `Application/Subscription/Queries/GetSubscriptionStatus/SubscriptionStatusDto.cs` | **Create** — `Plan`, `IsActive`, `ExpiresAt` only; no provider-specific fields |
-| `Application/Subscription/Queries/GetSubscriptionStatus/GetSubscriptionStatusQueryHandler.cs` | **Create** |
-| `Application/Subscription/Commands/CreateCheckoutSession/` (2 files) | **Create** — command + handler |
-| `Application/Subscription/Commands/CreateBillingPortalSession/` (2 files) | **Create** — command + handler |
-| `Application/Finance/Commands/CreateTransaction/CreateTransactionCommandHandler.cs` | **Modify** — inject `ISubscriptionLimitService`, call `EnforceMonthlyTransactionLimitAsync` |
-| `Application/Finance/Commands/CreateBudget/CreateBudgetCommandHandler.cs` | **Modify** — call `EnforceBudgetLimitAsync` |
-| `Application/Finance/Queries/GetTransactions/GetTransactionsQueryHandler.cs` | **Modify** — call `EnforceTransactionHistoryAccessAsync` if date filter present |
-| `Application/Trading/Commands/CreateTrade/CreateTradeCommandHandler.cs` | **Modify** — call `EnforceTradeLimitAsync` |
-| `Application/Trading/Commands/AddWatchedSymbol/AddWatchedSymbolCommandHandler.cs` | **Modify** — call `EnforceWatchlistLimitAsync` |
-| `Application/Trading/Queries/GetSignals/GetSignalsQueryHandler.cs` | **Modify** — call `EnforceSignalHistoryAccessAsync` if from-date present |
-| `Application/Notifications/Commands/UpdateNotificationPreference/UpdateNotificationPreferenceCommandHandler.cs` | **Modify** — call `EnforceTelegramAsync` when enabling |
-
-### Infrastructure
-| File | Action |
-|---|---|
-| `Infrastructure/Identity/CurrentUserAccessor.cs` | **Modify** — existing implementation of `ICurrentUser`; add `IsAdmin` by checking `ClaimTypes.Role` in the current `HttpContext` claims |
-| `Infrastructure/Services/SubscriptionLimitService.cs` | **Create** — implements `ISubscriptionLimitService`; admin bypass + `-1` sentinel + count queries |
-| `Infrastructure/Stripe/StripeOptions.cs` | **Create** — Stripe-specific credentials only (`SecretKey`, `WebhookSecret`) |
-| `Infrastructure/Stripe/StripePaymentGatewayService.cs` | **Create** — implements `IPaymentGatewayService` using `Stripe.net` NuGet |
-| `Infrastructure/Stripe/StripeWebhookHandler.cs` | **Create** — implements `IPaymentWebhookHandler`; Stripe-specific signature verification (`Stripe-Signature` header + `EventUtility.ConstructEvent`) and event dispatch |
-| `Infrastructure/Persistence/Configurations/AppUserConfiguration.cs` | **Modify** — add column configs + `HasIndex(u => u.PaymentCustomerId)` |
-| `Infrastructure/Persistence/Repositories/UserRepository.cs` | **Modify** — implement `GetByPaymentCustomerIdAsync` |
-| `Infrastructure/Persistence/Repositories/TransactionRepository.cs` | **Modify** — implement `CountByUserAndMonthAsync` |
-| `Infrastructure/Persistence/Repositories/BudgetRepository.cs` | **Modify** — implement `CountByUserAndMonthAsync` |
-| `Infrastructure/Persistence/Repositories/TradeRepository.cs` | **Modify** — implement `CountByUserAsync` |
-| `Infrastructure/Persistence/Repositories/WatchedSymbolRepository.cs` | **Modify** — implement `CountByUserAsync` |
-| `Infrastructure/DependencyInjection.cs` | **Modify** — read `PaymentGatewayOptions` at top of `AddInfrastructureServices`; add new private `AddPaymentGateway(services, configuration, pg)` helper (mirrors `AddIamServices` pattern); inside it: configure `SubscriptionPlanOptions` + `PaymentGatewayOptions`, register `ISubscriptionLimitService`, and select `IPaymentGatewayService` + `IPaymentWebhookHandler` based on `pg.Provider` with `OrdinalIgnoreCase` comparison |
-
-### API
-| File | Action |
-|---|---|
-| `API/Middleware/ExceptionHandlingMiddleware.cs` | **Modify** — add 402 case for `PlanLimitExceededException` before `DomainException` case |
-| `API/Controllers/SubscriptionController.cs` | **Create** — `[Authorize]`: GET `/api/subscription/status`, POST `/api/subscription/checkout`, POST `/api/subscription/portal` |
-| `API/Controllers/PaymentWebhookController.cs` | **Create** — `[AllowAnonymous]` POST `/api/payment/webhook`; reads raw body and delegates entirely to `IPaymentWebhookHandler` — zero provider-specific logic in the controller |
-
-**Generate migration:**
-```bash
-cd backend
-dotnet ef migrations add AddSubscriptionFieldsToAppUser \
-  --project src/FinTrackPro.Infrastructure \
-  --startup-project src/FinTrackPro.API
-```
+**Modified files**
+- `shared/api/client.ts` — 402 interceptor → `planLimitStore.setLimit(feature)`
+- `app/App.tsx` — `/pricing` route; `<PlanLimitModal />` + `<BankTransferModal />` mounted globally
+- `pages/dashboard/ui/DashboardPage.tsx` — `<FreePlanAdBanner />` at top of page body
+- `widgets/navbar/ui/Navbar.tsx` — `<PlanBadge />` in user dropdown
+- `pages/settings/ui/SettingsPage.tsx` — `<SubscriptionSection />`
+- `features/notification-settings/ui/NotificationSettingsForm.tsx` — disabled + upgrade overlay for Free users
+- `shared/ui/FreePlanAdBanner.tsx` — blue gradient banner; hidden for Pro/Admin; navigates to `/pricing`
 
 ---
 
-## 7. Key Implementation Details
-
-### SubscriptionLimitService — admin bypass and `-1` sentinel
-```csharp
-private bool IsUnlimited(AppUser user) => _currentUser.IsAdmin;
-
-private PlanLimits GetLimits(AppUser user) => user.Plan switch {
-    SubscriptionPlan.Pro => _options.Value.Pro,
-    _                    => _options.Value.Free,
-    // Future: SubscriptionPlan.Premium => _options.Value.Premium,
-};
-
-// Example: budget limit enforcement
-public async Task EnforceBudgetLimitAsync(AppUser user, IBudgetRepository repo,
-    string month, CancellationToken ct = default)
-{
-    if (IsUnlimited(user)) return;
-    var limits = GetLimits(user);
-    if (limits.ActiveBudgetLimit == -1) return;
-    var count = await repo.CountByUserAndMonthAsync(user.Id, month, ct);
-    if (count >= limits.ActiveBudgetLimit)
-        throw new PlanLimitExceededException("budget",
-            $"Budget limit of {limits.ActiveBudgetLimit} reached for your current plan.");
-}
-```
-
-### DependencyInjection — provider selection (mirrors IAM pattern)
-
-Read options at the top of `AddInfrastructureServices` alongside the existing reads, then call the new helper:
-
-```csharp
-// in AddInfrastructureServices — alongside existing options reads on lines 34–39:
-var pg = configuration.GetSection(PaymentGatewayOptions.SectionName).Get<PaymentGatewayOptions>() ?? new();
-
-// call site (alongside AddIamServices, AddExternalHttpClients, etc.):
-AddPaymentGateway(services, configuration, pg);
-```
-
-```csharp
-private static void AddPaymentGateway(
-    IServiceCollection services,
-    IConfiguration configuration,
-    PaymentGatewayOptions pg)
-{
-    services.Configure<PaymentGatewayOptions>(configuration.GetSection(PaymentGatewayOptions.SectionName));
-    services.Configure<SubscriptionPlanOptions>(configuration.GetSection(SubscriptionPlanOptions.SectionName));
-    services.AddScoped<ISubscriptionLimitService, SubscriptionLimitService>();
-
-    if (pg.Provider.Equals("stripe", StringComparison.OrdinalIgnoreCase))
-    {
-        services.Configure<StripeOptions>(configuration.GetSection(StripeOptions.SectionName));
-        services.AddScoped<IPaymentGatewayService, StripePaymentGatewayService>();
-        services.AddScoped<IPaymentWebhookHandler, StripeWebhookHandler>();
-    }
-    // Future: else if (pg.Provider.Equals("paddle", StringComparison.OrdinalIgnoreCase)) { ... }
-}
-```
-
-### PaymentWebhookController — no provider-specific logic
-```csharp
-[AllowAnonymous, HttpPost("/api/payment/webhook")]
-public async Task<IActionResult> HandleWebhook(
-    [FromServices] IPaymentWebhookHandler handler, CancellationToken ct)
-{
-    var payload = await new StreamReader(Request.Body).ReadToEndAsync();
-    // Pass the full header dictionary — the handler extracts whatever header its provider requires.
-    // No provider-specific header name (e.g. "Stripe-Signature") appears here.
-    var result  = await handler.HandleAsync(payload, Request.Headers, ct);
-    return result.SignatureValid ? Ok() : BadRequest();
-}
-```
-
-### StripeWebhookHandler (Infrastructure) — all Stripe-specific logic isolated here
-```csharp
-public async Task<PaymentWebhookResult> HandleAsync(string payload, IHeaderDictionary headers, CancellationToken ct)
-{
-    // "Stripe-Signature" header name is Stripe-specific — it lives here, not in the controller.
-    var signature = headers["Stripe-Signature"].ToString();
-    Event stripeEvent;
-    try {
-        stripeEvent = EventUtility.ConstructEvent(payload, signature, _stripeOptions.WebhookSecret);
-    } catch (StripeException) {
-        return new PaymentWebhookResult(SignatureValid: false);
-    }
-    // dispatch to AppUser domain methods via IUserRepository...
-    return new PaymentWebhookResult(SignatureValid: true);
-}
-```
-
-### CreateCheckoutSessionCommandHandler — lazy customer creation
-```csharp
-if (user.PaymentCustomerId is null) {
-    var customerId = await _paymentGateway.CreateCustomerAsync(user.Email!, user.DisplayName, ct);
-    // persist immediately so concurrent requests don't create duplicate customers
-    user.SetPaymentCustomerId(customerId);
-    await _context.SaveChangesAsync(ct);
-}
-var sessionUrl = await _paymentGateway.CreateCheckoutSessionAsync(
-    user.PaymentCustomerId, _gatewayOptions.Value.PriceId, request.SuccessUrl, request.CancelUrl, ct);
-return new CheckoutSessionDto(sessionUrl);
-```
-
----
-
-## 8. UI/UX
+## 7. UI/UX
 
 ### PlanBadge (navbar user dropdown)
 
@@ -446,15 +280,14 @@ return new CheckoutSessionDto(sessionUrl);
                         │  John Doe            │
                         │  john@example.com    │
                         │                      │
-                        │  Plan  [ Free  ▸ ]   │  ← gray pill; click → /pricing
+                        │  Plan  [ Free  › ]   │  ← gray pill; click → /pricing
                         │  ─────────────────   │
                         │  Settings            │
                         │  Sign out            │
                         └──────────────────────┘
 ```
 
-- Gray pill `Free` / blue pill `Pro`; clicking `Free` navigates to `/pricing`
-- Pro pill is display-only (no link)
+Pro users see a blue "Pro" pill with no link.
 
 ---
 
@@ -467,8 +300,7 @@ return new CheckoutSessionDto(sessionUrl);
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-- Full-width gradient banner at top of dashboard page body
-- Hidden entirely for Pro users and admins
+Full-width blue gradient banner. Button navigates to `/pricing`. Hidden for Pro users and admins.
 
 ---
 
@@ -478,44 +310,44 @@ return new CheckoutSessionDto(sessionUrl);
         ┌──────────────────────────────────────┐
         │  Budget limit reached            [×] │
         │  ────────────────────────────────    │
-        │  You've used all 3 budgets on your   │
-        │  Free plan.                          │
-        │                                      │
-        │  Upgrade to Pro for unlimited        │
-        │  budgets, transactions, and more.    │
+        │  Upgrade to Pro for unlimited access │
+        │  to budgets, transactions, trades,   │
+        │  and more.                           │
         │                                      │
         │           [ Upgrade to Pro ]         │
         │           [ Maybe later    ]         │
         └──────────────────────────────────────┘
 ```
 
-- Mounted globally in `App.tsx`; opens when `planLimitStore.open === true`
-- `feature` field from the 402 response drives the headline and body copy
-- `[ Upgrade to Pro ]` calls `useCreateCheckoutSession()` and redirects to Stripe
+Mounted globally in `App.tsx`. The `feature` field from the 402 response drives the headline. `[Upgrade to Pro]` triggers checkout via `UpgradeButton`.
 
 ---
 
 ### PricingPage (`/pricing`)
 
 ```
-┌─────────────────────────┐   ┌─────────────────────────┐
-│          Free           │   │   ✦  Pro          $9/mo  │  ← highlighted border
-│  ─────────────────────  │   │  ─────────────────────   │
-│  50 transactions/mo     │   │  Unlimited transactions  │
-│  90-day history         │   │  Full history            │
-│  3 active budgets       │   │  Unlimited budgets       │
-│  20 trades stored       │   │  Unlimited trades        │
-│  3 watchlist symbols    │   │  Unlimited watchlist     │
-│  7-day signal history   │   │  Full signal history     │
-│  ✗  Telegram alerts     │   │  ✓  Telegram alerts      │
-│  ✗  Ad-free dashboard   │   │  ✓  Ad-free dashboard    │
-│                         │   │                          │
-│  [ Current plan ]       │   │  [ Upgrade to Pro ]      │
-└─────────────────────────┘   └─────────────────────────┘
+  Simple, transparent pricing
+
+┌─────────────────────────┐   ┌────────────────────────────────┐
+│          Free           │   │  ★ Popular   Pro      $9/mo    │  ← highlighted border
+│  ─────────────────────  │   │  ─────────────────────────     │
+│  50 transactions/mo     │   │  Unlimited transactions        │
+│  90-day history         │   │  Full history                  │
+│  3 active budgets       │   │  Unlimited budgets             │
+│  20 trades stored       │   │  Unlimited trades              │
+│  3 watchlist symbols    │   │  Unlimited watchlist           │
+│  7-day signal history   │   │  Full signal history           │
+│  ✗  Telegram alerts     │   │  ✓  Telegram alerts            │
+│  ✗  Ad-free dashboard   │   │  ✓  Ad-free dashboard          │
+│                         │   │                                │
+│  [ Current plan ]       │   │  [ Upgrade to Pro ]            │
+│  (disabled)             │   │  or pay via bank transfer →    │
+└─────────────────────────┘   └────────────────────────────────┘
+
+  ← Back
 ```
 
-- Active plan card has highlighted border; its button reads "Current plan" (disabled)
-- Pro card button calls `useCreateCheckoutSession()` for Free users; calls `useCreatePortalSession()` for Pro users (→ "Manage subscription")
+Active plan card button shows "Current plan" (disabled). Pro users see "Manage subscription" instead of UpgradeButton.
 
 ---
 
@@ -524,132 +356,126 @@ return new CheckoutSessionDto(sessionUrl);
 ```
   Subscription
   ─────────────────────────────────────────────
-  Plan          Pro                             ← blue badge
+  Plan          [ Pro ]                         ← blue badge
   Status        Active
   Renews        2027-04-06
   ─────────────────────────────────────────────
                 [ Manage subscription ]         ← opens Stripe portal
 
-  — or for Free users —
+  — Free user view —
 
-  Plan          Free                            ← gray badge
+  Plan          [ Free ]                        ← gray badge
   ─────────────────────────────────────────────
                 [ Upgrade to Pro ]
 ```
 
-- On successful return from Stripe (`?subscribed=1` query param) → toast "You're now on Pro!"
+On return from Stripe with `?subscribed=1` → toast "You're now on Pro!". Shows loading skeleton during fetch.
 
 ---
 
-## 9. Frontend Implementation — File by File
+### BankTransferModal (global — opened from PricingPage or StripeUnavailableModal)
 
-### New entity: `entities/subscription/`
-| File | Content |
-|---|---|
-| `model/types.ts` | `SubscriptionPlan = 'Free' \| 'Pro'`, `SubscriptionStatus` interface |
-| `api/subscriptionApi.ts` | `useSubscriptionStatus()`, `useCreateCheckoutSession()`, `useCreatePortalSession()` |
-| `index.ts` | Barrel export |
+```
+        ┌────────────────────────────────────────────┐
+        │  Pay via Bank Transfer                 [×] │
+        │  ──────────────────────────────────────    │
+        │  ┌────────────────────────────────────┐    │
+        │  │ ⚠  Please contact admin before    │    │  ← amber warning box
+        │  │    transferring.                   │    │
+        │  └────────────────────────────────────┘    │
+        │                                            │
+        │        [ Telegram: @admin ]                │
+        │        [ Email: admin@... ]                │
+        │                                            │
+        │          ┌──────────────┐                  │
+        │          │   QR code    │  200×200          │
+        │          └──────────────┘                  │
+        │                                            │
+        │  ┌────────────────────────────────────┐    │
+        │  │ Bank        Techcombank            │    │
+        │  │ Account     1234567890             │    │
+        │  │ Holder      Nguyen Van A           │    │
+        │  │ Amount      99,000 VND/month       │    │  ← gray info box
+        │  │ Note        your registered email  │    │
+        │  └────────────────────────────────────┘    │
+        │                                            │
+        │               [ Close ]                    │
+        └────────────────────────────────────────────┘
+```
 
-### New feature: `features/plan-badge/`
-| File | Content |
-|---|---|
-| `ui/PlanBadge.tsx` | Pill component: gray "Free" / blue "Pro"; clicking "Free" navigates to `/pricing` |
-| `index.ts` | Barrel export |
-
-### New feature: `features/upgrade/`
-| File | Content |
-|---|---|
-| `model/planLimitStore.ts` | Zustand store: `{ open, feature, setLimit(feature), clear() }` |
-| `ui/UpgradeButton.tsx` | Calls `useCreateCheckoutSession()`, redirects to `sessionUrl` on success |
-| `ui/PlanLimitModal.tsx` | Subscribes to `planLimitStore`; shows targeted upgrade CTA when `open === true` |
-| `ui/SubscriptionSection.tsx` | Current plan, expiry, upgrade/manage buttons; handles `?subscribed=1` toast |
-| `index.ts` | Barrel export |
-
-### New page: `pages/pricing/`
-| File | Content |
-|---|---|
-| `ui/PricingPage.tsx` | Two cards (Free/Pro) + feature comparison table; highlights active plan; upgrade / manage button |
-| `index.ts` | Barrel export |
-
-### Modified files
-| File | Change |
-|---|---|
-| `shared/api/client.ts` | Add 402 interceptor → `usePlanLimitStore.getState().setLimit(feature)` |
-| `app/App.tsx` | Add `/pricing` route; mount `<PlanLimitModal />` globally after `<Toaster>` |
-| `pages/dashboard/ui/DashboardPage.tsx` | Add `<FreePlanAdBanner />` at top of page body |
-| `widgets/navbar/ui/Navbar.tsx` | Add `<PlanBadge />` + upgrade/manage link in user dropdown |
-| `pages/settings/ui/SettingsPage.tsx` | Add Subscription section using `<SubscriptionSection />` |
-| `features/notification-settings/ui/NotificationSettingsForm.tsx` | Disable form + overlay + `<UpgradeButton feature="telegram" />` when plan is Free |
-| `shared/ui/FreePlanAdBanner.tsx` | **Create** — full-width gradient banner, renders only for Free users |
+Controlled by `bankTransferStore`. Contact buttons render conditionally based on `VITE_ADMIN_TELEGRAM` / `VITE_ADMIN_EMAIL` env vars.
 
 ---
 
-## 10. Testing
+### StripeUnavailableModal (inline — shown by UpgradeButton on checkout error)
+
+```
+        ┌──────────────────────────────────────────┐
+        │  Card payment temporarily            [×] │
+        │  unavailable                             │
+        │  ────────────────────────────────────    │
+        │  You can upgrade via bank transfer       │
+        │  instead.                                │
+        │                                          │
+        │       [ View Bank Transfer QR ]          │  ← primary blue; opens BankTransferModal
+        │       [ Maybe later           ]          │  ← secondary gray
+        └──────────────────────────────────────────┘
+```
+
+---
+
+## 8. Testing
 
 ### Unit — `SubscriptionLimitService`
-**`tests/FinTrackPro.Application.UnitTests/Subscription/SubscriptionLimitServiceTests.cs`**
-- NSubstitute + FluentAssertions (matches existing pattern)
-- Cases:
-  - Free user at limit → `throws PlanLimitExceededException`
-  - Free user below limit → passes
-  - Pro user over Free limit → passes (unlimited)
-  - Admin user (`IsAdmin = true`) → passes regardless of plan
-  - Limit set to `-1` in config → passes for Free user
+`tests/FinTrackPro.Application.UnitTests/Subscription/SubscriptionLimitServiceTests.cs`
+- Free user at limit → throws `PlanLimitExceededException`
+- Free user below limit → passes
+- Pro user over Free limit → passes
+- Admin (`IsAdmin = true`) → passes regardless of plan
+- Limit set to `-1` → passes for Free user
 
 ### Unit — affected handlers
-- Modify existing test files for all 7 affected handlers
-- Add `ISubscriptionLimitService _limitService = Substitute.For<...>()` to setup
-- Add case: `Handle_FreePlanAtLimit_ThrowsPlanLimitExceededException`
+Modify existing test files for all 7 affected handlers; add `ISubscriptionLimitService` mock and `Handle_FreePlanAtLimit_ThrowsPlanLimitExceededException` case.
 
 ### Integration — payment webhook
-**`tests/FinTrackPro.Api.IntegrationTests/Features/Subscription/PaymentWebhookTests.cs`**
-- Uses `DatabaseFixture` + `CustomWebApplicationFactory` (existing pattern)
-- Override `IPaymentWebhookHandler` with a fake that bypasses signature verification in tests
-- Cases:
-  - Activate event → `GET /api/subscription/status` returns `Pro`
-  - Cancel event → status reverts to `Free`
-  - Invalid signature (fake returns `SignatureValid: false`) → `400 BadRequest`
+`tests/FinTrackPro.Api.IntegrationTests/Features/Subscription/PaymentWebhookTests.cs`  
+Override `IPaymentWebhookHandler` with a fake that bypasses signature verification.
+- Activate event → `GET /api/subscription/status` returns `Pro`
+- Cancel event → status reverts to `Free`
+- Invalid signature → `400 BadRequest`
 
 ### Integration — plan limits end-to-end
-**`tests/FinTrackPro.Api.IntegrationTests/Features/Subscription/PlanLimitsTests.cs`**
-- Free user: POST 4 budgets for same month → 4th returns `402` with `extensions.feature = ["budget"]`
-- Pro user (Plan set directly in DB fixture): no `402`
-- Config override: set `ActiveBudgetLimit = -1` in test config → no `402` for Free user
+`tests/FinTrackPro.Api.IntegrationTests/Features/Subscription/PlanLimitsTests.cs`
+- Free user: POST 4th budget → `402` with `extensions.feature = ["budget"]`
+- Pro user (Plan set in DB fixture): no `402`
+- `ActiveBudgetLimit = -1` in test config → no `402` for Free user
 
 ---
 
-## 11. Documentation Updates Required
+## 9. Bank Transfer Payment (MVP)
 
-Update these files as part of the same implementation task:
+Stripe does not support Vietnamese merchant accounts for production payouts. A static Techcombank QR is shown as a parallel payment path. Zero backend changes required — the flow is entirely frontend + manual admin confirmation.
 
-### `docs/architecture/api-spec.md`
-- Add new section **Subscription** with all 4 endpoints:
-  - `GET /api/subscription/status`
-  - `POST /api/subscription/checkout`
-  - `POST /api/subscription/portal`
-  - `POST /api/payment/webhook`
-- Document the `402` Plan Limit Error response shape (`status`, `title`, `instance`, `extensions.feature`)
+| Path | When used | Automated? |
+|---|---|---|
+| Stripe Checkout | `Stripe:SecretKey` configured | Yes (webhook-driven) |
+| Bank Transfer QR | Always available | No (admin confirms manually) |
 
-### `docs/architecture/database.md`
-- Add 4 new columns to the `AppUsers` table: `Plan`, `PaymentCustomerId`, `PaymentSubscriptionId`, `SubscriptionExpiresAt`
-- Add index note: `IX_AppUsers_PaymentCustomerId` for webhook lookup
-- Add migration name: `AddSubscriptionFieldsToAppUser`
+**Direct bank transfer:** User clicks "or pay via bank transfer →" on PricingPage → `BankTransferModal` opens → user contacts admin and transfers → admin activates Pro manually.
 
-### `docs/architecture/overview.md`
-- Update Application layer description to mention `Subscription/` as a new feature group (CQRS commands + queries)
-- Update Infrastructure layer description to mention `StripePaymentGatewayService`, `StripeWebhookHandler`, and `SubscriptionLimitService`
-- Add `ISubscriptionLimitService`, `IPaymentGatewayService`, `IPaymentWebhookHandler` to the Application interfaces list
-- Note payment gateway provider selection via `PaymentGateway:Provider` (same pattern as IAM)
+**Stripe fallback:** User clicks "Upgrade to Pro" → checkout API fails → `StripeUnavailableModal` → "View Bank Transfer QR" → `BankTransferModal`.
 
-### `docs/architecture/ui-flows.md`
-- Add **Upgrade flow**: Free user hits limit → `PlanLimitModal` opens → clicks Upgrade → Stripe Checkout → returns to app → `?subscribed=1` toast
-- Add **Pricing page** flow: user clicks `PlanBadge` or `FreePlanAdBanner` → `/pricing` → selects Pro → Stripe Checkout
-- Add **Manage subscription** flow: Pro user opens Settings → Subscription section → clicks Manage → Stripe Customer Portal
-- Add note: `FreePlanAdBanner` and `PlanBadge` are hidden for Admin users regardless of plan
+### Environment variables
 
-### `CLAUDE.md`
-- Add `PaymentGateway__Provider`, `PaymentGateway__PriceId`, `Stripe__SecretKey`, `Stripe__WebhookSecret` to the Key Configuration table
-- Add `dotnet user-secrets set` examples for the Stripe credentials (same pattern as existing secrets)
+| Variable | Purpose |
+|---|---|
+| `VITE_ADMIN_TELEGRAM` | Telegram handle for admin contact button |
+| `VITE_ADMIN_EMAIL` | Email for admin contact button |
+| `VITE_BANK_NAME` | Bank name in transfer details |
+| `VITE_BANK_ACCOUNT_NUMBER` | Account number (text fallback below QR) |
+| `VITE_BANK_ACCOUNT_NAME` | Account holder name |
+| `VITE_BANK_TRANSFER_AMOUNT` | Monthly Pro price in VND (default `99000`) |
 
-### `README.md`
-- Add Stripe environment variables to the backend setup prerequisites
+### Migration path to PayOS
+
+When manual confirmation becomes impractical, replace bank transfer with PayOS (VietQR-based, webhook-driven). Implement `PayOsPaymentGatewayService` implementing `IPaymentGatewayService`; set `PaymentGateway:Provider = "payos"`. No Application or Domain changes needed.

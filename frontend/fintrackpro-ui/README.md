@@ -53,8 +53,16 @@ Create a `.env` file in this directory (copy from `.env.example`):
 | `VITE_AUTH0_DOMAIN` | Auth0 tenant domain *(Auth0 mode only)* | `your-tenant.auth0.com` |
 | `VITE_AUTH0_CLIENT_ID` | Auth0 SPA client ID *(Auth0 mode only)* | `abc123` |
 | `VITE_AUTH0_AUDIENCE` | Auth0 API audience *(Auth0 mode only)* | `https://api.fintrackpro.dev` |
+| `VITE_ADMIN_TELEGRAM` | Telegram handle shown in bank transfer modal | `your_telegram_handle` |
+| `VITE_ADMIN_EMAIL` | Admin email shown in bank transfer modal | `admin@fintrackpro.dev` |
+| `VITE_BANK_NAME` | Bank name in transfer details | `Techcombank` |
+| `VITE_BANK_ACCOUNT_NUMBER` | Account number (text fallback below QR) | `your_account_number` |
+| `VITE_BANK_ACCOUNT_NAME` | Account holder name | `Your Full Name` |
+| `VITE_BANK_TRANSFER_AMOUNT` | Monthly Pro price in VND | `99000` |
 
 > All variables must be prefixed with `VITE_` to be accessible in the browser bundle.
+>
+> **Bank transfer QR image:** replace `src/shared/assets/bank-qr.png` with the QR exported from your Techcombank mobile app. Bank account details are public-safe — the same as printing them on an invoice.
 
 ## Feature-Sliced Design Layers
 

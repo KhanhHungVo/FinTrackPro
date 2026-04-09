@@ -56,6 +56,13 @@ In workspace → **Variables** tab, add each as a **Terraform variable**.
 | `vite_api_base_url` | `https://fintrackpro-api.onrender.com` (update after first deploy) | No |
 | `vite_auth0_domain` | Same as `auth0_domain` | No |
 | `vite_auth0_client_id` | Auth0 SPA app client ID | No |
+| `vite_admin_telegram` | Telegram handle shown in bank transfer modal | No |
+| `vite_admin_email` | Admin email shown in bank transfer modal | No |
+| `vite_bank_name` | Bank name displayed in transfer details (e.g. `Techcombank`) | No |
+| `vite_bank_account_number` | Bank account number displayed in transfer details | No |
+| `vite_bank_account_name` | Account holder name displayed in transfer details | No |
+| `vite_bank_transfer_amount` | Monthly Pro price in VND — defaults to `99000` if omitted | No |
+| `vite_bank_qr_url` | Direct URL to the bank QR image (postimages.org or GitHub release asset) | No |
 
 > `db_connection_string` is no longer required — the PostgreSQL instance is provisioned by
 > Terraform and its internal connection string is auto-injected into the API.
@@ -165,6 +172,13 @@ Use this if you prefer a one-click Render dashboard deploy without Terraform.
    | `VITE_API_BASE_URL` | API Render URL |
    | `VITE_AUTH0_DOMAIN` | e.g. `dev-abc123.us.auth0.com` |
    | `VITE_AUTH0_CLIENT_ID` | Auth0 SPA client ID |
+   | `VITE_ADMIN_TELEGRAM` | Telegram handle shown in bank transfer modal |
+   | `VITE_ADMIN_EMAIL` | Admin email shown in bank transfer modal |
+   | `VITE_BANK_NAME` | Bank name (e.g. `Techcombank`) |
+   | `VITE_BANK_ACCOUNT_NUMBER` | Bank account number |
+   | `VITE_BANK_ACCOUNT_NAME` | Account holder name |
+   | `VITE_BANK_TRANSFER_AMOUNT` | Monthly Pro price in VND (default `99000`) |
+   | `VITE_BANK_QR_URL` | Direct URL to the bank QR image |
 
 7. Click **Apply** — all resources build in parallel (~3–5 min for .NET Docker build)
 8. After deploy: copy the frontend URL → update `Cors__Origins` → redeploy API

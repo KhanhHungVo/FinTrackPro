@@ -137,6 +137,12 @@ Roles (`User`, `Admin`) are stored only in the IAM provider — never in the dat
 | `VITE_API_BASE_URL` | `frontend/fintrackpro-ui/.env` |
 | `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` (Keycloak mode) |
 | `VITE_AUTH0_DOMAIN/CLIENT_ID/AUDIENCE` | `frontend/fintrackpro-ui/.env` (Auth0 mode) |
+| `VITE_ADMIN_TELEGRAM` | `frontend/fintrackpro-ui/.env` — Telegram handle shown in bank transfer modal |
+| `VITE_ADMIN_EMAIL` | `frontend/fintrackpro-ui/.env` — admin email shown in bank transfer modal |
+| `VITE_BANK_NAME` | `frontend/fintrackpro-ui/.env` — bank name displayed in transfer details |
+| `VITE_BANK_ACCOUNT_NUMBER` | `frontend/fintrackpro-ui/.env` — account number for bank transfer |
+| `VITE_BANK_ACCOUNT_NAME` | `frontend/fintrackpro-ui/.env` — account holder name |
+| `VITE_BANK_TRANSFER_AMOUNT` | `frontend/fintrackpro-ui/.env` — monthly Pro price in VND (default `99000`) |
 
 Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
 
