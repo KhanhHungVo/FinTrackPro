@@ -80,7 +80,7 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | CreatedAt | timestamp | NOT NULL |
 | — | — | UNIQUE INDEX (UserId, Slug) |
 
-> `UserId = NULL` = system category (globally unique slug). `UserId = <user>` = user-owned custom category (slug unique per user). System categories are seeded idempotently by `TransactionCategoryDataSeeder` on every startup — 5 Income + 11 Expense = 16 total. System categories cannot be updated or deleted (HTTP 403 via domain guard). Custom categories are soft-deleted (`IsActive = false`).
+> `UserId = NULL` = system category (globally unique slug). `UserId = <user>` = user-owned custom category (slug unique per user). System categories are seeded idempotently by `TransactionCategoryDataSeeder` on every startup — 5 Income + 12 Expense = 17 total. System categories cannot be updated or deleted (HTTP 403 via domain guard). Custom categories are soft-deleted (`IsActive = false`).
 
 ---
 

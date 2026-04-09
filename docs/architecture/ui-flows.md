@@ -154,7 +154,7 @@ None — Dashboard is read-only.
 **Add Transaction Form**
 - Type toggle: "Income" (green) / "Expense" (red) — one active at a time
 - Amount field (number, required, > 0)
-- Category field (text, required)
+- Category field (dropdown selector, required) — groups system categories and user-created custom categories; shows emoji icon + localized label (EN/VI); includes "Manage my categories" link to /settings
 - Note field (text, optional)
 - Submit button: "Add" → "Saving..." while pending → clears form on success
 - Month is taken from the current month selector selection
@@ -213,7 +213,7 @@ None — Dashboard is read-only.
 **Month Selector** — same pattern as Transactions page
 
 **Add Budget Form (horizontal)**
-- Category field (text, placeholder "e.g. Food")
+- Category field (dropdown selector, required) — same grouped selector with emoji icons and localized labels (EN/VI)
 - Limit field (number, placeholder "500")
 - Add button → "..." while pending
 
@@ -342,6 +342,22 @@ None — Dashboard is read-only.
 ```
 
 ### Regions
+
+**My Categories Section**
+- Header row: "My Categories" label + description + "+ New category" button (blue, top-right)
+- Category list: each row shows emoji icon, EN name, VI name (gray subtext), type chip (red for Expense, green for Income), Edit and Delete buttons
+- Empty state: 🗂️ illustration + "No custom categories yet" + "Create first category" button
+- Edit button → opens Create/Edit Modal pre-filled with category data
+- Delete button → soft-deletes the category immediately (no confirmation)
+- System categories are never shown or manageable here
+
+**Create/Edit Category Modal**
+- Opened from the My Categories section (create or edit mode)
+- Type chips: "Expense" (red tint) / "Income" (green tint) — disabled in edit mode (type is immutable)
+- Emoji icon picker: scrollable 8-column grid of ~60 curated emojis; selected emoji highlighted with blue ring; live preview badge shows selected icon + current EN name
+- Side-by-side name fields: EN name (required) and VI name (required)
+- Slug preview (read-only monospace, auto-derived from EN name) — shown in create mode only
+- Footer: Cancel + "Create category" / "Save changes" (blue primary)
 
 **Notification Settings Form**
 - Info box: step-by-step instructions to find your Telegram Chat ID
