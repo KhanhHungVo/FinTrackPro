@@ -190,7 +190,7 @@ const vi = {
     rank: 'Hạng',
     name: 'Tên',
     poweredBy: 'Dữ liệu từ CoinGecko',
-    fearGreedIndex: 'Fear & Greed Index',
+    fearGreedIndex: 'Crypto Fear & Greed Index',
   },
   signals: {
     noSignals: 'Chưa có tín hiệu — thêm mã vào danh sách theo dõi.',

@@ -190,7 +190,7 @@ const en = {
     rank: 'Rank',
     name: 'Name',
     poweredBy: 'Powered by CoinGecko',
-    fearGreedIndex: 'Fear & Greed Index',
+    fearGreedIndex: 'Crypto Fear & Greed Index',
   },
   signals: {
     noSignals: 'No signals yet — add symbols to your watchlist.',
