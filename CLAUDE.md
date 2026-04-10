@@ -168,6 +168,7 @@ dotnet user-secrets set "Stripe:WebhookSecret" "<whsec_...>" --project backend/s
 ## Docs
 ### Architecture (reference — what the system is)
 - `docs/architecture/overview.md` — layer descriptions and design decisions
+- `docs/architecture/auth.md` — IAM provider overview, auth flows (sign-up, login, nightly sync), and provider switching reference
 - `docs/architecture/api-spec.md` — REST endpoints and schemas
 - `docs/architecture/database.md` — schema, tables, relationships, migration commands
 - `docs/architecture/background-jobs.md` — Hangfire job details and sequence diagrams

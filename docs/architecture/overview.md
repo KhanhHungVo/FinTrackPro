@@ -182,3 +182,11 @@ The `render.yaml` Blueprint at the repo root is retained as a **fallback** for m
 | `FinTrackPro.Application.UnitTests` | Application | NSubstitute for repositories |
 | `FinTrackPro.Infrastructure.UnitTests` | Infrastructure | NSubstitute + `MockHttpMessageHandler` for typed `HttpClient` |
 | `FinTrackPro.Api.IntegrationTests` | API | Testcontainers (SQL Server), `WebApplicationFactory`, real EF Core — uses SQL Server provider locally |
+
+## Related Architecture Docs
+
+- [auth.md](auth.md) — IAM provider overview, auth flows, and provider switching reference
+- [api-spec.md](api-spec.md) — REST endpoints and schemas
+- [database.md](database.md) — schema, tables, relationships
+- [background-jobs.md](background-jobs.md) — Hangfire job details and sequence diagrams
+- [ui-flows.md](ui-flows.md) — frontend user flows
