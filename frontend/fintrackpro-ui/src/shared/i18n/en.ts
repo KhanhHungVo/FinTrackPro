@@ -162,7 +162,7 @@ const en = {
     cta: 'Upgrade to Pro →',
   },
   donation: {
-    message: 'FinTrackPro is free during our launch.',
+    message: 'Like FinTrackPro? A coffee helps keep the lights on.',
     hint: "If it's been useful, a coffee keeps it going.",
     cta: 'Buy me a coffee ☕',
     dismiss: 'Dismiss',

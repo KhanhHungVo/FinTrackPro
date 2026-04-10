@@ -24,8 +24,7 @@ export function DonationFooter() {
         <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
           <p className="text-sm text-amber-900">
             <span className="mr-1.5">☕</span>
-            <span className="font-semibold">{t('donation.message')}</span>{' '}
-            <span className="text-amber-800">{t('donation.hint')}</span>
+            <span className="font-semibold">{t('donation.message')}</span>
           </p>
           <div className="flex shrink-0 items-center gap-2">
             <button

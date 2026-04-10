@@ -162,7 +162,7 @@ const vi = {
     cta: 'Nâng cấp lên Pro →',
   },
   donation: {
-    message: 'FinTrackPro miễn phí trong giai đoạn ra mắt.',
+    message: 'Thích FinTrackPro? Một ly cà phê giúp duy trì dự án.',
     hint: 'Nếu hữu ích với bạn, một ly cà phê giúp duy trì dự án.',
     cta: 'Ủng hộ tôi một ly cà phê ☕',
     dismiss: 'Đóng',
