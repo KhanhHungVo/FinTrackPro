@@ -23,9 +23,9 @@ public class BudgetsController : BaseApiController
     }
 
     [HttpPatch("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateBudgetRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateBudgetCommand command)
     {
-        await Mediator.Send(new UpdateBudgetCommand(id, request.LimitAmount));
+        await Mediator.Send(command with { Id = id });
         return NoContent();
     }
 
@@ -37,4 +37,3 @@ public class BudgetsController : BaseApiController
     }
 }
 
-public record UpdateBudgetRequest(decimal LimitAmount);

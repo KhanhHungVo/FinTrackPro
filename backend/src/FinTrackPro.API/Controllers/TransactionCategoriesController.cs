@@ -24,9 +24,9 @@ public class TransactionCategoriesController : BaseApiController
     }
 
     [HttpPatch("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, UpdateTransactionCategoryRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTransactionCategoryCommand command)
     {
-        await Mediator.Send(new UpdateTransactionCategoryCommand(id, request.LabelEn, request.LabelVi, request.Icon));
+        await Mediator.Send(command with { Id = id });
         return NoContent();
     }
 
@@ -38,4 +38,3 @@ public class TransactionCategoriesController : BaseApiController
     }
 }
 
-public record UpdateTransactionCategoryRequest(string LabelEn, string LabelVi, string Icon);
