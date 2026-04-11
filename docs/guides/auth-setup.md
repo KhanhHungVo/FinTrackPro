@@ -252,6 +252,13 @@ Auth0 free tier supports up to 7,500 MAU and requires no self-hosted infrastruct
        }
      }
 
+     // Inject email into the access token.
+     // scope=openid profile email only adds email to the ID token — the backend
+     // validates the Bearer access token, which does not include OIDC profile claims
+     // by default. Explicitly setting it here makes it available to the API.
+     api.accessToken.setCustomClaim('email', event.user.email)
+     api.accessToken.setCustomClaim('email_verified', event.user.email_verified ?? false)
+
      // Always set the claim (empty array if role assignment failed)
      api.accessToken.setCustomClaim(`${ns}/roles`, JSON.stringify(roles))
      api.idToken.setCustomClaim(`${ns}/roles`, JSON.stringify(roles))
