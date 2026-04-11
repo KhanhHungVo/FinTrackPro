@@ -1,2 +1,3 @@
 export type { Transaction, TransactionType } from './model/types'
-export { useTransactions, useCreateTransaction, useDeleteTransaction } from './api/transactionApi'
+export type { UpdateTransactionPayload } from './api/transactionApi'
+export { useTransactions, useCreateTransaction, useUpdateTransaction, useDeleteTransaction } from './api/transactionApi'

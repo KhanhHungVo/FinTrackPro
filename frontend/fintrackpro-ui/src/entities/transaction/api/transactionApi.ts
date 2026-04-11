@@ -31,6 +31,24 @@ export function useCreateTransaction() {
   })
 }
 
+export interface UpdateTransactionPayload {
+  type: TransactionType
+  amount: number
+  currency: string
+  category: string
+  note?: string | null
+  categoryId?: string | null
+}
+
+export function useUpdateTransaction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & UpdateTransactionPayload) =>
+      apiClient.patch(`/api/transactions/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  })
+}
+
 export function useDeleteTransaction() {
   const qc = useQueryClient()
   return useMutation({

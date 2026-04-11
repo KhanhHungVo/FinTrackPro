@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useTransactions, useDeleteTransaction } from '@/entities/transaction'
-import type { TransactionType } from '@/entities/transaction'
+import type { Transaction, TransactionType } from '@/entities/transaction'
 import { useTransactionCategories } from '@/entities/transaction-category'
 import { AddTransactionForm } from '@/features/add-transaction'
+import { EditTransactionModal } from '@/features/edit-transaction'
 import { useLocaleStore } from '@/features/locale'
 import { useExchangeRates } from '@/entities/exchange-rate'
 import { convertAmount } from '@/shared/lib/convertAmount'
@@ -29,6 +30,7 @@ export function TransactionsPage() {
   const currency = useLocaleStore((s) => s.currency)
   const language = useLocaleStore((s) => s.language)
   const [month, setMonth] = useState(monthsBack(0))
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const { data: transactions, isLoading } = useTransactions(month)
   const { mutate: deleteTx } = useDeleteTransaction()
   const { guarded: handleDelete, isPending: isDeleting } = useGuardedMutation<unknown, Error, string>(deleteTx)
@@ -132,6 +134,13 @@ export function TransactionsPage() {
                     {new Date(tx.createdAt).toLocaleDateString(i18n.language)}
                   </span>
                   <button
+                    onClick={() => setEditingTx(tx)}
+                    className="text-xs text-gray-300 hover:text-blue-500 transition-colors"
+                    title={t('common.edit')}
+                  >
+                    ✎
+                  </button>
+                  <button
                     onClick={() => onDeleteClick(tx.id)}
                     disabled={isDeleting(tx.id)}
                     className="text-xs text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -145,6 +154,8 @@ export function TransactionsPage() {
           })}
         </ul>
       )}
+
+      <EditTransactionModal transaction={editingTx} onClose={() => setEditingTx(null)} />
     </div>
   )
 }

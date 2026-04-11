@@ -62,6 +62,31 @@ Create a new transaction. The handler resolves and stores `rateToUsd` from the e
 
 ---
 
+### `PATCH /api/transactions/{id}`
+Update an existing transaction (owner only). `rateToUsd` and `budgetMonth` are immutable and cannot be changed.
+
+**Body:**
+```json
+{
+  "type": "Expense",
+  "amount": 250.00,
+  "currency": "USD",
+  "category": "food_beverage",
+  "note": "Updated note",
+  "categoryId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
+```
+
+**Validation errors (400):**
+- `amount` must be > 0
+- `currency` required, max 3 chars
+- `category` required, max 100 chars
+- `note` max 500 chars (optional)
+
+**Response 204** on success. **400** validation error. **403** not owner. **404** not found.
+
+---
+
 ### `DELETE /api/transactions/{id}`
 Delete a transaction (owner only).
 

@@ -19,6 +19,23 @@ public class Transaction : BaseEntity
 
     private Transaction() { }
 
+    public void Update(
+        TransactionType type, decimal amount, string currency,
+        string category, string? note, Guid? categoryId)
+    {
+        if (amount <= 0)
+            throw new DomainException("Amount must be greater than zero.");
+        if (string.IsNullOrWhiteSpace(currency))
+            throw new DomainException("Currency is required.");
+
+        Type = type;
+        Amount = amount;
+        Currency = currency.Trim().ToUpperInvariant();
+        Category = category.Trim();
+        Note = note?.Trim();
+        CategoryId = categoryId;
+    }
+
     public static Transaction Create(
         Guid userId, TransactionType type, decimal amount,
         string currency, decimal rateToUsd,

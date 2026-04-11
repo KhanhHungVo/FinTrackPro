@@ -364,9 +364,9 @@
           ]
         },
         {
-          "name": "PUT /api/transactions/{{transactionId}} → 200",
+          "name": "PATCH /api/transactions/{{transactionId}} → 204",
           "request": {
-            "method": "PUT",
+            "method": "PATCH",
             "url": "{{baseUrl}}/api/transactions/{{transactionId}}",
             "header": [
               {
@@ -376,7 +376,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 95.00,\n  \"category\": \"Food\",\n  \"note\": \"Updated note\",\n  \"budgetMonth\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 95.00,\n  \"currency\": \"USD\",\n  \"category\": \"food_beverage\",\n  \"note\": \"Updated note\",\n  \"categoryId\": \"{{expenseCategoryId}}\"\n}"
             }
           },
           "event": [
@@ -384,13 +384,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns updated transaction with expected schema', () => {",
-                  "  const tx = pm.response.json();",
-                  "  pm.expect(tx).to.have.property('id');",
-                  "  pm.expect(tx).to.have.property('amount');",
-                  "  pm.expect(tx).to.have.property('category');",
-                  "});"
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
                 ]
               }
             }

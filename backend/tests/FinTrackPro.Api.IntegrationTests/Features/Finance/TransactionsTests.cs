@@ -141,4 +141,66 @@ public class TransactionsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task UpdateTransaction_ValidRequest_Returns204()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/transactions",
+            TransactionRequestBuilder.Build(categoryId: _expenseCategoryId));
+        var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var update = new
+        {
+            type = "Expense",
+            amount = 999m,
+            currency = "USD",
+            category = "food_beverage",
+            note = "updated",
+            categoryId = _expenseCategoryId
+        };
+
+        var response = await _client.PatchAsJsonAsync($"/api/transactions/{id}", update);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task UpdateTransaction_NonExistentId_Returns404()
+    {
+        var update = new
+        {
+            type = "Expense",
+            amount = 100m,
+            currency = "USD",
+            category = "food_beverage",
+            note = (string?)null,
+            categoryId = _expenseCategoryId
+        };
+
+        var response = await _client.PatchAsJsonAsync($"/api/transactions/{Guid.NewGuid()}", update);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateTransaction_InvalidAmount_Returns400()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/transactions",
+            TransactionRequestBuilder.Build(categoryId: _expenseCategoryId));
+        var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var update = new
+        {
+            type = "Expense",
+            amount = 0m,
+            currency = "USD",
+            category = "food_beverage",
+            note = (string?)null,
+            categoryId = _expenseCategoryId
+        };
+
+        var response = await _client.PatchAsJsonAsync($"/api/transactions/{id}", update);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

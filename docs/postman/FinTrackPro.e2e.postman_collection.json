@@ -392,6 +392,52 @@
           ]
         },
         {
+          "name": "PATCH /api/transactions/{{transactionId}} → 204, verify fields updated",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/transactions/{{transactionId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 95.00,\n  \"currency\": \"USD\",\n  \"category\": \"food_beverage\",\n  \"note\": \"Updated grocery run\",\n  \"categoryId\": \"{{foodCategoryId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "",
+                  "// Verify the update took effect by fetching the transaction list",
+                  "const token = pm.environment.get('bearerToken');",
+                  "const baseUrl = pm.environment.get('baseUrl');",
+                  "const txId = pm.environment.get('transactionId');",
+                  "const testMonth = pm.environment.get('testMonth');",
+                  "pm.sendRequest({",
+                  "    url: `${baseUrl}/api/transactions?month=${testMonth}`,",
+                  "    method: 'GET',",
+                  "    header: [{ key: 'Authorization', value: `Bearer ${token}` }]",
+                  "}, (err, res) => {",
+                  "    pm.test('Updated transaction reflects new amount', () => {",
+                  "        const txs = res.json();",
+                  "        const tx = txs.find(t => t.id === txId);",
+                  "        pm.expect(tx, 'transaction still present after update').to.exist;",
+                  "        pm.expect(tx.amount).to.be.closeTo(95.00, 0.01);",
+                  "        pm.expect(tx.note).to.eql('Updated grocery run');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "PATCH /api/budgets/{{budgetId}} → 204",
           "request": {
             "method": "PATCH",
@@ -711,6 +757,99 @@
           }
         },
         {
+          "name": "Seed transaction for guard tests",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Ensure foodCategoryId is available (set by Spending flow; re-fetch if missing).",
+                  "if (!pm.environment.get('foodCategoryId')) {",
+                  "    const token = pm.environment.get('bearerToken');",
+                  "    const baseUrl = pm.environment.get('baseUrl');",
+                  "    pm.sendRequest({",
+                  "        url: `${baseUrl}/api/transaction-categories?type=Expense`,",
+                  "        method: 'GET',",
+                  "        header: [{ key: 'Authorization', value: `Bearer ${token}` }]",
+                  "    }, (err, res) => {",
+                  "        if (!err && res.code === 200) {",
+                  "            const food = res.json().find(c => c.slug === 'food_beverage');",
+                  "            if (food) pm.environment.set('foodCategoryId', food.id);",
+                  "        }",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Seed transaction created (201)', () => pm.response.to.have.status(201));",
+                  "pm.test('Captures guardTransactionId', () => {",
+                  "  const id = pm.response.text().replace(/\"/g, '');",
+                  "  pm.expect(id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "  pm.environment.set('guardTransactionId', id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 50.00,\n  \"categoryId\": \"{{foodCategoryId}}\",\n  \"note\": \"Guard test seed\",\n  \"budgetMonth\": \"{{testMonth}}\",\n  \"currency\": \"USD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/transactions/{{guardTransactionId}} → 403 (user2)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/transactions/{{guardTransactionId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Expense\",\n  \"amount\": 99.00,\n  \"currency\": \"USD\",\n  \"category\": \"food_beverage\",\n  \"note\": \"Malicious edit\",\n  \"categoryId\": \"{{foodCategoryId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 403 when user2 tries to update user1 transaction', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "PUT /api/trades/{{guardTradeId}} → 403 (user2)",
           "request": {
             "auth": {
@@ -802,6 +941,23 @@
                   "pm.test('Returns 403 when user2 tries to delete user1 budget', () => {",
                   "  pm.response.to.have.status(403);",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup — DELETE guard transaction (user1)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/transactions/{{guardTransactionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Guard transaction cleaned up (204)', () => pm.response.to.have.status(204));"
                 ]
               }
             }

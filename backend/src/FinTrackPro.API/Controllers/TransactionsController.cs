@@ -1,5 +1,6 @@
 using FinTrackPro.Application.Finance.Commands.CreateTransaction;
 using FinTrackPro.Application.Finance.Commands.DeleteTransaction;
+using FinTrackPro.Application.Finance.Commands.UpdateTransaction;
 using FinTrackPro.Application.Finance.Queries.GetTransactions;
 using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +22,13 @@ public class TransactionsController : BaseApiController
         return CreatedAtAction(nameof(GetAll), new { }, id);
     }
 
+    [HttpPatch("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTransactionCommand command)
+    {
+        await Mediator.Send(command with { Id = id });
+        return NoContent();
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -28,3 +36,4 @@ public class TransactionsController : BaseApiController
         return NoContent();
     }
 }
+
