@@ -28,6 +28,8 @@ const en = {
     tradingPnl: 'Trading P&L',
     thisMonth: 'This month',
     recentSignals: 'Recent Signals',
+    vsLastMonth: 'vs last month',
+    lastMonth: 'Last month',
   },
   transactions: {
     title: 'Transactions',

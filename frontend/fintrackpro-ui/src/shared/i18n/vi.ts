@@ -28,6 +28,8 @@ const vi = {
     tradingPnl: 'Lãi/Lỗ đầu tư',
     thisMonth: 'Tháng này',
     recentSignals: 'Tín hiệu gần đây',
+    vsLastMonth: 'so với tháng trước',
+    lastMonth: 'Tháng trước',
   },
   transactions: {
     title: 'Thu chi',
