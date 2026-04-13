@@ -20,6 +20,9 @@ const vi = {
     signOut: 'Đăng xuất',
     tryAgain: 'Thử lại',
     goToDashboard: 'Về trang chủ',
+    theme: 'Giao diện',
+    light: 'Sáng',
+    dark: 'Tối',
   },
   dashboard: {
     title: 'Tổng quan',
@@ -30,6 +33,10 @@ const vi = {
     recentSignals: 'Tín hiệu gần đây',
     vsLastMonth: 'so với tháng trước',
     lastMonth: 'Tháng trước',
+    goodMorning: 'Chào buổi sáng',
+    goodAfternoon: 'Chào buổi chiều',
+    goodEvening: 'Chào buổi tối',
+
   },
   transactions: {
     title: 'Thu chi',
@@ -78,9 +85,12 @@ const vi = {
     noTrades: 'Chưa có giao dịch nào.',
     closePosition: 'Đóng vị thế',
     closeTrade: 'Đóng',
+    date: 'Ngày',
+    side: 'Chiều',
   },
   settings: {
     title: 'Cài đặt',
+    subtitle: 'Quản lý tài khoản, danh mục và tuỳ chọn của bạn',
     subscription: 'Gói dịch vụ',
     myCategories: 'Danh mục của tôi',
     myCategoriesHint: 'Danh mục tuỳ chỉnh hiển thị cùng danh mục hệ thống khi ghi giao dịch',

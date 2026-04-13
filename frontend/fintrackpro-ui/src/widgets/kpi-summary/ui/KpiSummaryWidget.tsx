@@ -80,27 +80,30 @@ export function KpiSummaryWidget() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      {cards.map((card) => (
-        <div key={card.label} className="rounded-lg border p-4">
-          <p className={`text-xs font-semibold uppercase tracking-wide ${card.labelColor}`}>
-            {card.label} · {t('dashboard.thisMonth')}
-          </p>
-          <p className={`text-2xl font-semibold mt-1 ${card.valueColor}`}>
-            {card.value >= 0 && card.label === t('dashboard.tradingPnl') && card.value > 0 ? '+' : ''}
-            {formatCurrency(card.value, currency, i18n.language)}
-          </p>
-          {card.delta !== null && (
-            <div className="mt-2">
-              <DeltaBadge delta={card.delta} label={t('dashboard.vsLastMonth')} />
-            </div>
-          )}
-          {hasPrevMonth && card.prevValue > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              {t('dashboard.lastMonth')}: {formatCurrency(card.prevValue, currency, i18n.language)}
+      {cards.map((card, i) => {
+        const borderColors = ['border-l-green-500', 'border-l-red-500', 'border-l-blue-500']
+        return (
+          <div key={card.label} className={`rounded-xl p-5 bg-white dark:bg-white/4 dark:backdrop-blur-sm border-l-4 ${borderColors[i]}`}>
+            <p className={`text-xs font-semibold uppercase tracking-wide ${card.labelColor}`}>
+              {card.label} · {t('dashboard.thisMonth')}
             </p>
-          )}
-        </div>
-      ))}
+            <p className={`text-3xl font-bold tracking-tight mt-1 ${card.valueColor}`}>
+              {card.value >= 0 && card.label === t('dashboard.tradingPnl') && card.value > 0 ? '+' : ''}
+              {formatCurrency(card.value, currency, i18n.language)}
+            </p>
+            {card.delta !== null && (
+              <div className="mt-2">
+                <DeltaBadge delta={card.delta} label={t('dashboard.vsLastMonth')} />
+              </div>
+            )}
+            {hasPrevMonth && card.prevValue > 0 && (
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                {t('dashboard.lastMonth')}: {formatCurrency(card.prevValue, currency, i18n.language)}
+              </p>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

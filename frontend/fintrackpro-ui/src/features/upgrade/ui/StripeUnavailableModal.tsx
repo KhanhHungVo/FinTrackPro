@@ -20,14 +20,14 @@ export function StripeUnavailableModal({ open, onClose }: Props) {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
-      <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-white p-5 shadow-xl sm:p-6">
+      <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-white p-5 shadow-xl sm:p-6 dark:bg-[#161a25] dark:border-white/10">
         <div className="flex items-start justify-between">
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
             {t('stripeUnavailable.title')}
           </h2>
           <button
             onClick={onClose}
-            className="ml-4 text-gray-400 hover:text-gray-600"
+            className="ml-4 text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300"
             aria-label={t('donation.dismiss')}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -40,7 +40,7 @@ export function StripeUnavailableModal({ open, onClose }: Props) {
             </svg>
           </button>
         </div>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
           {t('stripeUnavailable.message')}
         </p>
         <div className="mt-5 flex flex-col gap-2">
@@ -52,7 +52,7 @@ export function StripeUnavailableModal({ open, onClose }: Props) {
           </button>
           <button
             onClick={onClose}
-            className="w-full rounded-md border py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="w-full rounded-md border py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
           >
             {t('stripeUnavailable.maybeLater')}
           </button>

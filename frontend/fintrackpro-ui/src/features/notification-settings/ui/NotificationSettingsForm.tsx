@@ -25,7 +25,7 @@ export function NotificationSettingsForm() {
     }
   }, [pref])
 
-  if (isLoading) return <div className="animate-pulse h-32 rounded-lg bg-gray-100" />
+  if (isLoading) return <div className="animate-pulse h-32 rounded-lg bg-gray-100 dark:bg-white/5" />
 
   const isFreePlan = !subscription || subscription.plan === 'Free'
 
@@ -41,15 +41,14 @@ export function NotificationSettingsForm() {
   }
 
   return (
-    <div className="relative max-w-md w-full">
+    <div className="relative w-full">
       <form
         onSubmit={handleSubmit}
-        className={`space-y-4 rounded-lg border p-4 md:p-6 ${isFreePlan ? 'pointer-events-none select-none opacity-50' : ''}`}
+        className={`page-card space-y-4 p-4 md:p-6 ${isFreePlan ? 'pointer-events-none select-none opacity-50' : ''}`}
         aria-hidden={isFreePlan}
       >
-        <h2 className="text-lg font-semibold">{t('notifications.title')}</h2>
 
-        <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800 space-y-1">
+        <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800 space-y-1 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-300">
           <p className="font-medium">{t('notifications.setupSteps')}</p>
           <ol className="list-decimal list-inside space-y-0.5">
             <li>{t('notifications.setupStep1')}</li>
@@ -66,7 +65,7 @@ export function NotificationSettingsForm() {
             value={chatId}
             onChange={(e) => setChatId(e.target.value)}
             required
-            className="w-full rounded-md border px-3 py-2 text-sm font-mono"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
           />
         </div>
 
@@ -90,8 +89,8 @@ export function NotificationSettingsForm() {
       </form>
 
       {isFreePlan && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-white/80 p-6">
-          <p className="text-sm font-medium text-gray-700 text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-white/80 dark:bg-[#0f1117]/80 p-6 backdrop-blur-sm">
+          <p className="text-sm font-medium text-gray-700 dark:text-slate-300 text-center">
             {t('notifications.proFeatureNotice')}
           </p>
           <UpgradeButton />

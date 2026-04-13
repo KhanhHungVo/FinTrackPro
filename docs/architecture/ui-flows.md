@@ -1,6 +1,6 @@
 # FinTrackPro — UI Flows
 
-> Last updated: 2026-03-24
+> Last updated: 2026-04-13
 > Format: screen-by-screen reference for UI design and Figma workflow generation.
 
 ---
@@ -37,7 +37,9 @@
 | Active link | Blue background, white text |
 | Inactive link | Gray text, hover darkens |
 | User menu closed | Avatar circle only |
-| User menu open | Dropdown with name, email, Logout button |
+| User menu open | Dropdown with name, email, plan badge, Logout button |
+| Locale dropdown closed | Globe icon button |
+| Locale dropdown open | Panel with language, currency, and theme sections |
 
 ### User Actions
 | Action | Result |
@@ -45,6 +47,8 @@
 | Click nav link | Navigate to corresponding page |
 | Click avatar | Open user menu |
 | Click Logout | End session, redirect to IAM login |
+| Click globe icon | Open locale/currency/theme dropdown |
+| Click Light / Dark in theme section | Switch app theme; persisted across reloads |
 
 ---
 
@@ -75,6 +79,9 @@
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────┐
+│  Good morning, Alex 👋                               │  ← Greeting header
+│  Sunday, April 13                                    │  ← Date subtitle
+├─────────────────────────────────────────────────────┤
 │  Income (month)   │  Expenses (month)  │  Trading P&L │  ← Summary cards
 ├───────────────────┴────────────────────┴─────────────┤
 │  Fear & Greed Gauge (left)  │  Trending Coins (right) │  ← Market widgets
@@ -85,10 +92,18 @@
 
 ### Regions
 
+**Greeting Header**
+- Time-based greeting using the user's first name: "Good morning / afternoon / evening, [First name] 👋"
+  - Morning: before 12:00 · Afternoon: 12:00–17:59 · Evening: 18:00+
+- Subtitle shows today's date, formatted with the browser's locale (e.g. "Sunday, April 13")
+- Greeting text is i18n-keyed and translated in both EN and VI
+
 **Summary Cards (3-column grid)**
-- Income this month — green, formatted as currency
-- Expenses this month — red, formatted as currency
-- Trading P&L — green if positive, red if negative
+- Each card has a coloured left-border accent for at-a-glance category recognition:
+  - Income: green left border — formatted as currency
+  - Expenses: red left border — formatted as currency
+  - Trading P&L: blue left border — green if positive, red if negative
+- Month-over-month delta badge shown below each value when previous month data is available
 
 **Fear & Greed Widget**
 - SVG semicircle gauge with animated needle
@@ -113,7 +128,7 @@
 | No signals | "No signals yet — add symbols to your watchlist." |
 
 ### User Actions
-None — Dashboard is read-only.
+None — Dashboard is read-only (all widgets are display-only).
 
 ### Navigates To
 - Any page via Navbar
@@ -287,8 +302,22 @@ None — Dashboard is read-only.
 - Submit: "Log Trade" → "Saving..." while pending → form clears and collapses on success
 
 **Trades Table**
-- Columns: Symbol, Direction (Long=green badge / Short=red badge), Entry Price, Exit Price, Position Size, Fees, P&L (green/red, bold), Date, Delete (✕)
-- P&L formula: `(exitPrice − entryPrice) × positionSize − fees`
+- Columns (left to right): Symbol, Direction, Status, P&L, Entry Price, Exit/Current Price, Position Size, Fees, Date, Actions
+- Direction badge: Long=green / Short=red
+- Status badge: Open=emerald / Closed=gray
+- P&L column:
+  - Closed trades: realised P&L in green/red (formula: `(exitPrice − entryPrice) × positionSize − fees`)
+  - Open trades: unrealised P&L in muted gray with "(unrlzd)" label; sourced from live price
+  - No exit price yet: "—"
+- Exit/Current Price: shows exit price for closed trades, live current price for open trades
+- Actions column: visible on row hover only
+  - ✓ (Close) — shown only for Open trades; opens Close Position modal
+  - ✎ (Edit) — opens Edit Trade modal
+  - ✕ (Delete) — deletes trade with guard against double-click
+
+**Unrealised P&L Card**
+- A 4th summary card appears in the stats bar when at least one open trade has a live price
+- Emerald tinted card displaying the aggregate unrealised P&L across all open positions
 
 ### States
 | State | Description |
@@ -300,6 +329,8 @@ None — Dashboard is read-only.
 | Form visible | Form shown below stats bar |
 | Form pending | Submit button disabled, shows "Saving..." |
 | Form error | Red error message below form fields |
+| Edit modal open | Pre-filled modal over the page |
+| Close modal open | Confirmation modal to record exit price |
 
 ### User Actions
 | Action | Result |
@@ -307,6 +338,9 @@ None — Dashboard is read-only.
 | Click "+ Log Trade" | Toggle form visibility |
 | Toggle Long/Short | Sets trade direction |
 | Fill and submit form | Creates trade, refreshes table and stats |
+| Hover a row | Reveals action buttons (✓ ✎ ✕) |
+| Click ✓ on an open trade | Opens Close Position modal |
+| Click ✎ on a row | Opens Edit Trade modal |
 | Click ✕ on a row | Deletes that trade, refreshes table and stats |
 
 ---
@@ -472,10 +506,28 @@ Settings → Subscription section → "Manage subscription"
 
 ## Colour System Reference
 
+### Semantic Colours
+
 | Colour | Meaning |
 |---|---|
 | Green | Income, positive P&L, Long direction, budget under 80% |
-| Yellow/Orange | Budget 80–100% of limit, RSI Overbought signal badge |
-| Red | Expense, negative P&L, Short direction, budget overrun, RSI Oversold signal badge |
-| Blue | Primary action buttons, active nav link, Volume Spike signal badge |
-| Gray | Secondary text, dates, inactive states |
+| Yellow/Orange | Budget 80–100% of limit |
+| Red | Expense, negative P&L, Short direction, budget overrun |
+| Blue | Primary action buttons, active nav link |
+| Emerald | Open trade status, unrealised P&L card, close action |
+| Gray | Secondary text, dates, inactive states, closed trade status |
+
+### Signal Badge Colours
+
+| Signal Type | Light | Dark |
+|---|---|---|
+| RsiOversold | Red | `dark:bg-red-500/15 dark:text-red-400` |
+| RsiOverbought | Orange | `dark:bg-orange-500/15 dark:text-orange-400` |
+| VolumeSpike | Blue | `dark:bg-blue-500/15 dark:text-blue-400` |
+| FundingRate | Purple | `dark:bg-purple-500/15 dark:text-purple-400` |
+| EmaCross | Green | `dark:bg-green-500/15 dark:text-green-400` |
+| BbSqueeze | Yellow | `dark:bg-yellow-500/15 dark:text-yellow-400` |
+
+### Theme
+
+The app supports light (default) and dark modes, toggled via the locale dropdown in the navbar. The preference is persisted in `localStorage` (inside the `fintrackpro-locale` Zustand store). See `docs/planned/dashboard-redesign-light-dark-theme.md` for the full design token reference.

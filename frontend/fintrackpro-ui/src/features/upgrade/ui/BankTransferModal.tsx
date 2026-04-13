@@ -13,14 +13,14 @@ export function BankTransferModal() {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/50" onClick={closeModal} />
-      <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-white p-5 shadow-xl max-h-[90dvh] overflow-y-auto sm:p-6">
+      <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-white p-5 shadow-xl max-h-[90dvh] overflow-y-auto sm:p-6 dark:bg-[#161a25] dark:border-white/10">
         <div className="flex items-start justify-between">
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
             {t('bankTransfer.orPayViaTransfer')}
           </h2>
           <button
             onClick={closeModal}
-            className="ml-4 text-gray-400 hover:text-gray-600"
+            className="ml-4 text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300"
             aria-label={t('donation.dismiss')}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -35,7 +35,7 @@ export function BankTransferModal() {
         </div>
 
         {/* Admin contact notice */}
-        <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+        <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-300">
           ⚠ {t('bankTransfer.contactNotice')}
         </div>
 
@@ -46,7 +46,7 @@ export function BankTransferModal() {
               href={`https://t.me/${env.ADMIN_TELEGRAM}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 rounded-md border border-blue-400 py-2 text-center text-sm font-medium text-blue-600 hover:bg-blue-50"
+              className="flex-1 rounded-md border border-blue-400 py-2 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500/10"
             >
               {t('bankTransfer.telegramButton')}
             </a>
@@ -54,7 +54,7 @@ export function BankTransferModal() {
           {env.ADMIN_EMAIL && (
             <a
               href={`mailto:${env.ADMIN_EMAIL}`}
-              className="flex-1 rounded-md border py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="flex-1 rounded-md border py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
             >
               {t('bankTransfer.emailButton')}
             </a>
@@ -65,7 +65,7 @@ export function BankTransferModal() {
 
         <button
           onClick={closeModal}
-          className="mt-4 w-full rounded-md border py-2 text-sm text-gray-700 hover:bg-gray-50"
+          className="mt-4 w-full rounded-md border py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
         >
           {t('common.cancel')}
         </button>

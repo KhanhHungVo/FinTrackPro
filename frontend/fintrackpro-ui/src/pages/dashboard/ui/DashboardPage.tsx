@@ -4,15 +4,40 @@ import { SignalsList } from '@/widgets/signals-list'
 import { TrendingCoinsWidget } from '@/widgets/trending-coins-widget'
 import { KpiSummaryWidget } from '@/widgets/kpi-summary'
 import { FreePlanAdBanner } from '@/shared/ui/FreePlanAdBanner'
+import { useAuthStore } from '@/features/auth'
+
+function useGreeting() {
+  const { t } = useTranslation()
+  const hour = new Date().getHours()
+  if (hour < 12) return t('dashboard.goodMorning')
+  if (hour < 18) return t('dashboard.goodAfternoon')
+  return t('dashboard.goodEvening')
+}
 
 export function DashboardPage() {
   const { t } = useTranslation()
+  const displayName = useAuthStore((s) => s.displayName)
+  const firstName = displayName?.split(' ')[0] ?? ''
+  const greeting = useGreeting()
+
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
 
   return (
     <>
       <FreePlanAdBanner />
-      <div className="mx-auto max-w-5xl p-4 md:p-6 space-y-6">
-        <h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
+      <div className="mx-auto max-w-6xl p-4 md:p-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {greeting}{firstName ? `, ${firstName}` : ''} 👋
+          </h1>
+          <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400">
+            <span>{today}</span>
+          </div>
+        </div>
 
         <KpiSummaryWidget />
 

@@ -43,7 +43,7 @@ export function AddBudgetForm({ month, onAdded }: Props) {
     <div className="flex flex-col gap-2">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
         <div className="flex-1">
-          <label className="block text-xs text-gray-500 mb-1">{t('transactions.category')}</label>
+          <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">{t('transactions.category')}</label>
           <TransactionCategorySelector
             type="Expense"
             value={categoryId}
@@ -52,22 +52,22 @@ export function AddBudgetForm({ month, onAdded }: Props) {
           />
         </div>
         <div className="w-full sm:w-36">
-          <label className="block text-xs text-gray-500 mb-1">{t('budgets.limit')}</label>
+          <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">{t('budgets.limit')}</label>
           <input
             type="number"
             placeholder="500"
             value={limit}
             onChange={(e) => setLimit(e.target.value)}
             required
-            className="w-full rounded-md border px-3 py-2 text-sm"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
           />
         </div>
         <div className="w-full sm:w-24">
-          <label className="block text-xs text-gray-500 mb-1">{t('common.currency')}</label>
+          <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">{t('common.currency')}</label>
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
           >
             {SUPPORTED_CURRENCIES.map((c) => (
               <option key={c} value={c}>{c}</option>

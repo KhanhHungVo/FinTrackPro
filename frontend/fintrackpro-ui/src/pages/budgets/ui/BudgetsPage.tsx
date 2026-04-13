@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useBudgets, useDeleteBudget, useUpdateBudget } from '@/entities/budget'
 import { useTransactions } from '@/entities/transaction'
+import { useTransactionCategories } from '@/entities/transaction-category'
 import { AddBudgetForm } from '@/features/add-budget'
 import { useLocaleStore } from '@/features/locale'
 import { useExchangeRates } from '@/entities/exchange-rate'
@@ -21,11 +22,18 @@ function monthsBack(n: number): string {
 export function BudgetsPage() {
   const { t, i18n } = useTranslation()
   const currency = useLocaleStore((s) => s.currency)
+  const language = useLocaleStore((s) => s.language)
   const [month, setMonth] = useState(monthsBack(0))
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLimit, setEditLimit] = useState('')
   const { data: budgets, isLoading } = useBudgets(month)
   const { data: transactions } = useTransactions(month)
+  const { data: allCategories } = useTransactionCategories()
+  const resolveCategoryLabel = (slug: string) => {
+    const cat = allCategories?.find((c) => c.slug === slug)
+    if (!cat) return slug
+    return `${cat.icon} ${language === 'vi' ? cat.labelVi : cat.labelEn}`
+  }
   const { mutate: deleteBudget } = useDeleteBudget()
   const { guarded: guardedDelete, isPending: isDeleting } = useGuardedMutation(deleteBudget)
   const { mutate: updateBudget, isPending: isSaving } = useUpdateBudget()
@@ -69,7 +77,7 @@ export function BudgetsPage() {
         <select
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          className="rounded-md border px-3 py-1.5 text-sm"
+          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
         >
           {monthOptions.map((m) => (
             <option key={m} value={m}>{m}</option>
@@ -82,11 +90,11 @@ export function BudgetsPage() {
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="animate-pulse h-20 rounded-lg bg-gray-100" />
+            <div key={i} className="animate-pulse h-20 rounded-lg bg-gray-100 dark:bg-white/5" />
           ))}
         </div>
       ) : budgets?.length === 0 ? (
-        <p className="text-center text-sm text-gray-400 py-8">
+        <p className="text-center text-sm text-gray-400 dark:text-slate-500 py-8">
           {t('budgets.noBudgets')}
         </p>
       ) : (
@@ -99,9 +107,9 @@ export function BudgetsPage() {
             const overrun = spent > limitInPreferred
 
             return (
-              <li key={budget.id} className="rounded-lg border p-4 space-y-2">
+              <li key={budget.id} className="page-card p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium">{budget.category}</p>
+                  <p className="font-medium">{resolveCategoryLabel(budget.category)}</p>
                   <div className="flex items-center gap-2">
                     {editingId === budget.id ? (
                       <input
@@ -116,25 +124,25 @@ export function BudgetsPage() {
                           if (e.key === 'Escape') setEditingId(null)
                         }}
                         disabled={isSaving}
-                        className="w-24 rounded border px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        className="w-24 rounded border px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-400 dark:bg-slate-800 dark:border-white/10 dark:text-white"
                         autoFocus
                       />
                     ) : (
                       <span
                         className={cn(
                           'text-sm font-semibold',
-                          overrun ? 'text-red-600' : 'text-gray-700',
+                          overrun ? 'text-red-600' : 'text-gray-700 dark:text-slate-300',
                         )}
                       >
                         {formatCurrency(spent, currency, i18n.language)}
-                        <span className="font-normal text-gray-400">
+                        <span className="font-normal text-gray-400 dark:text-slate-500">
                           {' '}/ {formatCurrency(limitInPreferred, currency, i18n.language)}
                         </span>
                       </span>
                     )}
                     <button
                       onClick={() => startEdit(budget.id, budget.limitAmount)}
-                      className="text-gray-400 hover:text-blue-500 transition-colors text-sm"
+                      className="text-gray-400 hover:text-blue-500 transition-colors text-sm dark:text-slate-600"
                       aria-label={t('common.edit')}
                       title={t('common.edit')}
                     >
@@ -143,17 +151,17 @@ export function BudgetsPage() {
                     <button
                       onClick={() => guardedDelete(budget.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
                       disabled={isDeleting(budget.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                      className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 dark:text-slate-600"
                       aria-label={t('common.delete')}
                       title={t('common.delete')}
                     >
-                      ×
+                      ✕
                     </button>
                   </div>
                 </div>
 
                 {/* Progress bar */}
-                <div className="h-2 w-full rounded-full bg-gray-100">
+                <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-slate-700">
                   <div
                     className={cn(
                       'h-2 rounded-full transition-all',

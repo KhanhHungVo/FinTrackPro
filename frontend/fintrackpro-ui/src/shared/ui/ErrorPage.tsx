@@ -15,9 +15,9 @@ export function ErrorPage({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
-      <div className="text-5xl text-gray-300">⚠</div>
-      <h1 className="text-2xl font-semibold text-gray-800">{title ?? t('common.error')}</h1>
-      {message && <p className="text-gray-500 max-w-md">{message}</p>}
+      <div className="text-5xl text-gray-300 dark:text-slate-600">⚠</div>
+      <h1 className="text-2xl font-semibold text-gray-800 dark:text-slate-200">{title ?? t('common.error')}</h1>
+      {message && <p className="text-gray-500 dark:text-slate-400 max-w-md">{message}</p>}
       <div className="flex gap-3">
         {onRetry && (
           <button
@@ -29,7 +29,7 @@ export function ErrorPage({
         )}
         <a
           href="/dashboard"
-          className="rounded-md border px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+          className="rounded-md border px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
         >
           {t('error.goToDashboard')}
         </a>

@@ -24,11 +24,7 @@ export function WatchlistManager() {
   }
 
   return (
-    <div className="rounded-lg border p-4 md:p-6 max-w-md w-full space-y-4">
-      <h2 className="text-lg font-semibold">Signal Watchlist</h2>
-      <p className="text-sm text-gray-500">
-        Symbols here are monitored by the 4-hour signal job (RSI, volume spikes).
-      </p>
+    <div className="page-card p-4 md:p-6 w-full space-y-4">
 
       <form onSubmit={handleAdd} className="flex gap-2">
         <input
@@ -37,7 +33,7 @@ export function WatchlistManager() {
           value={symbol}
           onChange={(e) => setSymbol(e.target.value.toUpperCase())}
           required
-          className="flex-1 rounded-md border px-3 py-2 text-sm font-mono"
+          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-mono outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
         />
         <button
           type="submit"
@@ -49,15 +45,15 @@ export function WatchlistManager() {
       </form>
 
       {isLoading ? (
-        <div className="animate-pulse h-16 rounded bg-gray-100" />
+        <div className="animate-pulse h-16 rounded bg-gray-100 dark:bg-white/5" />
       ) : symbols?.length === 0 ? (
-        <p className="text-sm text-gray-400">No symbols watched yet.</p>
+        <p className="text-sm text-gray-400 dark:text-slate-500">No symbols watched yet.</p>
       ) : (
         <ul className="space-y-1">
           {symbols?.map((ws) => (
             <li
               key={ws.id}
-              className="flex items-center justify-between rounded-md border px-3 py-2"
+              className="flex items-center justify-between rounded-md border px-3 py-2 dark:border-white/6"
             >
               <span className="font-mono text-sm font-medium">{ws.symbol}</span>
               <button

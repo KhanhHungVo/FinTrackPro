@@ -59,7 +59,7 @@ export function TransactionsPage() {
         <select
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          className="rounded-md border px-3 py-1.5 text-sm"
+          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
         >
           {monthOptions.map((m) => (
             <option key={m} value={m}>{m}</option>
@@ -69,16 +69,16 @@ export function TransactionsPage() {
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-gray-500">{t('transactions.income')}</p>
+        <div className="page-card p-4">
+          <p className="text-xs text-gray-500 dark:text-slate-400">{t('transactions.income')}</p>
           <p className="text-xl font-semibold text-green-600">+{formatCurrency(income, currency, i18n.language)}</p>
         </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-gray-500">{t('transactions.expense')}</p>
+        <div className="page-card p-4">
+          <p className="text-xs text-gray-500 dark:text-slate-400">{t('transactions.expense')}</p>
           <p className="text-xl font-semibold text-red-600">-{formatCurrency(expense, currency, i18n.language)}</p>
         </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-gray-500">{t('transactions.net')}</p>
+        <div className="page-card p-4">
+          <p className="text-xs text-gray-500 dark:text-slate-400">{t('transactions.net')}</p>
           <p className={cn('text-xl font-semibold', net >= 0 ? 'text-green-600' : 'text-red-600')}>
             {net >= 0 ? '+' : ''}{formatCurrency(net, currency, i18n.language)}
           </p>
@@ -92,11 +92,11 @@ export function TransactionsPage() {
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="animate-pulse h-14 rounded-lg bg-gray-100" />
+            <div key={i} className="animate-pulse h-14 rounded-lg bg-gray-100 dark:bg-white/5" />
           ))}
         </div>
       ) : transactions?.length === 0 ? (
-        <p className="text-center text-sm text-gray-400 py-8">
+        <p className="text-center text-sm text-gray-400 dark:text-slate-500 py-8">
           {t('transactions.noTransactions')}
         </p>
       ) : (
@@ -106,7 +106,7 @@ export function TransactionsPage() {
             return (
               <li
                 key={tx.id}
-                className="flex items-center justify-between rounded-lg border px-4 py-3"
+                className="page-card flex items-center justify-between px-4 py-3"
               >
                 <div className="flex items-center gap-3">
                   <span
@@ -122,7 +122,7 @@ export function TransactionsPage() {
                   <div>
                     <p className="text-sm font-medium">{resolveCategoryLabel(tx.category)}</p>
                     {tx.note && (
-                      <p className="text-xs text-gray-400">{tx.note}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500">{tx.note}</p>
                     )}
                   </div>
                 </div>
@@ -130,12 +130,12 @@ export function TransactionsPage() {
                   <span className={cn('text-sm font-semibold', TYPE_COLORS[tx.type])}>
                     {tx.type === 'Income' ? '+' : '-'}{formatCurrency(displayAmount, currency, i18n.language)}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-400 dark:text-slate-500">
                     {new Date(tx.createdAt).toLocaleDateString(i18n.language)}
                   </span>
                   <button
                     onClick={() => setEditingTx(tx)}
-                    className="text-xs text-gray-300 hover:text-blue-500 transition-colors"
+                    className="text-xs text-gray-300 hover:text-blue-500 transition-colors dark:text-slate-600"
                     title={t('common.edit')}
                   >
                     ✎
@@ -143,7 +143,7 @@ export function TransactionsPage() {
                   <button
                     onClick={() => onDeleteClick(tx.id)}
                     disabled={isDeleting(tx.id)}
-                    className="text-xs text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="text-xs text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:text-slate-600"
                     title={t('common.delete')}
                   >
                     ✕

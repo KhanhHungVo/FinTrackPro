@@ -117,13 +117,13 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-[#161a25]">
+        <div className="flex items-center justify-between border-b px-4 py-3 dark:border-white/6">
           <h2 className="text-lg font-semibold">{t('common.edit')} {t('trades.title')}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none dark:text-slate-500 dark:hover:text-slate-300"
             aria-label={t('common.cancel')}
           >
             ✕
@@ -144,7 +144,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                     ? s === 'Open'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-gray-500 text-white'
-                    : 'bg-gray-100 text-gray-700',
+                    : 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-slate-300',
                 )}
               >
                 {s === 'Open' ? t('trades.openPosition') : t('trades.closedTrade')}
@@ -165,7 +165,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                     ? d === 'Long'
                       ? 'bg-green-600 text-white'
                       : 'bg-red-600 text-white'
-                    : 'bg-gray-100 text-gray-700',
+                    : 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-slate-300',
                 )}
               >
                 {d === 'Long' ? t('trades.long') : t('trades.short')}
@@ -181,7 +181,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                 value={symbol}
                 onChange={(e) => { setSymbol(e.target.value.toUpperCase()); clearFieldError('symbol') }}
                 className={cn(
-                  'w-full rounded-md border px-3 py-2 text-sm font-mono',
+                  'w-full rounded-md border px-3 py-2 text-sm font-mono dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.symbol && 'border-red-400',
                 )}
               />
@@ -190,7 +190,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="rounded-md border px-3 py-2 text-sm self-start"
+              className="rounded-md border px-3 py-2 text-sm self-start dark:bg-slate-800 dark:border-white/10 dark:text-white"
             >
               {SUPPORTED_CURRENCIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -206,7 +206,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                 value={entryPrice}
                 onChange={(e) => { setEntryPrice(e.target.value); clearFieldError('entryPrice') }}
                 className={cn(
-                  'rounded-md border px-3 py-2 text-sm',
+                  'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.entryPrice && 'border-red-400',
                 )}
               />
@@ -223,7 +223,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                   value={exitPrice}
                   onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
                   className={cn(
-                    'rounded-md border px-3 py-2 text-sm',
+                    'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                     fieldErrors.exitPrice && 'border-red-400',
                   )}
                 />
@@ -252,7 +252,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                 value={positionSize}
                 onChange={(e) => { setPositionSize(e.target.value); clearFieldError('positionSize') }}
                 className={cn(
-                  'rounded-md border px-3 py-2 text-sm',
+                  'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.positionSize && 'border-red-400',
                 )}
               />
@@ -267,7 +267,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                 value={fees}
                 onChange={(e) => { setFees(e.target.value); clearFieldError('fees') }}
                 className={cn(
-                  'rounded-md border px-3 py-2 text-sm',
+                  'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.fees && 'border-red-400',
                 )}
               />
@@ -282,7 +282,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
               onChange={(e) => { setNotes(e.target.value); clearFieldError('notes') }}
               rows={4}
               className={cn(
-                'w-full rounded-md border px-3 py-2 text-sm resize-y',
+                'w-full rounded-md border px-3 py-2 text-sm resize-y dark:bg-slate-800 dark:border-white/10 dark:text-white',
                 fieldErrors.notes && 'border-red-400',
               )}
             />
@@ -290,7 +290,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
           </div>
 
           {serverErrors && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/20">
               <p className="font-medium">{serverErrors.title ?? 'Validation failed'}</p>
               {serverErrors.errors && (
                 <ul className="mt-1 list-disc list-inside space-y-0.5">

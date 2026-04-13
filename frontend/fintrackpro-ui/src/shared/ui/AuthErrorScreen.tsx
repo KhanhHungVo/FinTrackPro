@@ -38,8 +38,8 @@ const ERROR_CONTENT = {
     subtitle:
       'The login service is temporarily unreachable. This is usually a temporary issue on our end — not your network.',
     badgeLabel: 'Service Unavailable',
-    badgeClass: 'bg-orange-100 text-orange-700',
-    iconBg: 'bg-orange-50',
+    badgeClass: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400',
+    iconBg: 'bg-orange-50 dark:bg-orange-500/10',
   },
   timeout: {
     icon: (
@@ -62,8 +62,8 @@ const ERROR_CONTENT = {
     subtitle:
       'The login service is taking longer than expected. Please try again in a moment.',
     badgeLabel: 'Service Unavailable',
-    badgeClass: 'bg-yellow-100 text-yellow-700',
-    iconBg: 'bg-yellow-50',
+    badgeClass: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400',
+    iconBg: 'bg-yellow-50 dark:bg-yellow-500/10',
   },
   config: {
     icon: (
@@ -87,8 +87,8 @@ const ERROR_CONTENT = {
     subtitle:
       "We couldn't connect to the authentication provider. This is usually a temporary issue.",
     badgeLabel: 'Service Unavailable',
-    badgeClass: 'bg-red-100 text-red-700',
-    iconBg: 'bg-red-50',
+    badgeClass: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
+    iconBg: 'bg-red-50 dark:bg-red-500/10',
   },
   unknown: {
     icon: (
@@ -112,8 +112,8 @@ const ERROR_CONTENT = {
     subtitle:
       "We couldn't connect to the authentication provider. This is usually a temporary issue. Please try again in a few moments.",
     badgeLabel: 'Service Unavailable',
-    badgeClass: 'bg-slate-100 text-slate-600',
-    iconBg: 'bg-slate-50',
+    badgeClass: 'bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-400',
+    iconBg: 'bg-slate-50 dark:bg-white/5',
   },
 } as const
 
@@ -172,12 +172,12 @@ export function AuthErrorScreen({
       role="alert"
       aria-live="assertive"
       aria-atomic="true"
-      className="flex min-h-screen items-center justify-center bg-gray-50 px-4"
+      className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-[#0f1117] px-4"
     >
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:bg-[#161a25] dark:border-white/6">
         {/* Brand strip */}
         <div className="mb-6 text-center">
-          <span className="text-lg font-bold tracking-tight text-gray-900">
+          <span className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
             FinTrackPro
           </span>
         </div>
@@ -205,13 +205,13 @@ export function AuthErrorScreen({
         <h1
           ref={h1Ref}
           tabIndex={-1}
-          className="mb-2 text-center text-xl font-semibold text-gray-900 focus:outline-none"
+          className="mb-2 text-center text-xl font-semibold text-gray-900 dark:text-white focus:outline-none"
         >
           {content.title}
         </h1>
 
         {/* Subtitle */}
-        <p className="mb-6 text-center text-sm leading-relaxed text-gray-500">
+        <p className="mb-6 text-center text-sm leading-relaxed text-gray-500 dark:text-slate-400">
           {content.subtitle}
         </p>
 
@@ -230,7 +230,7 @@ export function AuthErrorScreen({
           className={cn(
             'w-full rounded-md py-2.5 text-sm font-medium transition-colors',
             isExhausted || isRetrying
-              ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+              ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-slate-500'
               : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
           )}
         >
@@ -241,7 +241,7 @@ export function AuthErrorScreen({
         {!isExhausted && (
           <p
             aria-live="polite"
-            className="mt-2 text-center text-xs text-gray-400"
+            className="mt-2 text-center text-xs text-gray-400 dark:text-slate-500"
           >
             {isRetrying
               ? 'Connecting to login service…'
@@ -251,9 +251,9 @@ export function AuthErrorScreen({
 
         {/* Exhausted amber block */}
         {isExhausted && (
-          <div className="mt-4 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mt-4 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
             <p className="font-medium">Still having trouble?</p>
-            <p className="mt-1 text-amber-700">
+            <p className="mt-1 text-amber-700 dark:text-amber-400">
               Please try again later or{' '}
               <a href="mailto:support@fintrackpro.dev" className="underline">
                 contact support
@@ -270,12 +270,12 @@ export function AuthErrorScreen({
 
 export function AuthLoadingSplash() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-50">
-      <span className="text-lg font-bold tracking-tight text-gray-900">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-[#0f1117]">
+      <span className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
         FinTrackPro
       </span>
       <div className="h-1 w-48 animate-pulse rounded-full bg-blue-200" />
-      <p className="text-sm text-gray-400">Signing you in…</p>
+      <p className="text-sm text-gray-400 dark:text-slate-500">Signing you in…</p>
     </div>
   )
 }

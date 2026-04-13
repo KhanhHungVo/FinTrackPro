@@ -79,20 +79,20 @@ export function ClosePositionModal({ trade, onClose }: ClosePositionModalProps) 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
     >
-      <div className="w-full max-w-sm rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="w-full max-w-sm rounded-lg bg-white shadow-xl dark:bg-[#161a25]">
+        <div className="flex items-center justify-between border-b px-4 py-3 dark:border-white/6">
           <h2 className="text-lg font-semibold">{t('trades.closePosition')}</h2>
           <button
             type="button"
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none dark:text-slate-500 dark:hover:text-slate-300"
             aria-label={t('common.cancel')}
           >
             ✕
           </button>
         </div>
 
-        <div className="px-4 pt-4 pb-2 space-y-1 text-sm text-gray-600 bg-gray-50 rounded-none">
+        <div className="px-4 pt-4 pb-2 space-y-1 text-sm text-gray-600 bg-gray-50 rounded-none dark:bg-white/4 dark:text-slate-400">
           <div className="flex justify-between">
             <span className="text-gray-400">{t('trades.symbol')}</span>
             <span className="font-mono font-medium">{trade.symbol}</span>
@@ -115,7 +115,7 @@ export function ClosePositionModal({ trade, onClose }: ClosePositionModalProps) 
               value={exitPrice}
               onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
               className={cn(
-                'rounded-md border px-3 py-2 text-sm',
+                'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                 fieldErrors.exitPrice && 'border-red-400',
               )}
               autoFocus
@@ -132,7 +132,7 @@ export function ClosePositionModal({ trade, onClose }: ClosePositionModalProps) 
               value={fees}
               onChange={(e) => { setFees(e.target.value); clearFieldError('fees') }}
               className={cn(
-                'rounded-md border px-3 py-2 text-sm',
+                'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                 fieldErrors.fees && 'border-red-400',
               )}
             />
@@ -156,7 +156,7 @@ export function ClosePositionModal({ trade, onClose }: ClosePositionModalProps) 
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 rounded-md border py-2 text-sm text-gray-600 hover:bg-gray-50"
+              className="flex-1 rounded-md border py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:text-slate-400 dark:hover:bg-white/5"
             >
               {t('common.cancel')}
             </button>

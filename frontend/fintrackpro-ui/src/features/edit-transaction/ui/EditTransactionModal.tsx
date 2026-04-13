@@ -110,13 +110,13 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-[#161a25]">
+        <div className="flex items-center justify-between border-b px-4 py-3 dark:border-white/6">
           <h2 className="text-lg font-semibold">{t('common.edit')} {t('transactions.title')}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none dark:text-slate-500 dark:hover:text-slate-300"
             aria-label={t('common.cancel')}
           >
             ✕
@@ -137,7 +137,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
                     ? ty === 'Income'
                       ? 'bg-green-600 text-white'
                       : 'bg-red-600 text-white'
-                    : 'bg-gray-100 text-gray-700',
+                    : 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-slate-300',
                 )}
               >
                 {ty === 'Income' ? t('transactions.income') : t('transactions.expense')}
@@ -154,7 +154,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
                 value={amount}
                 onChange={(e) => { setAmount(e.target.value); clearFieldError('amount') }}
                 className={cn(
-                  'w-full rounded-md border px-3 py-2 text-sm',
+                  'w-full rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.amount && 'border-red-400',
                 )}
               />
@@ -163,7 +163,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="rounded-md border px-3 py-2 text-sm self-start"
+              className="rounded-md border px-3 py-2 text-sm self-start dark:bg-slate-800 dark:border-white/10 dark:text-white"
             >
               {SUPPORTED_CURRENCIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -190,12 +190,12 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
-            className="w-full rounded-md border px-3 py-2 text-sm resize-y"
+            className="w-full rounded-md border px-3 py-2 text-sm resize-y dark:bg-slate-800 dark:border-white/10 dark:text-white"
           />
 
           {/* Server-side validation errors */}
           {serverErrors && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/20">
               <p className="font-medium">{serverErrors.title ?? 'Validation failed'}</p>
               {serverErrors.errors && (
                 <ul className="mt-1 list-disc list-inside space-y-0.5">
@@ -211,7 +211,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-md border py-2 text-sm text-gray-600 hover:bg-gray-50"
+              className="flex-1 rounded-md border py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:text-slate-400 dark:hover:bg-white/5"
             >
               {t('common.cancel')}
             </button>

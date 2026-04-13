@@ -33,18 +33,18 @@ export function SubscriptionSection() {
     )
   }
 
-  if (isLoading) return <div className="animate-pulse h-24 rounded-lg bg-gray-100" />
+  if (isLoading) return <div className="animate-pulse h-24 rounded-lg bg-gray-100 dark:bg-white/5" />
 
   const isPro = status?.plan === 'Pro'
 
   return (
-    <div className="rounded-lg border p-4 md:p-6 max-w-md w-full space-y-4">
+    <div className="page-card p-4 md:p-6 w-full space-y-4">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">{t('subscription.planLabel')}</span>
+          <span className="text-sm text-gray-500 dark:text-slate-400">{t('subscription.planLabel')}</span>
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              isPro ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+              isPro ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' : 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-slate-400'
             }`}
           >
             {status?.plan ?? t('subscription.free')}
@@ -53,12 +53,12 @@ export function SubscriptionSection() {
         {isPro && (
           <>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">{t('subscription.statusLabel')}</span>
+              <span className="text-sm text-gray-500 dark:text-slate-400">{t('subscription.statusLabel')}</span>
               <span className="text-sm font-medium text-green-600">{t('subscription.active')}</span>
             </div>
             {status?.expiresAt && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">{t('subscription.renewsLabel')}</span>
+                <span className="text-sm text-gray-500 dark:text-slate-400">{t('subscription.renewsLabel')}</span>
                 <span className="text-sm text-gray-700">
                   {new Date(status.expiresAt).toLocaleDateString()}
                 </span>
@@ -72,7 +72,7 @@ export function SubscriptionSection() {
           <button
             onClick={handleManage}
             disabled={portalPending}
-            className="w-full rounded-md border py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="w-full rounded-md border py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
           >
             {portalPending ? t('common.loading') : t('subscription.manageSubscription')}
           </button>

@@ -1,5 +1,37 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
+@utility glass-card {
+  background: white;
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--color-gray-200, #e5e7eb);
+  border-radius: 0.75rem;
+}
+
+.dark .glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+/* Shared card style used across all pages for consistent borders */
+@utility page-card {
+  background: white;
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--color-gray-200, #e5e7eb);
+  border-radius: 0.5rem;
+}
+
+.dark .page-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+
+
 @keyframes tcw-shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position:  400px 0; }

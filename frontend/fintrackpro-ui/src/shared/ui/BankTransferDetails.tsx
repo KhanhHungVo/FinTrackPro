@@ -15,12 +15,12 @@ export function BankTransferDetails({ showTransferAmountWithNote = false }: Bank
           <img
             src={env.BANK_QR_URL}
             alt={t('bankTransfer.bankLabel')}
-            className="h-48 w-48 rounded-lg border object-contain"
+            className="h-48 w-48 rounded-lg border object-contain dark:border-white/10"
           />
         </div>
       )}
 
-      <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 space-y-1">
+      <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 space-y-1 dark:bg-white/4 dark:text-slate-400">
         {env.BANK_NAME && (
           <div className="flex justify-between">
             <span className="font-medium">{t('bankTransfer.bankLabel')}</span>

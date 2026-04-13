@@ -20,6 +20,9 @@ const en = {
     signOut: 'Sign out',
     tryAgain: 'Try again',
     goToDashboard: 'Go to Dashboard',
+    theme: 'Theme',
+    light: 'Light',
+    dark: 'Dark',
   },
   dashboard: {
     title: 'Dashboard',
@@ -30,6 +33,10 @@ const en = {
     recentSignals: 'Recent Signals',
     vsLastMonth: 'vs last month',
     lastMonth: 'Last month',
+    goodMorning: 'Good morning',
+    goodAfternoon: 'Good afternoon',
+    goodEvening: 'Good evening',
+
   },
   transactions: {
     title: 'Transactions',
@@ -78,9 +85,12 @@ const en = {
     noTrades: 'No trades yet.',
     closePosition: 'Close Position',
     closeTrade: 'Close',
+    date: 'Date',
+    side: 'Side',
   },
   settings: {
     title: 'Settings',
+    subtitle: 'Manage your account, categories, and preferences',
     subscription: 'Subscription',
     myCategories: 'My Categories',
     myCategoriesHint: 'Custom categories appear alongside system ones when logging transactions',

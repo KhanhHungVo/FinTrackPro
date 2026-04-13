@@ -113,7 +113,7 @@ export function AddTradeForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-4">
+    <form onSubmit={handleSubmit} className="page-card space-y-4 p-4">
       <h2 className="text-lg font-semibold">{t('trades.addTrade')}</h2>
 
       {/* Status toggle */}
@@ -129,7 +129,7 @@ export function AddTradeForm() {
                 ? s === 'Open'
                   ? 'bg-emerald-600 text-white'
                   : 'bg-gray-500 text-white'
-                : 'bg-gray-100 text-gray-700',
+                : 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-slate-300',
             )}
           >
             {s === 'Open' ? t('trades.openPosition') : t('trades.closedTrade')}
@@ -150,7 +150,7 @@ export function AddTradeForm() {
                 ? d === 'Long'
                   ? 'bg-green-600 text-white'
                   : 'bg-red-600 text-white'
-                : 'bg-gray-100 text-gray-700',
+                : 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-slate-300',
             )}
           >
             {d === 'Long' ? t('trades.long') : t('trades.short')}
@@ -167,7 +167,7 @@ export function AddTradeForm() {
             onChange={(e) => { setSymbol(e.target.value.toUpperCase()); clearFieldError('symbol') }}
             onBlur={() => validateField('symbol', symbol)}
             className={cn(
-              'w-full rounded-md border px-3 py-2 text-sm font-mono',
+              'w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white',
               fieldErrors.symbol && 'border-red-400',
             )}
           />
@@ -176,7 +176,7 @@ export function AddTradeForm() {
         <select
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm self-start"
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm self-start outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
         >
           {SUPPORTED_CURRENCIES.map((c) => (
             <option key={c} value={c}>{c}</option>
@@ -193,7 +193,7 @@ export function AddTradeForm() {
             onChange={(e) => { setEntryPrice(e.target.value); clearFieldError('entryPrice') }}
             onBlur={() => validateField('entryPrice', parseFloat(entryPrice))}
             className={cn(
-              'rounded-md border px-3 py-2 text-sm',
+              'rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white',
               fieldErrors.entryPrice && 'border-red-400',
             )}
           />
@@ -211,7 +211,7 @@ export function AddTradeForm() {
               onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
               onBlur={() => validateField('exitPrice', parseFloat(exitPrice) || null)}
               className={cn(
-                'rounded-md border px-3 py-2 text-sm',
+                'rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white',
                 fieldErrors.exitPrice && 'border-red-400',
               )}
             />
@@ -226,7 +226,7 @@ export function AddTradeForm() {
               placeholder={t('trades.currentPrice')}
               value={currentPrice}
               onChange={(e) => { setCurrentPrice(e.target.value); clearFieldError('currentPrice') }}
-              className="rounded-md border px-3 py-2 text-sm"
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
             />
           </div>
         )}
@@ -241,7 +241,7 @@ export function AddTradeForm() {
             onChange={(e) => { setPositionSize(e.target.value); clearFieldError('positionSize') }}
             onBlur={() => validateField('positionSize', parseFloat(positionSize))}
             className={cn(
-              'rounded-md border px-3 py-2 text-sm',
+              'rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white',
               fieldErrors.positionSize && 'border-red-400',
             )}
           />
@@ -257,7 +257,7 @@ export function AddTradeForm() {
             onChange={(e) => { setFees(e.target.value); clearFieldError('fees') }}
             onBlur={() => validateField('fees', parseFloat(fees) || 0)}
             className={cn(
-              'rounded-md border px-3 py-2 text-sm',
+              'rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white',
               fieldErrors.fees && 'border-red-400',
             )}
           />
@@ -273,7 +273,7 @@ export function AddTradeForm() {
           onBlur={() => validateField('notes', notes || null)}
           rows={4}
           className={cn(
-            'w-full rounded-md border px-3 py-2 text-sm resize-y',
+            'w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-y outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white',
             fieldErrors.notes && 'border-red-400',
           )}
         />
@@ -281,7 +281,7 @@ export function AddTradeForm() {
       </div>
 
       {serverErrors && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20">
           <p className="font-medium">{serverErrors.title ?? 'Validation failed'}</p>
           {serverErrors.errors && (
             <ul className="mt-1 list-disc list-inside space-y-0.5">

@@ -66,7 +66,7 @@ export function FearGreedWidget() {
   const { t } = useTranslation()
   const { data, isLoading } = useFearGreed()
 
-  if (isLoading) return <div className="animate-pulse h-44 rounded-lg bg-gray-100" />
+  if (isLoading) return <div className="animate-pulse h-44 rounded-lg bg-gray-100 dark:bg-white/5" />
   if (!data) return null
 
   const activeIdx = getActiveZone(data.value)
@@ -82,8 +82,8 @@ export function FearGreedWidget() {
   }
 
   return (
-    <div className="rounded-lg border p-4 text-center">
-      <p className="text-sm text-gray-500 mb-1">{t('market.fearGreedIndex')}</p>
+    <div className="glass-card p-4 text-center">
+      <p className="text-sm text-gray-500 dark:text-slate-400 mb-1">{t('market.fearGreedIndex')}</p>
 
       <svg viewBox="0 0 300 185" className="w-full max-w-[340px] mx-auto">
         {/* Arc segments */}
@@ -121,7 +121,7 @@ export function FearGreedWidget() {
 
         {/* Dot markers */}
         {dots.map((d, i) => (
-          <circle key={i} cx={d.x} cy={d.y} r={1.5} fill="#9ca3af" />
+          <circle key={i} cx={d.x} cy={d.y} r={1.5} className="fill-gray-400 dark:fill-slate-600" />
         ))}
 
         {/* Numeric boundary labels */}
@@ -136,7 +136,7 @@ export function FearGreedWidget() {
               dominantBaseline="middle"
               fontSize="10"
               fontWeight="500"
-              fill="#6b7280"
+              className="fill-gray-500 dark:fill-slate-400"
             >
               {val}
             </text>
@@ -160,7 +160,7 @@ export function FearGreedWidget() {
               dominantBaseline="middle"
               fontSize="8"
               fontWeight="600"
-              fill="#6b7280"
+              className="fill-gray-500 dark:fill-slate-400"
               transform={`rotate(${textRotation}, ${pos.x}, ${pos.y})`}
             >
               {lines.map((line, li) => (
@@ -178,7 +178,7 @@ export function FearGreedWidget() {
           y1={CY}
           x2={CX + NEEDLE_LEN}
           y2={CY}
-          stroke="#1f2937"
+          className="stroke-gray-800 dark:stroke-slate-200"
           strokeWidth={3.5}
           strokeLinecap="round"
           style={{
@@ -189,7 +189,7 @@ export function FearGreedWidget() {
         />
 
         {/* Pivot dot */}
-        <circle cx={CX} cy={CY} r={5} fill="#1f2937" />
+        <circle cx={CX} cy={CY} r={5} className="fill-gray-800 dark:fill-slate-200" />
 
         {/* Value below gauge */}
         <text
@@ -198,7 +198,7 @@ export function FearGreedWidget() {
           textAnchor="middle"
           fontWeight="800"
           fontSize="32"
-          fill="#1f2937"
+          className="fill-gray-800 dark:fill-slate-100"
         >
           {data.value}
         </text>

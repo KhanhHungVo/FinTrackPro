@@ -50,7 +50,7 @@ export function TradesPage() {
         <h1 className="text-2xl font-bold">{t('trades.title')}</h1>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition-colors"
         >
           {showForm ? t('common.cancel') : `+ ${t('trades.addTrade')}`}
         </button>
@@ -58,24 +58,24 @@ export function TradesPage() {
 
       {/* Summary cards */}
       <div className={cn('grid grid-cols-1 gap-4', openTradesWithPrice.length > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-gray-500">{t('trades.totalPnl')}</p>
+        <div className="page-card p-4">
+          <p className="text-xs text-gray-500 dark:text-slate-400">{t('trades.totalPnl')}</p>
           <p className={cn('text-xl font-semibold', totalPnl >= 0 ? 'text-green-600' : 'text-red-600')}>
             {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl, currency, i18n.language)}
           </p>
         </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-gray-500">{t('trades.winRate')}</p>
+        <div className="page-card p-4">
+          <p className="text-xs text-gray-500 dark:text-slate-400">{t('trades.winRate')}</p>
           <p className="text-xl font-semibold">{winRate}%</p>
         </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-gray-500">{t('trades.totalTrades')}</p>
+        <div className="page-card p-4">
+          <p className="text-xs text-gray-500 dark:text-slate-400">{t('trades.totalTrades')}</p>
           <p className="text-xl font-semibold">{totalAllTrades}</p>
         </div>
         {openTradesWithPrice.length > 0 && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-            <p className="text-xs text-emerald-600">{t('trades.unrealizedPnl')}</p>
-            <p className={cn('text-xl font-semibold', unrealizedPnl >= 0 ? 'text-emerald-700' : 'text-red-600')}>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">{t('trades.unrealizedPnl')}</p>
+            <p className={cn('text-xl font-semibold', unrealizedPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600')}>
               {unrealizedPnl >= 0 ? '+' : ''}{formatCurrency(unrealizedPnl, currency, i18n.language)}
             </p>
           </div>
@@ -92,130 +92,161 @@ export function TradesPage() {
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="animate-pulse h-16 rounded-lg bg-gray-100" />
+            <div key={i} className="animate-pulse h-16 rounded-lg bg-gray-100 dark:bg-white/5" />
           ))}
         </div>
       ) : trades?.length === 0 ? (
-        <p className="text-center text-sm text-gray-400 py-8">
+        <p className="text-center text-sm text-gray-400 dark:text-slate-500 py-8">
           {t('trades.noTrades')}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border -mx-4 sm:mx-0">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-              <tr>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">{t('trades.symbol')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">{t('trades.direction')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">{t('trades.status')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.entryPrice')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.exitCurrentPrice')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.positionSize')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.fees')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-right">{t('trades.pnl')}</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3 text-left">Date</th>
-                <th className="px-3 py-2 sm:px-4 sm:py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {trades?.map((trade) => {
-                const isOpen = trade.status === 'Open'
-                const displayPrice = isOpen ? trade.currentPrice : trade.exitPrice
-                const pnlRaw = isOpen ? (trade.unrealizedResult ?? null) : trade.result
-                const displayPnl = pnlRaw != null
-                  ? convertAmount(pnlRaw, trade.rateToUsd, preferredRate)
-                  : null
-                const displayFees = convertAmount(trade.fees, trade.rateToUsd, preferredRate)
+        <div className="page-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-gray-100 dark:border-white/6 bg-gray-50/60 dark:bg-white/3">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.symbol')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.direction')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.status')}</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.pnl')}</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.entryPrice')}</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.exitCurrentPrice')}</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.positionSize')}</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.fees')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('trades.date')}</th>
+                  <th className="px-4 py-3 w-20" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                {trades?.map((trade) => {
+                  const isOpen = trade.status === 'Open'
+                  const displayPrice = isOpen ? trade.currentPrice : trade.exitPrice
+                  const pnlRaw = isOpen ? (trade.unrealizedResult ?? null) : trade.result
+                  const displayPnl = pnlRaw != null
+                    ? convertAmount(pnlRaw, trade.rateToUsd, preferredRate)
+                    : null
+                  const displayFees = convertAmount(trade.fees, trade.rateToUsd, preferredRate)
 
-                return (
-                  <tr key={trade.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 font-mono font-medium">{trade.symbol}</td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3">
-                      <span
-                        className={cn(
-                          'rounded px-1.5 py-0.5 text-xs font-medium',
-                          trade.direction === 'Long'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700',
-                        )}
-                      >
-                        {trade.direction === 'Long' ? t('trades.long') : t('trades.short')}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3">
-                      <span
-                        className={cn(
-                          'rounded px-1.5 py-0.5 text-xs font-medium',
-                          isOpen
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-gray-100 text-gray-600',
-                        )}
-                      >
-                        {isOpen ? t('trades.open') : t('trades.closed')}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">
-                      {formatCurrency(convertAmount(trade.entryPrice, trade.rateToUsd, preferredRate), currency, i18n.language)}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">
-                      {displayPrice != null
-                        ? formatCurrency(convertAmount(displayPrice, trade.rateToUsd, preferredRate), currency, i18n.language)
-                        : '—'}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-600">{trade.positionSize}</td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 text-right text-gray-400">
-                      {formatCurrency(displayFees, currency, i18n.language)}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 text-right">
-                      {displayPnl != null ? (
+                  return (
+                    <tr key={trade.id} className="group hover:bg-gray-50/70 dark:hover:bg-white/3 transition-colors">
+                      {/* Symbol */}
+                      <td className="px-4 py-3">
+                        <span className="font-mono font-semibold text-gray-900 dark:text-slate-100">{trade.symbol}</span>
+                      </td>
+
+                      {/* Direction */}
+                      <td className="px-4 py-3">
                         <span
                           className={cn(
-                            isOpen
-                              ? 'italic text-gray-400'
-                              : cn('font-semibold', displayPnl >= 0 ? 'text-green-600' : 'text-red-600'),
+                            'inline-flex w-fit rounded px-1.5 py-0.5 text-xs font-semibold',
+                            trade.direction === 'Long'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
                           )}
                         >
-                          {displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl, currency, i18n.language)}
+                          {trade.direction === 'Long' ? t('trades.long') : t('trades.short')}
                         </span>
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs text-gray-400">
-                      {new Date(trade.createdAt).toLocaleDateString(i18n.language)}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3">
-                      <div className="flex gap-2">
-                        {isOpen && (
-                          <button
-                            onClick={() => setClosingTrade(trade)}
-                            className="text-xs text-gray-300 hover:text-emerald-600"
-                            title={t('trades.closeTrade')}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            'inline-flex w-fit rounded px-1.5 py-0.5 text-xs font-medium',
+                            isOpen
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400'
+                              : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-slate-500',
+                          )}
+                        >
+                          {isOpen ? t('trades.open') : t('trades.closed')}
+                        </span>
+                      </td>
+
+                      {/* P&L — most important, shown prominently */}
+                      <td className="px-4 py-3 text-right">
+                        {displayPnl != null ? (
+                          <span
+                            className={cn(
+                              'text-sm font-bold',
+                              isOpen
+                                ? 'text-gray-400 dark:text-slate-500'
+                                : displayPnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400',
+                            )}
                           >
-                            ✓
-                          </button>
+                            {displayPnl >= 0 ? '+' : ''}{formatCurrency(displayPnl, currency, i18n.language)}
+                            {isOpen && <span className="ml-1 text-xs font-normal italic">(unrlzd)</span>}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 dark:text-slate-600">—</span>
                         )}
-                        <button
-                          onClick={() => setEditingTrade(trade)}
-                          className="text-xs text-gray-300 hover:text-blue-500"
-                          title={t('common.edit')}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          onClick={() => guardedDelete(trade.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
-                          disabled={isDeleting(trade.id)}
-                          className="text-xs text-gray-300 hover:text-red-500 disabled:opacity-50"
-                          title={t('common.delete')}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      </td>
+
+                      {/* Entry price */}
+                      <td className="px-4 py-3 text-right text-gray-600 dark:text-slate-300 tabular-nums">
+                        {formatCurrency(convertAmount(trade.entryPrice, trade.rateToUsd, preferredRate), currency, i18n.language)}
+                      </td>
+
+                      {/* Exit / current price */}
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {displayPrice != null ? (
+                          <span className="text-gray-600 dark:text-slate-300">
+                            {formatCurrency(convertAmount(displayPrice, trade.rateToUsd, preferredRate), currency, i18n.language)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 dark:text-slate-600">—</span>
+                        )}
+                      </td>
+
+                      {/* Position size */}
+                      <td className="px-4 py-3 text-right text-gray-500 dark:text-slate-400 tabular-nums">
+                        {trade.positionSize}
+                      </td>
+
+                      {/* Fees — dimmed, secondary info */}
+                      <td className="px-4 py-3 text-right text-gray-400 dark:text-slate-500 tabular-nums text-xs">
+                        {formatCurrency(displayFees, currency, i18n.language)}
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-4 py-3 text-xs text-gray-400 dark:text-slate-500 whitespace-nowrap">
+                        {new Date(trade.createdAt).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
+                      </td>
+
+                      {/* Actions — visible on hover */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {isOpen && (
+                            <button
+                              onClick={() => setClosingTrade(trade)}
+                              title={t('trades.closeTrade')}
+                              className="rounded px-1.5 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10 transition-colors"
+                            >
+                              ✓
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setEditingTrade(trade)}
+                            title={t('common.edit')}
+                            className="rounded px-1.5 py-1 text-xs text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={() => guardedDelete(trade.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
+                            disabled={isDeleting(trade.id)}
+                            title={t('common.delete')}
+                            className="rounded px-1.5 py-1 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

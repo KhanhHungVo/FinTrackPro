@@ -10,7 +10,7 @@ export function PlanBadge() {
 
   if (isPro) {
     return (
-      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-500/15 dark:text-blue-400">
         {t('subscription.pro')}
       </span>
     )
@@ -19,7 +19,7 @@ export function PlanBadge() {
   return (
     <button
       onClick={() => navigate('/pricing')}
-      className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+      className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10"
     >
       {t('subscription.free')}
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">

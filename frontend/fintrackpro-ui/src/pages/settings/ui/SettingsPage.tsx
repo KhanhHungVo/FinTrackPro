@@ -12,7 +12,7 @@ export function SettingsPage() {
       <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
 
       <section>
-        <h2 className="text-base font-semibold text-gray-700 mb-3">{t('settings.subscription')}</h2>
+        <h2 className="text-base font-semibold text-gray-700 dark:text-slate-300 mb-3">{t('settings.subscription')}</h2>
         <SubscriptionSection />
       </section>
 
@@ -21,12 +21,12 @@ export function SettingsPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-semibold text-gray-700 mb-3">{t('settings.notifications')}</h2>
+        <h2 className="text-base font-semibold text-gray-700 dark:text-slate-300 mb-3">{t('settings.notifications')}</h2>
         <NotificationSettingsForm />
       </section>
 
       <section>
-        <h2 className="text-base font-semibold text-gray-700 mb-3">{t('settings.watchlist')}</h2>
+        <h2 className="text-base font-semibold text-gray-700 dark:text-slate-300 mb-3">{t('settings.watchlist')}</h2>
         <WatchlistManager />
       </section>
     </div>

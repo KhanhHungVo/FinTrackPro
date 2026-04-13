@@ -45,7 +45,7 @@ export function AddTransactionForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-4">
+    <form onSubmit={handleSubmit} className="page-card space-y-4 p-4">
       <h2 className="text-lg font-semibold">{t('transactions.addTransaction')}</h2>
 
       <div className="flex gap-2">
@@ -60,7 +60,7 @@ export function AddTransactionForm() {
                 ? ty === 'Income'
                   ? 'bg-green-600 text-white'
                   : 'bg-red-600 text-white'
-                : 'bg-gray-100 text-gray-700',
+                : 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-slate-300',
             )}
           >
             {ty === 'Income' ? t('transactions.income') : t('transactions.expense')}
@@ -75,12 +75,12 @@ export function AddTransactionForm() {
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           required
-          className="flex-1 rounded-md border px-3 py-2 text-sm"
+          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
         />
         <select
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm"
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
         >
           {SUPPORTED_CURRENCIES.map((c) => (
             <option key={c} value={c}>{c}</option>
@@ -100,7 +100,7 @@ export function AddTransactionForm() {
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={4}
-        className="w-full rounded-md border px-3 py-2 text-sm resize-y"
+        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-y outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
       />
 
       <button

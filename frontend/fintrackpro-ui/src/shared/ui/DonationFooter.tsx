@@ -20,9 +20,9 @@ export function DonationFooter() {
 
   return (
     <>
-      <div className="w-full border-t border-amber-200 bg-amber-50 px-4 py-3">
+      <div className="w-full border-t border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/10">
         <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
-          <p className="text-sm text-amber-900">
+          <p className="text-sm text-amber-900 dark:text-amber-300">
             <span className="mr-1.5">☕</span>
             <span className="font-semibold">{t('donation.message')}</span>
           </p>
@@ -35,7 +35,7 @@ export function DonationFooter() {
             </button>
             <button
               onClick={handleDismiss}
-              className="rounded p-1 text-amber-500 transition-colors hover:bg-amber-100 hover:text-amber-700"
+              className="rounded p-1 text-amber-500 transition-colors hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-500/20"
               aria-label={t('donation.dismiss')}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">

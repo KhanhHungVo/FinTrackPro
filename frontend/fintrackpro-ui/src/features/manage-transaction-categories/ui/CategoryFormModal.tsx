@@ -121,17 +121,17 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
         aria-labelledby="category-modal-title"
         className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 px-4"
       >
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-2xl overflow-hidden">
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-2xl overflow-hidden dark:bg-[#161a25] dark:border-white/6">
 
           {/* Header */}
-          <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100">
+          <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-white/6">
             <div>
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">
                 {isEdit ? t('common.edit') : t('transactionCategories.newCategory')}
               </p>
               <h2
                 id="category-modal-title"
-                className="text-xl font-semibold text-gray-900"
+                className="text-xl font-semibold text-gray-900 dark:text-white"
               >
                 {isEdit
                   ? t('transactionCategories.editTitle')
@@ -140,7 +140,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
             </div>
             <button
               onClick={onClose}
-              className="ml-4 text-gray-400 hover:text-gray-600 transition-colors"
+              className="ml-4 text-gray-400 hover:text-gray-600 transition-colors dark:text-slate-500 dark:hover:text-slate-300"
               aria-label={t('common.cancel')}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -154,7 +154,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
 
             {/* Type toggle — disabled in edit mode (type is immutable) */}
             <div>
-              <p className="block text-xs text-gray-500 font-medium mb-2">
+              <p className="block text-xs text-gray-500 dark:text-slate-400 font-medium mb-2">
                 {t('transactionCategories.type')}
               </p>
               <div className="flex gap-2">
@@ -165,7 +165,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border-[1.5px] transition-all disabled:cursor-not-allowed ${
                     selectedType === 'Expense'
                       ? 'bg-red-50 text-red-600 border-red-300'
-                      : 'bg-gray-50 text-gray-500 border-gray-200'
+                      : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-white/4 dark:text-slate-400 dark:border-white/6'
                   }`}
                 >
                   {t('transactionCategories.expense')}
@@ -177,7 +177,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border-[1.5px] transition-all disabled:cursor-not-allowed ${
                     selectedType === 'Income'
                       ? 'bg-green-50 text-green-600 border-green-300'
-                      : 'bg-gray-50 text-gray-500 border-gray-200'
+                      : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-white/4 dark:text-slate-400 dark:border-white/6'
                   }`}
                 >
                   {t('transactionCategories.income')}
@@ -192,12 +192,12 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
                   {t('transactionCategories.icon')}
                 </p>
                 {/* Live preview badge */}
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 text-sm font-medium text-gray-700">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 text-sm font-medium text-gray-700 dark:bg-white/4 dark:border-white/6 dark:text-slate-300">
                   <span aria-label="selected icon">{selectedIcon}</span>
                   <span className="text-gray-400">{nameEn || 'Category name'}</span>
                 </span>
               </div>
-              <div className="max-h-[188px] overflow-y-auto rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+              <div className="max-h-[188px] overflow-y-auto rounded-xl border border-gray-100 bg-gray-50/60 p-3 dark:border-white/5 dark:bg-white/4">
                 <div className="flex flex-wrap gap-1" role="listbox" aria-label={t('transactionCategories.icon')}>
                   {EMOJIS.map((emoji) => (
                     <button
@@ -208,8 +208,8 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
                       onClick={() => setSelectedIcon(emoji)}
                       className={`w-10 h-10 flex items-center justify-center text-xl rounded-lg transition-all border-2 ${
                         emoji === selectedIcon
-                          ? 'bg-blue-50 border-blue-500 scale-110'
-                          : 'border-transparent hover:bg-gray-100 hover:scale-110'
+                          ? 'bg-blue-50 border-blue-500 scale-110 dark:bg-blue-500/15'
+                          : 'border-transparent hover:bg-gray-100 hover:scale-110 dark:hover:bg-white/5'
                       }`}
                       title={emoji}
                     >
@@ -223,7 +223,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
             {/* Name fields */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 font-medium mb-1.5">
+                <label className="block text-xs text-gray-500 dark:text-slate-400 font-medium mb-1.5">
                   {t('transactionCategories.nameEn')}
                 </label>
                 <input
@@ -234,14 +234,14 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
                     if (errors.nameEn) setErrors((prev) => ({ ...prev, nameEn: undefined }))
                   }}
                   placeholder={t('transactionCategories.namePlaceholderEn')}
-                  className={`w-full rounded-md border px-3 py-2 text-sm ${errors.nameEn ? 'border-red-400' : ''}`}
+                  className={`w-full rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white ${errors.nameEn ? 'border-red-400' : ''}`}
                 />
                 {errors.nameEn && (
                   <p className="mt-1 text-xs text-red-500">{errors.nameEn}</p>
                 )}
               </div>
               <div>
-                <label className="block text-xs text-gray-500 font-medium mb-1.5">
+                <label className="block text-xs text-gray-500 dark:text-slate-400 font-medium mb-1.5">
                   {t('transactionCategories.nameVi')}
                 </label>
                 <input
@@ -252,7 +252,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
                     if (errors.nameVi) setErrors((prev) => ({ ...prev, nameVi: undefined }))
                   }}
                   placeholder={t('transactionCategories.namePlaceholderVi')}
-                  className={`w-full rounded-md border px-3 py-2 text-sm ${errors.nameVi ? 'border-red-400' : ''}`}
+                  className={`w-full rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white ${errors.nameVi ? 'border-red-400' : ''}`}
                 />
                 {errors.nameVi && (
                   <p className="mt-1 text-xs text-red-500">{errors.nameVi}</p>
@@ -262,7 +262,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
 
             {/* Slug preview */}
             {!isEdit && (
-              <p className="text-[11px] text-gray-400 font-mono -mt-2">
+              <p className="text-[11px] text-gray-400 dark:text-slate-500 font-mono -mt-2">
                 {t('transactionCategories.slugPreview')}: <strong>{slug}</strong>
               </p>
             )}
@@ -273,7 +273,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-md border border-gray-200 py-2.5 text-sm text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              className="flex-1 rounded-md border border-gray-200 py-2.5 text-sm text-gray-700 font-medium hover:bg-gray-50 transition-colors dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
             >
               {t('common.cancel')}
             </button>
