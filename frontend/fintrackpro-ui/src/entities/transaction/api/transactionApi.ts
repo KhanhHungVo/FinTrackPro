@@ -1,6 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
+import { cleanParams } from '@/shared/lib/cleanParams'
+import type { PagedResult } from '@/shared/api/types'
 import type { Transaction, TransactionType } from '../model/types'
+
+export interface TransactionQueryParams {
+  page?: number
+  pageSize?: number
+  search?: string
+  month?: string
+  type?: TransactionType | ''
+  categoryId?: string
+  sortBy?: string
+  sortDir?: string
+}
+
+export interface TransactionSummaryParams {
+  month?: string
+  type?: TransactionType | ''
+  categoryId?: string
+  preferredCurrency?: string
+  preferredRate?: number
+}
+
+export interface TransactionSummary {
+  totalIncome: number
+  totalExpense: number
+  netBalance: number
+}
 
 export interface CreateTransactionPayload {
   type: TransactionType
@@ -11,12 +38,27 @@ export interface CreateTransactionPayload {
   budgetMonth: string
 }
 
-export function useTransactions(month?: string) {
+export function useTransactions(params: TransactionQueryParams = {}) {
   return useQuery({
-    queryKey: ['transactions', month],
+    queryKey: ['transactions', params],
     queryFn: async () => {
-      const params = month ? { month } : {}
-      const { data } = await apiClient.get<Transaction[]>('/api/transactions', { params })
+      const { data } = await apiClient.get<PagedResult<Transaction>>(
+        '/api/transactions',
+        { params: cleanParams(params as Record<string, unknown>) },
+      )
+      return data
+    },
+  })
+}
+
+export function useTransactionSummary(params: TransactionSummaryParams = {}) {
+  return useQuery({
+    queryKey: ['transactions', 'summary', params],
+    queryFn: async () => {
+      const { data } = await apiClient.get<TransactionSummary>(
+        '/api/transactions/summary',
+        { params: cleanParams(params as Record<string, unknown>) },
+      )
       return data
     },
   })

@@ -2,7 +2,9 @@ using FinTrackPro.Application.Trading.Commands.ClosePosition;
 using FinTrackPro.Application.Trading.Commands.CreateTrade;
 using FinTrackPro.Application.Trading.Commands.DeleteTrade;
 using FinTrackPro.Application.Trading.Commands.UpdateTrade;
+using FinTrackPro.Application.Trading.DTOs;
 using FinTrackPro.Application.Trading.Queries.GetTrades;
+using FinTrackPro.Application.Trading.Queries.GetTradeSummary;
 using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +15,27 @@ namespace FinTrackPro.API.Controllers;
 public class TradesController : BaseApiController
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TradeDto>>> GetAll()
-        => Ok(await Mediator.Send(new GetTradesQuery()));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] string? status = null,
+        [FromQuery] string? direction = null,
+        [FromQuery] DateOnly? dateFrom = null,
+        [FromQuery] DateOnly? dateTo = null,
+        [FromQuery] string sortBy = "date",
+        [FromQuery] string sortDir = "desc")
+        => Ok(await Mediator.Send(new GetTradesQuery(page, pageSize, search, status, direction, dateFrom, dateTo, sortBy, sortDir)));
+
+    [HttpGet("summary")]
+    public async Task<ActionResult<TradeSummaryDto>> GetSummary(
+        [FromQuery] string? status,
+        [FromQuery] string? direction,
+        [FromQuery] DateOnly? dateFrom,
+        [FromQuery] DateOnly? dateTo,
+        [FromQuery] string? preferredCurrency,
+        [FromQuery] decimal preferredRate = 1m)
+        => Ok(await Mediator.Send(new GetTradeSummaryQuery(status, direction, dateFrom, dateTo, preferredCurrency, preferredRate)));
 
     [HttpPost]
     public async Task<ActionResult<Guid>> Create(CreateTradeCommand command)

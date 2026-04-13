@@ -10,30 +10,78 @@ OpenAPI JSON: `GET /openapi/v1.json` (development only)
 ## Transactions
 
 ### `GET /api/transactions`
-Returns all transactions for the authenticated user.
+Returns a paginated list of transactions for the authenticated user.
+
+**Query params:**
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | int | 1 | Page number (≥ 1) |
+| `pageSize` | int | 20 | Items per page (1–100) |
+| `search` | string | — | Free-text search on note and category name |
+| `month` | string (YYYY-MM) | — | Filter by budget month |
+| `type` | `Income` \| `Expense` | — | Filter by transaction type |
+| `categoryId` | guid | — | Filter by category |
+| `sortBy` | string | `date` | Column to sort: `date`, `amount`, `category` |
+| `sortDir` | `asc` \| `desc` | `desc` | Sort direction |
+
+**Response 200:**
+```json
+{
+  "items": [
+    {
+      "id": "guid",
+      "type": "Expense",
+      "amount": 120.50,
+      "currency": "VND",
+      "rateToUsd": 25000.0,
+      "category": "food_beverage",
+      "categoryId": "guid-or-null",
+      "note": "Grocery run",
+      "budgetMonth": "2026-03",
+      "createdAt": "2026-03-12T10:00:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 42,
+  "totalPages": 3,
+  "hasPreviousPage": false,
+  "hasNextPage": true
+}
+```
+
+**Validation errors (400):**
+- `page` must be ≥ 1
+- `pageSize` must be between 1 and 100
+- `sortBy` must be one of `date`, `amount`, `category`
+- `month` must match `YYYY-MM` if provided
+
+---
+
+### `GET /api/transactions/summary`
+Returns aggregate income/expense totals for the authenticated user. Applies the same filter params as `GET /api/transactions` (minus page/sort). Use this to compute KPI cards over the full filtered dataset without transferring rows.
+
+Totals are returned **in `preferredCurrency`**: when a transaction's stored currency matches `preferredCurrency` the amount is used as-is (no round-trip); otherwise it is normalized via `amount / rateToUsd * preferredRate`. This ensures the KPI cards match the sum of individual rows exactly.
 
 **Query params:**
 | Param | Type | Description |
 |---|---|---|
 | `month` | string (YYYY-MM) | Filter by budget month (optional) |
+| `type` | `Income` \| `Expense` | Filter by type (optional) |
+| `categoryId` | guid | Filter by category (optional) |
+| `preferredCurrency` | string (ISO 4217) | Target display currency — totals are returned in this currency (optional, defaults to `USD`) |
+| `preferredRate` | decimal | Exchange rate for `preferredCurrency` (units per 1 USD). Required when `preferredCurrency` is not `USD` (optional, defaults to `1`) |
 
 **Response 200:**
 ```json
-[
-  {
-    "id": "guid",
-    "type": "Expense",
-    "amount": 120.50,
-    "currency": "VND",
-    "rateToUsd": 25000.0,
-    "category": "food_beverage",
-    "categoryId": "guid-or-null",
-    "note": "Grocery run",
-    "budgetMonth": "2026-03",
-    "createdAt": "2026-03-12T10:00:00Z"
-  }
-]
+{
+  "totalIncome": 3500.00,
+  "totalExpense": 2100.00,
+  "netBalance": 1400.00
+}
 ```
+
+> All three values are expressed in `preferredCurrency`.
 
 ---
 
@@ -222,49 +270,88 @@ Delete a budget (owner only).
 ## Trades
 
 ### `GET /api/trades`
-Returns all trades for the user (open and closed), ordered by date descending.
+Returns a paginated list of trades for the user (open and closed).
+
+**Query params:**
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | int | 1 | Page number (≥ 1) |
+| `pageSize` | int | 20 | Items per page (1–100) |
+| `search` | string | — | Free-text search on symbol |
+| `status` | `Open` \| `Closed` | — | Filter by trade status |
+| `direction` | `Long` \| `Short` | — | Filter by direction |
+| `dateFrom` | date (YYYY-MM-DD) | — | Filter to trades on or after this date |
+| `dateTo` | date (YYYY-MM-DD) | — | Filter to trades on or before this date |
+| `sortBy` | string | `date` | Column to sort: `date`, `pnl`, `symbol`, `entryPrice`, `positionSize`, `fees` |
+| `sortDir` | `asc` \| `desc` | `desc` | Sort direction |
 
 **Response 200:**
 ```json
-[
-  {
-    "id": "guid",
-    "symbol": "BTCUSDT",
-    "direction": "Long",
-    "status": "Closed",
-    "entryPrice": 60000.0,
-    "exitPrice": 65000.0,
-    "currentPrice": null,
-    "positionSize": 0.1,
-    "fees": 5.0,
-    "currency": "USD",
-    "rateToUsd": 1.0,
-    "result": 495.0,
-    "unrealizedResult": null,
-    "notes": null,
-    "createdAt": "2026-03-10T14:00:00Z"
-  },
-  {
-    "id": "guid",
-    "symbol": "ETHUSDT",
-    "direction": "Long",
-    "status": "Open",
-    "entryPrice": 2000.0,
-    "exitPrice": null,
-    "currentPrice": 2200.0,
-    "positionSize": 1.0,
-    "fees": 0.0,
-    "currency": "USD",
-    "rateToUsd": 1.0,
-    "result": 0.0,
-    "unrealizedResult": 200.0,
-    "notes": null,
-    "createdAt": "2026-03-15T09:00:00Z"
-  }
-]
+{
+  "items": [
+    {
+      "id": "guid",
+      "symbol": "BTCUSDT",
+      "direction": "Long",
+      "status": "Closed",
+      "entryPrice": 60000.0,
+      "exitPrice": 65000.0,
+      "currentPrice": null,
+      "positionSize": 0.1,
+      "fees": 5.0,
+      "currency": "USD",
+      "rateToUsd": 1.0,
+      "result": 495.0,
+      "unrealizedResult": null,
+      "notes": null,
+      "createdAt": "2026-03-10T14:00:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 15,
+  "totalPages": 1,
+  "hasPreviousPage": false,
+  "hasNextPage": false
+}
 ```
 
 > `result` = realized P&L for Closed trades, computed server-side, not stored. `unrealizedResult` = estimated P&L for Open trades with a current price; `null` if no current price.
+
+**Validation errors (400):**
+- `page` must be ≥ 1
+- `pageSize` must be between 1 and 100
+- `sortBy` must be one of `date`, `pnl`, `symbol`, `entryPrice`, `positionSize`, `fees`
+- `dateFrom` must be ≤ `dateTo` if both provided
+
+---
+
+### `GET /api/trades/summary`
+Returns aggregate P&L statistics for the authenticated user. Applies the same filter params as `GET /api/trades` (minus page/sort). KPI cards on the Trades page source from this endpoint — totals are unaffected by the current page or sort.
+
+Totals are returned **in `preferredCurrency`**: when a trade's stored currency matches `preferredCurrency` the P&L is used as-is (no round-trip); otherwise it is normalized via `pnl / rateToUsd * preferredRate`.
+
+**Query params:**
+| Param | Type | Description |
+|---|---|---|
+| `status` | `Open` \| `Closed` | Filter by trade status (optional) |
+| `direction` | `Long` \| `Short` | Filter by direction (optional) |
+| `dateFrom` | date (YYYY-MM-DD) | Filter start date (optional) |
+| `dateTo` | date (YYYY-MM-DD) | Filter end date (optional) |
+| `preferredCurrency` | string (ISO 4217) | Target display currency — totals are returned in this currency (optional, defaults to `USD`) |
+| `preferredRate` | decimal | Exchange rate for `preferredCurrency` (units per 1 USD). Required when `preferredCurrency` is not `USD` (optional, defaults to `1`) |
+
+**Response 200:**
+```json
+{
+  "totalPnl": 1240.50,
+  "winRate": 65,
+  "totalTrades": 20,
+  "unrealizedPnl": 320.00
+}
+```
+
+> `winRate` is an integer percentage (0–100). `unrealizedPnl` sums unrealized P&L across all Open trades that have a current price. Both `totalPnl` and `unrealizedPnl` are expressed in `preferredCurrency`.
 
 ---
 

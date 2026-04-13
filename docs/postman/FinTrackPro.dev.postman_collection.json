@@ -157,14 +157,18 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns array with expected schema', () => {",
-                  "  const trades = pm.response.json();",
-                  "  pm.expect(trades).to.be.an('array');",
-                  "  if (trades.length > 0) {",
-                  "    pm.expect(trades[0]).to.have.property('id');",
-                  "    pm.expect(trades[0]).to.have.property('symbol');",
-                  "    pm.expect(trades[0]).to.have.property('direction');",
-                  "    pm.expect(trades[0]).to.have.property('result');",
+                  "pm.test('Returns paged result with expected schema', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "  pm.expect(body.items).to.be.an('array');",
+                  "  if (body.items.length > 0) {",
+                  "    pm.expect(body.items[0]).to.have.property('id');",
+                  "    pm.expect(body.items[0]).to.have.property('symbol');",
+                  "    pm.expect(body.items[0]).to.have.property('direction');",
+                  "    pm.expect(body.items[0]).to.have.property('result');",
                   "  }",
                   "});"
                 ]
@@ -273,6 +277,129 @@
               }
             }
           ]
+        },
+        {
+          "name": "GET /api/trades?page=1&pageSize=5&sortBy=pnl&sortDir=desc → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades?page=1&pageSize=5&sortBy=pnl&sortDir=desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns paged result with correct page/pageSize', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "  pm.expect(body.page).to.eql(1);",
+                  "  pm.expect(body.pageSize).to.eql(5);",
+                  "  pm.expect(body.items.length).to.be.at.most(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades?status=Open → 200, all items are Open",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades?status=Open"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All returned items have status Open', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  body.items.forEach(t => pm.expect(t.status).to.eql('Open'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades?search=BTC → 200, paged shape returned",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades?search=BTC"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns paged result shape', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades/summary → 200, aggregate fields present",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns aggregate summary fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalPnl');",
+                  "  pm.expect(body).to.have.property('winRate');",
+                  "  pm.expect(body).to.have.property('totalTrades');",
+                  "  pm.expect(body).to.have.property('unrealizedPnl');",
+                  "  pm.expect(body.winRate).to.be.at.least(0).and.at.most(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades/summary?status=Closed → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades/summary?status=Closed"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns aggregate summary fields filtered to closed', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalPnl');",
+                  "  pm.expect(body).to.have.property('winRate');",
+                  "  pm.expect(body).to.have.property('totalTrades');",
+                  "  pm.expect(body).to.have.property('unrealizedPnl');",
+                  "  pm.expect(body.winRate).to.be.at.least(0).and.at.most(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -324,14 +451,18 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns array with expected schema', () => {",
-                  "  const txs = pm.response.json();",
-                  "  pm.expect(txs).to.be.an('array');",
-                  "  if (txs.length > 0) {",
-                  "    pm.expect(txs[0]).to.have.property('id');",
-                  "    pm.expect(txs[0]).to.have.property('amount');",
-                  "    pm.expect(txs[0]).to.have.property('category');",
-                  "    pm.expect(txs[0]).to.have.property('budgetMonth');",
+                  "pm.test('Returns paged result with expected schema', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "  pm.expect(body.items).to.be.an('array');",
+                  "  if (body.items.length > 0) {",
+                  "    pm.expect(body.items[0]).to.have.property('id');",
+                  "    pm.expect(body.items[0]).to.have.property('amount');",
+                  "    pm.expect(body.items[0]).to.have.property('category');",
+                  "    pm.expect(body.items[0]).to.have.property('budgetMonth');",
                   "  }",
                   "});"
                 ]
@@ -351,11 +482,15 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns array filtered by month', () => {",
-                  "  const txs = pm.response.json();",
-                  "  pm.expect(txs).to.be.an('array');",
-                  "  if (txs.length > 0) {",
-                  "    pm.expect(txs[0]).to.have.property('budgetMonth');",
+                  "pm.test('Returns paged result filtered by month', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "  pm.expect(body.items).to.be.an('array');",
+                  "  if (body.items.length > 0) {",
+                  "    pm.expect(body.items[0]).to.have.property('budgetMonth');",
                   "  }",
                   "});"
                 ]
@@ -402,6 +537,109 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions?page=1&pageSize=5&sortBy=amount&sortDir=desc → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions?page=1&pageSize=5&sortBy=amount&sortDir=desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns paged result with correct page/pageSize', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "  pm.expect(body.page).to.eql(1);",
+                  "  pm.expect(body.pageSize).to.eql(5);",
+                  "  pm.expect(body.items.length).to.be.at.most(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions?search=rent → 200, paged shape returned",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions?search=rent"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns paged result shape', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions/summary?month={{testMonth}} → 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions/summary?month={{testMonth}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns aggregate summary fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalIncome');",
+                  "  pm.expect(body).to.have.property('totalExpense');",
+                  "  pm.expect(body).to.have.property('netBalance');",
+                  "  pm.expect(body.totalIncome).to.be.a('number');",
+                  "  pm.expect(body.totalExpense).to.be.a('number');",
+                  "  pm.expect(body.netBalance).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions/summary → 200, lifetime totals",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns aggregate summary fields (no month filter)', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalIncome');",
+                  "  pm.expect(body).to.have.property('totalExpense');",
+                  "  pm.expect(body).to.have.property('netBalance');",
+                  "  pm.expect(body.totalIncome).to.be.a('number');",
+                  "  pm.expect(body.totalExpense).to.be.a('number');",
+                  "  pm.expect(body.netBalance).to.be.a('number');",
+                  "});"
                 ]
               }
             }
@@ -799,6 +1037,74 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 400 for negative amount', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions?sortBy=invalid → 400",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions?sortBy=invalid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for unknown sortBy', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades?sortBy=invalid → 400",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades?sortBy=invalid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for unknown sortBy', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades?page=0 → 400",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades?page=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for page < 1', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions?pageSize=200 → 400",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions?pageSize=200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for pageSize > 100', () => pm.response.to.have.status(400));"
                 ]
               }
             }

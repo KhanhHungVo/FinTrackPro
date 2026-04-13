@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
-import { useTrades, useCreateTrade, useDeleteTrade, useClosePosition } from './tradeApi'
+import { useTrades, useTradesSummary, useCreateTrade, useDeleteTrade, useClosePosition } from './tradeApi'
 import { apiClient } from '@/shared/api/client'
 
 vi.mock('@/shared/api/client', () => ({
@@ -21,45 +21,100 @@ function createWrapper() {
     React.createElement(QueryClientProvider, { client: qc }, children)
 }
 
-const mockTrades = [
-  {
-    id: 'tr1',
-    symbol: 'BTCUSDT',
-    direction: 'Long',
-    status: 'Closed',
-    entryPrice: 60000,
-    exitPrice: 65000,
-    currentPrice: null,
-    positionSize: 0.1,
-    fees: 5,
-    currency: 'USD',
-    rateToUsd: 1,
-    result: 495,
-    unrealizedResult: null,
-    notes: null,
-    createdAt: '2026-03-10T14:00:00Z',
-  },
-]
+const mockTrade = {
+  id: 'tr1',
+  symbol: 'BTCUSDT',
+  direction: 'Long',
+  status: 'Closed',
+  entryPrice: 60000,
+  exitPrice: 65000,
+  currentPrice: null,
+  positionSize: 0.1,
+  fees: 5,
+  currency: 'USD',
+  rateToUsd: 1,
+  result: 495,
+  unrealizedResult: null,
+  notes: null,
+  createdAt: '2026-03-10T14:00:00Z',
+}
+
+const mockPagedTrades = {
+  items: [mockTrade],
+  page: 1,
+  pageSize: 20,
+  totalCount: 1,
+  totalPages: 1,
+  hasPreviousPage: false,
+  hasNextPage: false,
+}
 
 beforeEach(() => vi.clearAllMocks())
 
 describe('useTrades', () => {
-  it('fetches trades from /api/trades', async () => {
-    vi.mocked(apiClient.get).mockResolvedValue({ data: mockTrades })
+  it('fetches paged trades from /api/trades', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockPagedTrades })
 
     const { result } = renderHook(() => useTrades(), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(apiClient.get).toHaveBeenCalledWith('/api/trades')
-    expect(result.current.data).toEqual(mockTrades)
+    expect(apiClient.get).toHaveBeenCalledWith('/api/trades', { params: {} })
+    expect(result.current.data?.items).toEqual(mockPagedTrades.items)
+    expect(result.current.data?.totalCount).toBe(1)
+  })
+
+  it('passes status and sortBy params', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockPagedTrades })
+
+    const { result } = renderHook(
+      () => useTrades({ status: 'Open', sortBy: 'pnl', sortDir: 'desc' }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(apiClient.get).toHaveBeenCalledWith('/api/trades', {
+      params: { status: 'Open', sortBy: 'pnl', sortDir: 'desc' },
+    })
+  })
+})
+
+describe('useTradesSummary', () => {
+  it('fetches summary from /api/trades/summary', async () => {
+    const mockSummary = { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockSummary })
+
+    const { result } = renderHook(() => useTradesSummary(), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(apiClient.get).toHaveBeenCalledWith('/api/trades/summary', { params: {} })
+    expect(result.current.data).toEqual(mockSummary)
+  })
+
+  it('passes preferredCurrency and preferredRate to the summary endpoint', async () => {
+    const mockSummary = { totalPnl: 12_375_000, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockSummary })
+
+    const { result } = renderHook(
+      () => useTradesSummary({ preferredCurrency: 'VND', preferredRate: 25000 }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(apiClient.get).toHaveBeenCalledWith('/api/trades/summary', {
+      params: { preferredCurrency: 'VND', preferredRate: 25000 },
+    })
+    expect(result.current.data).toEqual(mockSummary)
   })
 })
 
 describe('useCreateTrade', () => {
   it('posts to /api/trades with status field', async () => {
     vi.mocked(apiClient.post).mockResolvedValue({ data: 'new-guid' })
-    vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockPagedTrades })
 
     const { result } = renderHook(() => useCreateTrade(), { wrapper: createWrapper() })
 
@@ -89,7 +144,7 @@ describe('useCreateTrade', () => {
 describe('useDeleteTrade', () => {
   it('deletes the correct trade URL', async () => {
     vi.mocked(apiClient.delete).mockResolvedValue({})
-    vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockPagedTrades })
 
     const { result } = renderHook(() => useDeleteTrade(), { wrapper: createWrapper() })
 
@@ -103,8 +158,8 @@ describe('useDeleteTrade', () => {
 
 describe('useClosePosition', () => {
   it('patches the close endpoint', async () => {
-    vi.mocked(apiClient.patch).mockResolvedValue({ data: { ...mockTrades[0], status: 'Closed' } })
-    vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: { ...mockTrade, status: 'Closed' } })
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockPagedTrades })
 
     const { result } = renderHook(() => useClosePosition(), { wrapper: createWrapper() })
 

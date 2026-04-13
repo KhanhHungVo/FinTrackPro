@@ -12,7 +12,10 @@ Record every inflow and outflow of money:
 
 - **Income & expense entries** — log any transaction with an amount, category (e.g. "Food", "Salary"), an optional note, and the target budget month.
 - **Monthly view** — filter your transaction history by any month to see exactly what you spent or earned in that period.
-- **Income vs. expense summary** — the Transactions page shows a running total of income, expenses, and net balance for the selected month.
+- **Search and filter** — search transactions by note or category name; filter by type (Income/Expense) and category; all server-side.
+- **Sort** — sort the list by date (default), amount, or category with a single click; direction cycles desc → asc → reset.
+- **Paginated list** — transactions load 20 per page by default (configurable: 10/20/50); pagination controls below the list.
+- **Income vs. expense summary** — the Transactions page KPI cards show a running total of income, expenses, and net balance for the active filter state, sourced from a dedicated summary endpoint. Cards update when filters change and are unaffected by the current page or sort.
 - **Delete transactions** — remove any entry you own.
 
 ---
@@ -37,7 +40,10 @@ A structured log for crypto trades with automatic profit/loss calculation:
 - **Log a trade** — record a completed trade with: symbol (e.g. `BTCUSDT`), direction (Long or Short), entry price, exit price, position size, trading fees, and optional notes.
 - **Symbol validation** — the symbol is verified against Binance's live trading pairs before saving. Invalid or misspelled pairs are rejected immediately.
 - **Automatic P&L** — profit or loss is calculated on every read as `(exitPrice − entryPrice) × positionSize − fees`. It is always computed from your raw inputs, so it is always accurate.
-- **Journal statistics** — the Trades page shows aggregate stats across all your logged trades: total realised P&L and win rate (percentage of trades that were profitable).
+- **Search and filter** — search by symbol; filter by status (Open/Closed), direction (Long/Short), and date range; all server-side.
+- **Sort** — sort the table by date (default), P&L, symbol, entry price, position size, or fees; direction cycles desc → asc → reset.
+- **Paginated list** — trades load 20 per page by default (configurable: 10/20/50); pagination controls below the table.
+- **Journal statistics** — the Trades page KPI cards show aggregate stats for the active filter state: total realised P&L, win rate (percentage of trades that were profitable), total trade count, and unrealised P&L across open positions. Stats are sourced from a dedicated summary endpoint and reflect the full filtered dataset — not just the current page.
 - **Delete a trade** — remove any trade you own.
 
 ---

@@ -5,7 +5,7 @@
 >
 > Collection file: `FinTrackPro.e2e.postman_collection.json`
 > Run command: `bash scripts/api-e2e-local.sh`
-> Current totals: **31 requests · 44 assertions**
+> Current totals: **33 requests · 52 assertions**
 
 ---
 
@@ -18,26 +18,28 @@
 
 ---
 
-## Trades — Full lifecycle (5 requests)
+## Trades — Full lifecycle (7 requests)
 
 | # | Test name | Method | Endpoint | Status | Key assertions |
 |---|---|---|---|---|---|
 | 3 | Create trade | POST | `/api/trades` | 201 | Response is a GUID; captured as `tradeId` |
-| 4 | List trades — trade present | GET | `/api/trades` | 200 | `tradeId` in list; `id`, `symbol`, `direction`, `result` fields present |
+| 4 | List trades — trade present | GET | `/api/trades` | 200 | `body.items` is array; `body.page`, `body.pageSize`, `body.totalCount` present; `tradeId` in `body.items`; `id`, `symbol`, `direction`, `result` fields present |
 | 5 | Update trade (exitPrice → 67 000) | PUT | `/api/trades/{{tradeId}}` | 200 | `exitPrice` = 67 000; notes contains "Updated target hit"; `result` ≈ 695 (±1) |
 | 6 | Delete trade | DELETE | `/api/trades/{{tradeId}}` | 204 | — |
-| 7 | List trades — trade absent | GET | `/api/trades` | 200 | `tradeId` no longer in list |
+| 7 | List trades — trade absent | GET | `/api/trades` | 200 | `body.items` is array; `tradeId` not in `body.items` |
+| 7a | Trades summary | GET | `/api/trades/summary` | 200 | `totalPnl`, `winRate`, `totalTrades`, `unrealizedPnl` present; `winRate` in [0, 100] |
 
 ---
 
-## Budgets + Transactions — Spending flow (7 requests)
+## Budgets + Transactions — Spending flow (9 requests)
 
 | # | Test name | Method | Endpoint | Status | Key assertions |
 |---|---|---|---|---|---|
 | 8 | Create budget (Food, `{{testMonth}}`) | POST | `/api/budgets` | 201 | GUID returned; captured as `budgetId`; pre-request deletes any stale Food budget for month |
 | 9 | Fetch Expense categories | GET | `/api/transaction-categories?type=Expense` | 200 | `food_beverage` slug present; `id` captured as `foodCategoryId` |
 | 10 | Create transaction ($120.50) | POST | `/api/transactions` | 201 | GUID returned; captured as `transactionId` |
-| 11 | List transactions for month | GET | `/api/transactions?month={{testMonth}}` | 200 | `transactionId` in list; `amount` ≈ 120.50 (±0.01); `category` is non-empty string; `categoryId` matches `foodCategoryId`; `budgetMonth` present |
+| 11 | List transactions for month | GET | `/api/transactions?month={{testMonth}}` | 200 | `body.items` is array; `body.page`, `body.pageSize`, `body.totalCount` present; `transactionId` in `body.items`; `amount` ≈ 120.50 (±0.01); `category` is non-empty string; `categoryId` matches `foodCategoryId`; `budgetMonth` present |
+| 11a | Transactions summary for month | GET | `/api/transactions/summary?month={{testMonth}}` | 200 | `totalIncome`, `totalExpense`, `netBalance` present; all are numbers |
 | 12 | Update budget limit (→ $750) | PATCH | `/api/budgets/{{budgetId}}` | 204 | — |
 | 13 | Delete transaction | DELETE | `/api/transactions/{{transactionId}}` | 204 | — |
 | 14 | Delete budget | DELETE | `/api/budgets/{{budgetId}}` | 204 | — |
@@ -84,15 +86,15 @@ All guard 403 tests use `bearerToken2` (user2 — User role only). Seed resource
 
 ## Coverage Matrix
 
-| Resource | Create | Read list | Update | Delete | Conflict guard | Ownership guard |
-|---|---|---|---|---|---|---|
-| Trades | 201 (#3) | 200 (#4, #7) | 200 (#5) | 204 (#6) | — | PUT 403 (#23), DELETE 403 (#24) |
-| Budgets | 201 (#8, #22) | via pre-req cleanup | PATCH 204 (#12) | 204 (#14, #26, #27) | — | DELETE 403 (#25) |
-| Transactions | 201 (#10) | 200 (#11) | — | 204 (#13) | — | — |
-| Watched Symbols | 201 (#15) | 200 (#17) | — | 204 (#18) | 409 (#16) | — |
-| Transaction Categories | — | 200 (#9) | — | — | — | — |
-| Market / Fear-Greed | — | 200 (#28) | — | — | — | — |
-| Market / Trending | — | 200 (#29) | — | — | — | — |
+| Resource | Create | Read list | Summary | Update | Delete | Conflict guard | Ownership guard |
+|---|---|---|---|---|---|---|---|
+| Trades | 201 (#3) | 200 (#4, #7) — paged | 200 (#7a) | 200 (#5) | 204 (#6) | — | PUT 403 (#23), DELETE 403 (#24) |
+| Budgets | 201 (#8, #22) | via pre-req cleanup | — | PATCH 204 (#12) | 204 (#14, #26, #27) | — | DELETE 403 (#25) |
+| Transactions | 201 (#10) | 200 (#11) — paged | 200 (#11a) | — | 204 (#13) | — | — |
+| Watched Symbols | 201 (#15) | 200 (#17) | — | — | 204 (#18) | 409 (#16) | — |
+| Transaction Categories | — | 200 (#9) | — | — | — | — | — |
+| Market / Fear-Greed | — | 200 (#28) | — | — | — | — | — |
+| Market / Trending | — | 200 (#29) | — | — | — | — | — |
 
 ---
 

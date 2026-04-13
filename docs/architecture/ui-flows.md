@@ -138,61 +138,83 @@ None — Dashboard is read-only (all widgets are display-only).
 ## Screen: Transactions
 
 **Route:** `/transactions`
-**Purpose:** Log, browse, and delete income and expense transactions filtered by month.
+**Purpose:** Log, browse, and delete income and expense transactions with search, filter, sort, and pagination.
 
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Transactions          [Month selector ▼]            │  ← Header
+│  Transactions                        [+ Add]         │  ← Header
 ├──────────────┬─────────────┬────────────────────────┤
-│  Income      │  Expenses   │  Net                   │  ← Summary cards
+│  Income      │  Expenses   │  Net                   │  ← Summary cards (from /summary endpoint)
 ├─────────────────────────────────────────────────────┤
-│  Add Transaction Form                                │  ← Inline form
+│  [Search___] [Month▼] [Type▼] [Category▼]           │  ← Filter bar
 ├─────────────────────────────────────────────────────┤
-│  Transaction list                                    │  ← List
-│   [badge] Category  Note       Amount   Date    [✕]  │
-│   ...                                                │
+│  [Add Transaction Form — visible only when toggled]  │  ← Collapsible form
+├─────────────────────────────────────────────────────┤
+│  ↕ Date  ↕ Category  Note    ↕ Amount  [✕]          │  ← Sortable column headers
+│  [badge] Category   Note     Amount   Date    [✕]   │  ← Transaction rows
+│  ...                                                 │
+├─────────────────────────────────────────────────────┤
+│  < 1 2 3 >   10 ▼ per page                          │  ← Pagination
 └─────────────────────────────────────────────────────┘
 ```
 
 ### Regions
 
-**Month Selector**
-- Dropdown listing the last 6 months (e.g. "2026-03", "2026-02", …)
-- Filters all data on the page to the selected month
-
 **Summary Cards (3-column grid)**
-- Income: sum of all Income transactions for selected month (green, +$X.XX)
-- Expenses: sum of all Expense transactions (red, -$X.XX)
+- Sourced from `GET /api/transactions/summary` with active filter state (month, type, categoryId)
+- Updates when any filter changes; **unaffected by page or sort**
+- Income: sum of all Income transactions matching filters (green, +$X.XX)
+- Expenses: sum of all Expense transactions matching filters (red, -$X.XX)
 - Net: Income − Expenses (green if positive, red if negative)
 
-**Add Transaction Form**
+**Filter Bar**
+- Search input (debounced 300 ms) — searches note and category name
+- Month selector dropdown — last 6 months; filters all data to selected month
+- Type toggle: All / Income / Expense
+- Category dropdown — filter by a specific category
+- Any filter change resets page to 1
+
+**Add Transaction Form (collapsible)**
+- Hidden by default; revealed by the "+ Add" button in the header
 - Type toggle: "Income" (green) / "Expense" (red) — one active at a time
 - Amount field (number, required, > 0)
-- Category field (dropdown selector, required) — groups system categories and user-created custom categories; shows emoji icon + localized label (EN/VI); includes "Manage my categories" link to /settings
+- Category field (dropdown selector, required) — groups system and custom categories; shows emoji icon + localized label (EN/VI); includes "Manage my categories" link to /settings
 - Note field (text, optional)
-- Submit button: "Add" → "Saving..." while pending → clears form on success
-- Month is taken from the current month selector selection
+- Submit button: "Add" → "Saving..." while pending → clears form and collapses on success
+- Month taken from the current month filter selection
 
-**Transaction List**
-- One row per transaction, sorted newest first
-- Row contains: type badge, category name, note (gray subtext), amount (green/red), date, delete button (✕)
+**Transaction Table**
+- Sortable column headers: Date (default desc), Amount, Category — click cycles: default → desc → asc → reset; arrow indicator (↑ ↓ ↕)
+- One row per transaction: type badge, category name, note (gray subtext), amount (green/red), date, delete button (✕)
+
+**Pagination**
+- Classic `< 1 2 … N >` with ellipsis beyond 7 pages
+- Page size dropdown: 10 / 20 / 50
+- Page resets to 1 on any filter or sort change
 
 ### States
 | State | Description |
 |---|---|
 | Loading | 4 animated skeleton rows |
-| Empty | "No transactions for [month]." |
-| Loaded | List of transaction rows |
+| Empty | "No transactions for [month]." (or "No results match your search.") |
+| Loaded | Filter bar + table + pagination |
+| Form hidden | Default — only filters, summary cards, and table visible |
+| Form visible | Add form shown below filter bar |
 | Form pending | Submit button disabled, shows "Saving..." |
 
 ### User Actions
 | Action | Result |
 |---|---|
-| Change month | Reload transactions and summary for selected month |
+| Type in search box | Debounced filter; page resets to 1 |
+| Change month / type / category filter | Reload list and refresh summary cards; page resets to 1 |
+| Click sortable column header | Cycle sort direction; page resets to 1 |
+| Click "+ Add" | Toggle form visibility |
 | Toggle Income/Expense | Sets transaction type on form |
 | Fill and submit form | Creates transaction, refreshes list and summary |
 | Click ✕ on a row | Deletes that transaction, refreshes list and summary |
+| Navigate pagination | Load selected page |
+| Change page size | Reload with new page size; page resets to 1 |
 
 ---
 
@@ -207,6 +229,8 @@ None — Dashboard is read-only (all widgets are display-only).
 │  Budgets                   [Month selector ▼]        │  ← Header
 ├─────────────────────────────────────────────────────┤
 │  Category [___________]  Limit [$] [_____]  [Add]   │  ← Add Budget form
+├─────────────────────────────────────────────────────┤
+│  [Show over budget only ☐]  ↕ Category  ↕ Spent %   │  ← Filter / sort controls
 ├─────────────────────────────────────────────────────┤
 │  Budget cards (vertical stack)                       │
 │  ┌──────────────────────────────────────────────┐   │
@@ -232,6 +256,12 @@ None — Dashboard is read-only (all widgets are display-only).
 - Limit field (number, placeholder "500")
 - Add button → "..." while pending
 
+**Filter / Sort Controls (client-side)**
+- "Show over budget only" toggle — hides budgets where spent < limit
+- Clickable "Category" label — sorts alphabetically (asc → desc → reset)
+- Clickable "Spent %" label — sorts by spent percentage (desc → asc → reset)
+- Filter and sort are applied in-memory; no additional API calls
+
 **Budget Cards**
 - Category name
 - Spent / Limit amounts (e.g. "$150.00 / $500.00")
@@ -239,14 +269,15 @@ None — Dashboard is read-only (all widgets are display-only).
 - Overrun state: red bar, red "Over budget by $X.XX" label
 - Edit button (✎) → switches amount to inline input; saves on blur or Enter, cancels on Escape
 - Delete button (×)
-- Spending is auto-calculated from Expense transactions in the same month and category
+- Spending is auto-calculated from Expense transactions in the same month and category (loaded with `pageSize: 100`)
 
 ### States
 | State | Description |
 |---|---|
 | Loading | 3 animated skeleton boxes |
 | Empty | "No budgets set for [month]." |
-| Loaded | List of budget cards |
+| Loaded | Filter controls + list of budget cards |
+| Filtered empty | "No over-budget categories for [month]." (when toggle is on and all budgets are under limit) |
 | Edit mode (per card) | Limit amount becomes an editable input |
 | Overrun | Red progress bar + red overage text |
 | Form pending | Add button disabled, shows "..." |
@@ -256,6 +287,8 @@ None — Dashboard is read-only (all widgets are display-only).
 |---|---|
 | Change month | Reload budgets and recalculate spending |
 | Fill and submit Add form | Creates budget, refreshes list |
+| Toggle "Show over budget only" | Filter cards client-side; no API call |
+| Click Category / Spent % sort label | Client-side sort; cycles direction |
 | Click ✎ on a card | Enter inline edit mode for that card's limit |
 | Blur / press Enter in edit | Save new limit, exit edit mode |
 | Press Escape in edit | Cancel edit, restore original value |
@@ -266,28 +299,42 @@ None — Dashboard is read-only (all widgets are display-only).
 ## Screen: Trades
 
 **Route:** `/trades`
-**Purpose:** Log and review crypto trades with automatic P&L calculation and aggregate statistics.
+**Purpose:** Log and review crypto trades with search, filter, sort, pagination, and aggregate P&L statistics.
 
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Trades                          [+ Log Trade]       │  ← Header
 ├──────────────┬─────────────┬────────────────────────┤
-│  Total P&L   │  Win Rate   │  Total Trades           │  ← Stats bar
+│  Total P&L   │  Win Rate   │  Total Trades           │  ← KPI cards (from /summary endpoint)
+├─────────────────────────────────────────────────────┤
+│  [Search___] [Status▼] [Direction▼] [From] [To]     │  ← Filter bar
 ├─────────────────────────────────────────────────────┤
 │  [AddTradeForm — visible only when toggled]          │  ← Collapsible form
 ├─────────────────────────────────────────────────────┤
+│  ↕ Date │ Symbol │ Dir │ ↕ Entry │ ↕ Size │ ↕ Fees │ ↕ P&L │ … │  ← Sortable headers
 │  Trades table (scrollable)                           │
-│  Symbol │ Dir │ Entry │ Exit │ Size │ Fees │ P&L │ … │
+├─────────────────────────────────────────────────────┤
+│  < 1 2 3 >   10 ▼ per page                          │  ← Pagination
 └─────────────────────────────────────────────────────┘
 ```
 
 ### Regions
 
-**Stats Bar (3-column grid)**
-- Total P&L: sum of all trade results (green/red)
-- Win Rate: % of trades where P&L > 0
-- Total Trades: count
+**KPI Cards (3–4 column grid)**
+- Sourced from `GET /api/trades/summary` with active filter state (status, direction, dateFrom, dateTo)
+- Updates when any filter changes; **unaffected by page or sort** — represent totals over the full filtered dataset
+- Total P&L: sum of all realized trade results matching filters (green/red)
+- Win Rate: percentage of matching trades where P&L > 0
+- Total Trades: count of matching trades
+- Unrealised P&L card (4th): appears when filter includes Open trades that have a live price; emerald tinted
+
+**Filter Bar**
+- Search input (debounced 300 ms) — searches symbol
+- Status toggle: All / Open / Closed
+- Direction toggle: All / Long / Short
+- Date range: From / To date inputs (optional)
+- Any filter change resets page to 1
 
 **Add Trade Form (collapsible)**
 - Visible when "+ Log Trade" is clicked; hidden by default
@@ -302,7 +349,8 @@ None — Dashboard is read-only (all widgets are display-only).
 - Submit: "Log Trade" → "Saving..." while pending → form clears and collapses on success
 
 **Trades Table**
-- Columns (left to right): Symbol, Direction, Status, P&L, Entry Price, Exit/Current Price, Position Size, Fees, Date, Actions
+- Sortable column headers (click cycles: default → desc → asc → reset; arrow indicator ↑ ↓ ↕): Date (default desc), P&L, Symbol, Entry Price, Position Size, Fees
+- Columns: Symbol, Direction, Status, P&L, Entry Price, Exit/Current Price, Position Size, Fees, Date, Actions
 - Direction badge: Long=green / Short=red
 - Status badge: Open=emerald / Closed=gray
 - P&L column:
@@ -315,18 +363,19 @@ None — Dashboard is read-only (all widgets are display-only).
   - ✎ (Edit) — opens Edit Trade modal
   - ✕ (Delete) — deletes trade with guard against double-click
 
-**Unrealised P&L Card**
-- A 4th summary card appears in the stats bar when at least one open trade has a live price
-- Emerald tinted card displaying the aggregate unrealised P&L across all open positions
+**Pagination**
+- Classic `< 1 2 … N >` with ellipsis beyond 7 pages
+- Page size dropdown: 10 / 20 / 50
+- Page resets to 1 on any filter or sort change
 
 ### States
 | State | Description |
 |---|---|
 | Loading | 4 animated skeleton rows |
 | Empty | "No trades logged yet. Click 'Log Trade' to get started." |
-| Loaded | Stats bar + table |
-| Form hidden | Default — only stats + table visible |
-| Form visible | Form shown below stats bar |
+| Loaded | Filter bar + KPI cards + table + pagination |
+| Form hidden | Default — only filters, KPI cards, and table visible |
+| Form visible | Form shown below filter bar |
 | Form pending | Submit button disabled, shows "Saving..." |
 | Form error | Red error message below form fields |
 | Edit modal open | Pre-filled modal over the page |
@@ -335,13 +384,18 @@ None — Dashboard is read-only (all widgets are display-only).
 ### User Actions
 | Action | Result |
 |---|---|
+| Type in search box | Debounced filter; page resets to 1 |
+| Change status / direction / date range filter | Reload list and refresh KPI cards; page resets to 1 |
+| Click sortable column header | Cycle sort direction; page resets to 1 |
 | Click "+ Log Trade" | Toggle form visibility |
 | Toggle Long/Short | Sets trade direction |
-| Fill and submit form | Creates trade, refreshes table and stats |
+| Fill and submit form | Creates trade, refreshes table and KPI cards |
 | Hover a row | Reveals action buttons (✓ ✎ ✕) |
 | Click ✓ on an open trade | Opens Close Position modal |
 | Click ✎ on a row | Opens Edit Trade modal |
-| Click ✕ on a row | Deletes that trade, refreshes table and stats |
+| Click ✕ on a row | Deletes that trade, refreshes table and KPI cards |
+| Navigate pagination | Load selected page |
+| Change page size | Reload with new page size; page resets to 1 |
 
 ---
 

@@ -25,6 +25,11 @@ const vi = {
     theme: 'Giao diện',
     light: 'Sáng',
     dark: 'Tối',
+    all: 'Tất cả',
+    allMonths: 'Tất cả tháng',
+    allCategories: 'Tất cả danh mục',
+    search: 'Tìm kiếm',
+    sortBy: 'Sắp xếp theo',
   },
   dashboard: {
     title: 'Tổng quan',
@@ -58,6 +63,7 @@ const vi = {
     limit: 'Hạn mức',
     spent: 'Đã chi',
     overBudget: 'Vượt ngân sách',
+    overBudgetOnly: 'Chỉ vượt ngân sách',
     noBudgets: 'Không có ngân sách cho tháng này.',
   },
   trades: {

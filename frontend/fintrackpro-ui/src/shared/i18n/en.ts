@@ -25,6 +25,11 @@ const en = {
     theme: 'Theme',
     light: 'Light',
     dark: 'Dark',
+    all: 'All',
+    allMonths: 'All months',
+    allCategories: 'All categories',
+    search: 'Search',
+    sortBy: 'Sort by',
   },
   dashboard: {
     title: 'Dashboard',
@@ -58,6 +63,7 @@ const en = {
     limit: 'Limit',
     spent: 'Spent',
     overBudget: 'Over budget',
+    overBudgetOnly: 'Over budget only',
     noBudgets: 'No budgets for this month.',
   },
   trades: {

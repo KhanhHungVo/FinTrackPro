@@ -1,4 +1,5 @@
 using FinTrackPro.Application.Common.Interfaces;
+using FinTrackPro.Application.Common.Models;
 using FinTrackPro.Domain.Entities;
 using FinTrackPro.Domain.Exceptions;
 using FinTrackPro.Domain.Repositories;
@@ -10,9 +11,11 @@ public class GetTransactionsQueryHandler(
     IUserRepository userRepository,
     ITransactionRepository transactionRepository,
     ISubscriptionLimitService subscriptionLimitService,
-    ICurrentUser currentUser) : IRequestHandler<GetTransactionsQuery, IEnumerable<TransactionDto>>
+    ICurrentUser currentUser) : IRequestHandler<GetTransactionsQuery, PagedResult<TransactionDto>>
 {
-    public async Task<IEnumerable<TransactionDto>> Handle(
+    private const int MaxPageSize = 100;
+
+    public async Task<PagedResult<TransactionDto>> Handle(
         GetTransactionsQuery request, CancellationToken cancellationToken)
     {
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
@@ -28,13 +31,18 @@ public class GetTransactionsQueryHandler(
                 user, fromDate, cancellationToken);
         }
 
-        var transactions = await transactionRepository.GetByUserAsync(user.Id, cancellationToken);
+        var pageSize = Math.Min(request.PageSize, MaxPageSize);
+        var pageQuery = new TransactionPageQuery(
+            request.Page, pageSize, request.Search,
+            request.Month, request.Type, request.CategoryId,
+            request.SortBy, request.SortDir);
 
-        if (!string.IsNullOrWhiteSpace(request.Month))
-            transactions = transactions.Where(t => t.BudgetMonth == request.Month);
+        var (items, totalCount) = await transactionRepository.GetPagedAsync(user.Id, pageQuery, cancellationToken);
 
-        return transactions
-            .OrderByDescending(t => t.CreatedAt)
-            .Select(t => (TransactionDto)t);
+        return new PagedResult<TransactionDto>(
+            items.Select(t => (TransactionDto)t).ToList(),
+            request.Page,
+            pageSize,
+            totalCount);
     }
 }

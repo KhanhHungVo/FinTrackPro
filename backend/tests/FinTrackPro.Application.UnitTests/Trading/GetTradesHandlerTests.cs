@@ -25,7 +25,7 @@ public class GetTradesHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ValidUser_ReturnsTrades()
+    public async Task Handle_ValidUser_ReturnsPagedTrades()
     {
         var trades = new List<Trade>
         {
@@ -35,25 +35,60 @@ public class GetTradesHandlerTests
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
-        _tradeRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
-            .Returns(trades);
+        _tradeRepository
+            .GetPagedAsync(TestUser.Id, Arg.Any<TradePageQuery>(), Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<Trade>)trades, trades.Count));
 
         var result = await _handler.Handle(new GetTradesQuery(), CancellationToken.None);
 
-        result.Should().HaveCount(2);
+        result.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(2);
     }
 
     [Fact]
-    public async Task Handle_NoTrades_ReturnsEmpty()
+    public async Task Handle_NoTrades_ReturnsEmptyPagedResult()
     {
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
-        _tradeRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
-            .Returns(new List<Trade>());
+        _tradeRepository
+            .GetPagedAsync(TestUser.Id, Arg.Any<TradePageQuery>(), Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<Trade>)[], 0));
 
         var result = await _handler.Handle(new GetTradesQuery(), CancellationToken.None);
 
-        result.Should().BeEmpty();
+        result.Items.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_WithStatusFilter_PassesStatusToRepository()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _tradeRepository
+            .GetPagedAsync(TestUser.Id, Arg.Any<TradePageQuery>(), Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<Trade>)[], 0));
+
+        await _handler.Handle(new GetTradesQuery(Status: "Open"), CancellationToken.None);
+
+        await _tradeRepository.Received(1).GetPagedAsync(
+            TestUser.Id,
+            Arg.Is<TradePageQuery>(q => q.Status == "Open"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_PageSizeClampsAt100()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _tradeRepository
+            .GetPagedAsync(TestUser.Id, Arg.Any<TradePageQuery>(), Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<Trade>)[], 0));
+
+        var result = await _handler.Handle(new GetTradesQuery(PageSize: 500), CancellationToken.None);
+
+        result.PageSize.Should().Be(100);
     }
 
     [Fact]

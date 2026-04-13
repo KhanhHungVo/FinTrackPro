@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useTransactions } from '@/entities/transaction'
+import { useTransactionSummary } from '@/entities/transaction'
 import { useTrades } from '@/entities/trade'
 import { useExchangeRates } from '@/entities/exchange-rate'
 import { useLocaleStore } from '@/features/locale'
@@ -13,6 +13,12 @@ function getPreviousMonth(yyyyMm: string): string {
   return new Date(y, m - 2, 1).toISOString().slice(0, 7)
 }
 
+function lastDayOf(yyyyMm: string): string {
+  const [y, m] = yyyyMm.split('-').map(Number)
+  const day = new Date(y, m, 0).getDate() // day 0 of next month = last day of this month
+  return `${yyyyMm}-${String(day).padStart(2, '0')}`
+}
+
 export function KpiSummaryWidget() {
   const { t, i18n } = useTranslation()
   const currency = useLocaleStore((s) => s.currency)
@@ -20,36 +26,37 @@ export function KpiSummaryWidget() {
   const currentMonth = new Date().toISOString().slice(0, 7)
   const previousMonth = getPreviousMonth(currentMonth)
 
-  const { data: currentTx } = useTransactions(currentMonth)
-  const { data: previousTx } = useTransactions(previousMonth)
-  const { data: trades } = useTrades()
-  const { data: rates } = useExchangeRates([currency])
+  // Use summary endpoints — no rows transferred, only scalars
+  const { data: currentSummary } = useTransactionSummary({ month: currentMonth })
+  const { data: previousSummary } = useTransactionSummary({ month: previousMonth })
 
+  // Trades: fetch current and prev month pages for P&L calculation (small set per month)
+  const { data: currentTrades } = useTrades({ dateFrom: `${currentMonth}-01`, dateTo: lastDayOf(currentMonth), pageSize: 100 })
+  const { data: previousTrades } = useTrades({ dateFrom: `${previousMonth}-01`, dateTo: lastDayOf(previousMonth), pageSize: 100 })
+
+  const { data: rates } = useExchangeRates([currency])
   const preferredRate = rates?.[currency] ?? 1
 
-  const sumTx = (txs: typeof currentTx, type: 'Income' | 'Expense') =>
-    txs
-      ?.filter((tx) => tx.type === type)
-      .reduce((s, tx) => s + convertAmount(tx.amount, tx.rateToUsd, preferredRate, tx.currency, currency), 0) ?? 0
+  // Income/Expense come directly from summary (already aggregated in USD on server)
+  const income = convertAmount(currentSummary?.totalIncome ?? 0, 1, preferredRate, 'USD', currency)
+  const expense = convertAmount(currentSummary?.totalExpense ?? 0, 1, preferredRate, 'USD', currency)
+  const prevIncome = convertAmount(previousSummary?.totalIncome ?? 0, 1, preferredRate, 'USD', currency)
+  const prevExpense = convertAmount(previousSummary?.totalExpense ?? 0, 1, preferredRate, 'USD', currency)
 
-  const sumPnl = (month: string) =>
-    trades
-      ?.filter((tr) => tr.status === 'Closed' && tr.createdAt.slice(0, 7) === month)
+  // P&L: sum from filtered trade pages
+  const sumPnl = (items: typeof currentTrades) =>
+    items?.items
+      ?.filter((tr) => tr.status === 'Closed')
       .reduce((s, tr) => s + convertAmount(tr.result, tr.rateToUsd, preferredRate, tr.currency, currency), 0) ?? 0
 
-  const income = sumTx(currentTx, 'Income')
-  const expense = sumTx(currentTx, 'Expense')
-  const pnl = sumPnl(currentMonth)
-
-  const prevIncome = sumTx(previousTx, 'Income')
-  const prevExpense = sumTx(previousTx, 'Expense')
-  const prevPnl = sumPnl(previousMonth)
+  const pnl = sumPnl(currentTrades)
+  const prevPnl = sumPnl(previousTrades)
 
   const incomeDelta = calcDelta(income, prevIncome)
   const expenseDelta = calcDelta(expense, prevExpense)
   const pnlDelta = calcDelta(pnl, prevPnl)
 
-  const hasPrevMonth = (previousTx?.length ?? 0) > 0
+  const hasPrevMonth = (previousSummary?.totalIncome ?? 0) > 0 || (previousSummary?.totalExpense ?? 0) > 0
 
   const cards = [
     {

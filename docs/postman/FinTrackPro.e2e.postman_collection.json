@@ -146,11 +146,15 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns array with the created trade', () => {",
-                  "  const trades = pm.response.json();",
-                  "  pm.expect(trades).to.be.an('array');",
+                  "pm.test('Returns paged result with the created trade', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "  pm.expect(body.items).to.be.an('array');",
                   "  const tradeId = pm.environment.get('tradeId');",
-                  "  const trade = trades.find(t => t.id === tradeId);",
+                  "  const trade = body.items.find(t => t.id === tradeId);",
                   "  pm.expect(trade, 'created trade present in list').to.exist;",
                   "  pm.expect(trade).to.have.property('id');",
                   "  pm.expect(trade).to.have.property('symbol');",
@@ -230,11 +234,37 @@
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "pm.test('Deleted trade is no longer in list', () => {",
-                  "  const trades = pm.response.json();",
-                  "  pm.expect(trades).to.be.an('array');",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body.items).to.be.an('array');",
                   "  const tradeId = pm.environment.get('tradeId');",
-                  "  const found = trades.some(t => t.id === tradeId);",
+                  "  const found = body.items.some(t => t.id === tradeId);",
                   "  pm.expect(found, 'deleted trade should not be present').to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/trades/summary → 200, aggregate fields present",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns aggregate summary fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalPnl');",
+                  "  pm.expect(body).to.have.property('winRate');",
+                  "  pm.expect(body).to.have.property('totalTrades');",
+                  "  pm.expect(body).to.have.property('unrealizedPnl');",
+                  "  pm.expect(body.winRate).to.be.at.least(0).and.at.most(100);",
                   "});"
                 ]
               }
@@ -374,11 +404,15 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns array containing the created transaction', () => {",
-                  "  const txs = pm.response.json();",
-                  "  pm.expect(txs).to.be.an('array');",
+                  "pm.test('Returns paged result containing the created transaction', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('page');",
+                  "  pm.expect(body).to.have.property('pageSize');",
+                  "  pm.expect(body).to.have.property('totalCount');",
+                  "  pm.expect(body.items).to.be.an('array');",
                   "  const txId = pm.environment.get('transactionId');",
-                  "  const tx = txs.find(t => t.id === txId);",
+                  "  const tx = body.items.find(t => t.id === txId);",
                   "  pm.expect(tx, 'created transaction present').to.exist;",
                   "  pm.expect(tx).to.have.property('id');",
                   "  pm.expect(tx.amount).to.be.closeTo(120.50, 0.01);",
@@ -425,8 +459,8 @@
                   "    header: [{ key: 'Authorization', value: `Bearer ${token}` }]",
                   "}, (err, res) => {",
                   "    pm.test('Updated transaction reflects new amount', () => {",
-                  "        const txs = res.json();",
-                  "        const tx = txs.find(t => t.id === txId);",
+                  "        const body = res.json();",
+                  "        const tx = body.items.find(t => t.id === txId);",
                   "        pm.expect(tx, 'transaction still present after update').to.exist;",
                   "        pm.expect(tx.amount).to.be.closeTo(95.00, 0.01);",
                   "        pm.expect(tx.note).to.eql('Updated grocery run');",
@@ -459,6 +493,32 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/transactions/summary?month={{testMonth}} → 200, aggregate fields present",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions/summary?month={{testMonth}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns aggregate summary fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalIncome');",
+                  "  pm.expect(body).to.have.property('totalExpense');",
+                  "  pm.expect(body).to.have.property('netBalance');",
+                  "  pm.expect(body.totalIncome).to.be.a('number');",
+                  "  pm.expect(body.totalExpense).to.be.a('number');",
+                  "  pm.expect(body.netBalance).to.be.a('number');",
+                  "});"
                 ]
               }
             }

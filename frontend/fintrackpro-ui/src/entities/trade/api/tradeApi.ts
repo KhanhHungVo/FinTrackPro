@@ -1,6 +1,36 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
+import { cleanParams } from '@/shared/lib/cleanParams'
+import type { PagedResult } from '@/shared/api/types'
 import type { Trade, TradeDirection, TradeStatus } from '../model/types'
+
+export interface TradeQueryParams {
+  page?: number
+  pageSize?: number
+  search?: string
+  status?: TradeStatus | ''
+  direction?: TradeDirection | ''
+  dateFrom?: string
+  dateTo?: string
+  sortBy?: string
+  sortDir?: string
+}
+
+export interface TradeSummaryParams {
+  status?: TradeStatus | ''
+  direction?: TradeDirection | ''
+  dateFrom?: string
+  dateTo?: string
+  preferredCurrency?: string
+  preferredRate?: number
+}
+
+export interface TradesSummary {
+  totalPnl: number
+  winRate: number
+  totalTrades: number
+  unrealizedPnl: number
+}
 
 export interface CreateTradePayload {
   symbol: string
@@ -33,13 +63,30 @@ export interface ClosePositionPayload {
   fees: number
 }
 
-export function useTrades() {
+export function useTrades(params: TradeQueryParams = {}) {
   return useQuery({
-    queryKey: ['trades'],
+    queryKey: ['trades', params],
     queryFn: async () => {
-      const { data } = await apiClient.get<Trade[]>('/api/trades')
+      const { data } = await apiClient.get<PagedResult<Trade>>(
+        '/api/trades',
+        { params: cleanParams(params as Record<string, unknown>) },
+      )
       return data
     },
+  })
+}
+
+export function useTradesSummary(params: TradeSummaryParams = {}, enabled = true) {
+  return useQuery({
+    queryKey: ['trades', 'summary', params],
+    queryFn: async () => {
+      const { data } = await apiClient.get<TradesSummary>(
+        '/api/trades/summary',
+        { params: cleanParams(params as Record<string, unknown>) },
+      )
+      return data
+    },
+    enabled,
   })
 }
 

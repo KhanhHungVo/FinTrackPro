@@ -26,46 +26,54 @@ public class GetTransactionsHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NoMonthFilter_ReturnsAllTransactionsOrderedByDateDesc()
+    public async Task Handle_NoFilters_ReturnsPagedResult()
     {
-        var older = Transaction.Create(TestUser.Id, TransactionType.Expense, 10m, "USD", 1.0m, "Food", null, "2026-02");
-        var newer = Transaction.Create(TestUser.Id, TransactionType.Income, 200m, "USD", 1.0m, "Salary", null, "2026-03");
-
-        // Force distinct timestamps so OrderByDescending is deterministic
-        SetCreatedAt(older, DateTime.UtcNow.AddMinutes(-1));
-        SetCreatedAt(newer, DateTime.UtcNow);
+        var tx = Transaction.Create(TestUser.Id, TransactionType.Income, 200m, "USD", 1.0m, "Salary", null, "2026-03");
 
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
-        _transactionRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
-            .Returns(new[] { older, newer });
+        _transactionRepository
+            .GetPagedAsync(TestUser.Id, Arg.Any<TransactionPageQuery>(), Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<Transaction>)[tx], 1));
 
-        var result = (await _handler.Handle(new GetTransactionsQuery(), CancellationToken.None)).ToList();
+        var result = await _handler.Handle(new GetTransactionsQuery(), CancellationToken.None);
 
-        result.Should().HaveCount(2);
-        result.First().Amount.Should().Be(200m);
+        result.Items.Should().HaveCount(1);
+        result.TotalCount.Should().Be(1);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(20);
     }
 
     [Fact]
-    public async Task Handle_WithMonthFilter_ReturnsOnlyMatchingMonth()
+    public async Task Handle_WithMonthFilter_PassesMonthToRepository()
     {
-        var march = Transaction.Create(TestUser.Id, TransactionType.Expense, 50m, "USD", 1.0m, "Food", null, "2026-03");
-        var feb   = Transaction.Create(TestUser.Id, TransactionType.Expense, 30m, "USD", 1.0m, "Transport", null, "2026-02");
-
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
-        _transactionRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
-            .Returns(new[] { march, feb });
+        _transactionRepository
+            .GetPagedAsync(TestUser.Id, Arg.Any<TransactionPageQuery>(), Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<Transaction>)[], 0));
 
-        var result = (await _handler.Handle(new GetTransactionsQuery("2026-03"), CancellationToken.None)).ToList();
+        await _handler.Handle(new GetTransactionsQuery(Month: "2026-03"), CancellationToken.None);
 
-        result.Should().HaveCount(1);
-        result.Single().BudgetMonth.Should().Be("2026-03");
+        await _transactionRepository.Received(1).GetPagedAsync(
+            TestUser.Id,
+            Arg.Is<TransactionPageQuery>(q => q.Month == "2026-03"),
+            Arg.Any<CancellationToken>());
     }
 
-    private static void SetCreatedAt(Transaction t, DateTime value) =>
-        typeof(Transaction).GetProperty(nameof(Transaction.CreatedAt))!
-            .SetValue(t, value);
+    [Fact]
+    public async Task Handle_PageSizeClampsAt100()
+    {
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
+        _transactionRepository
+            .GetPagedAsync(TestUser.Id, Arg.Any<TransactionPageQuery>(), Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<Transaction>)[], 0));
+
+        var result = await _handler.Handle(new GetTransactionsQuery(PageSize: 500), CancellationToken.None);
+
+        result.PageSize.Should().Be(100);
+    }
 
     [Fact]
     public async Task Handle_UserNotFound_ThrowsNotFoundException()
@@ -87,7 +95,7 @@ public class GetTransactionsHandlerTests
             .EnforceTransactionHistoryAccessAsync(Arg.Any<AppUser>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new PlanLimitExceededException("transaction_history", "History access denied.")));
 
-        var act = async () => await _handler.Handle(new GetTransactionsQuery("2025-01"), CancellationToken.None);
+        var act = async () => await _handler.Handle(new GetTransactionsQuery(Month: "2025-01"), CancellationToken.None);
 
         await act.Should().ThrowAsync<PlanLimitExceededException>();
     }

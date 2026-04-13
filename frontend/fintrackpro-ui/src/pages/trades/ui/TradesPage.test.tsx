@@ -2,17 +2,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TradesPage } from './TradesPage'
 import type { Trade } from '@/entities/trade'
+import type { PagedResult } from '@/shared/api/types'
 
 const mockDeleteTrade = vi.fn()
 const mockGuardedDelete = vi.fn()
 
 vi.mock('@/entities/trade', () => ({
   useTrades: vi.fn(),
+  useTradesSummary: vi.fn(),
   useDeleteTrade: () => ({ mutate: mockDeleteTrade }),
 }))
 vi.mock('@/features/add-trade', () => ({ AddTradeForm: () => null }))
 vi.mock('@/features/edit-trade', () => ({ EditTradeModal: () => null }))
 vi.mock('@/features/close-position', () => ({ ClosePositionModal: () => null }))
+vi.mock('@/features/filter-trades', () => ({
+  TradeFilterBar: () => null,
+}))
 vi.mock('@/features/locale', () => ({
   useLocaleStore: () => 'USD',
 }))
@@ -24,12 +29,18 @@ vi.mock('@/shared/lib/formatCurrency', () => ({ formatCurrency: (v: number) => S
 vi.mock('@/shared/lib/useGuardedMutation', () => ({
   useGuardedMutation: () => ({ guarded: mockGuardedDelete, isPending: () => false }),
 }))
+vi.mock('@/shared/lib/useDebounce', () => ({ useDebounce: (v: unknown) => v }))
+vi.mock('@/shared/ui', () => ({
+  ConfirmDeleteDialog: () => null,
+  Pagination: () => null,
+  SortableColumnHeader: ({ label }: { label: string }) => <span>{label}</span>,
+}))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
 }))
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
-import { useTrades } from '@/entities/trade'
+import { useTrades, useTradesSummary } from '@/entities/trade'
 
 const closedTrade: Trade = {
   id: 'c1',
@@ -74,47 +85,58 @@ const openTradeNoPrice: Trade = {
   unrealizedResult: null,
 }
 
-beforeEach(() => vi.clearAllMocks())
+function pagedOf(items: Trade[]): PagedResult<Trade> {
+  return { items, page: 1, pageSize: 20, totalCount: items.length, totalPages: 1, hasPreviousPage: false, hasNextPage: false }
+}
+
+const defaultSummary = { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(useTradesSummary).mockReturnValue({ data: defaultSummary, isLoading: false } as any)
+})
 
 describe('TradesPage — summary cards', () => {
-  it('Total P&L uses closed trades only', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: [closedTrade, openTradeWithPrice], isLoading: false } as any)
+  it('shows Total P&L from summary hook', () => {
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as any)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as any)
 
     render(<TradesPage />)
 
-    // Total P&L card should show 495 (closedTrade.result), not 495+200
     expect(screen.getByText('trades.totalPnl')).toBeInTheDocument()
-    // The P&L appears at least once (card + possibly table row)
     expect(screen.getAllByText('+495').length).toBeGreaterThan(0)
   })
 
-  it('Win Rate uses closed trades only', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: [closedTrade], isLoading: false } as any)
+  it('Win Rate comes from summary hook', () => {
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as any)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as any)
 
     render(<TradesPage />)
 
-    // 1 closed trade, 1 win → 100%
     expect(screen.getByText('100%')).toBeInTheDocument()
   })
 
-  it('Total Trades counts all trades', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: [closedTrade, openTradeWithPrice], isLoading: false } as any)
+  it('Total Trades comes from summary hook', () => {
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade, openTradeWithPrice]), isLoading: false } as any)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 50, totalTrades: 2, unrealizedPnl: 200 }, isLoading: false } as any)
 
     render(<TradesPage />)
 
     expect(screen.getByText('2')).toBeInTheDocument()
   })
 
-  it('Unrealized P&L card appears when open trade with current price exists', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: [openTradeWithPrice], isLoading: false } as any)
+  it('Unrealized P&L card appears when summary unrealizedPnl is non-zero', () => {
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeWithPrice]), isLoading: false } as any)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 0, winRate: 0, totalTrades: 1, unrealizedPnl: 200 }, isLoading: false } as any)
 
     render(<TradesPage />)
 
     expect(screen.getByText('trades.unrealizedPnl')).toBeInTheDocument()
   })
 
-  it('Unrealized P&L card is absent when no open trades have a current price', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: [closedTrade, openTradeNoPrice], isLoading: false } as any)
+  it('Unrealized P&L card is absent when summary unrealizedPnl is zero', () => {
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as any)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as any)
 
     render(<TradesPage />)
 
@@ -123,24 +145,28 @@ describe('TradesPage — summary cards', () => {
 })
 
 describe('TradesPage — trade table badges', () => {
-  it('open trade row shows green Open badge', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: [openTradeWithPrice], isLoading: false } as any)
+  beforeEach(() => {
+    vi.mocked(useTradesSummary).mockReturnValue({ data: defaultSummary, isLoading: false } as any)
+  })
+
+  it('open trade row shows Open badge', () => {
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeWithPrice]), isLoading: false } as any)
 
     render(<TradesPage />)
 
     expect(screen.getByText('trades.open')).toBeInTheDocument()
   })
 
-  it('closed trade row shows grey Closed badge', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: [closedTrade], isLoading: false } as any)
+  it('closed trade row shows Closed badge', () => {
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as any)
 
     render(<TradesPage />)
 
     expect(screen.getByText('trades.closed')).toBeInTheDocument()
   })
 
-  it('open trade row with no current price shows — in Exit/Current Price column', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: [openTradeNoPrice], isLoading: false } as any)
+  it('open trade with no current price shows — in Exit/Current Price column', () => {
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeNoPrice]), isLoading: false } as any)
 
     render(<TradesPage />)
 
@@ -148,14 +174,10 @@ describe('TradesPage — trade table badges', () => {
   })
 
   it('Close button is visible only for open trades', () => {
-    vi.mocked(useTrades).mockReturnValue({
-      data: [closedTrade, openTradeWithPrice],
-      isLoading: false,
-    } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade, openTradeWithPrice]), isLoading: false } as any)
 
     render(<TradesPage />)
 
-    // ✓ close button should appear once (for the open trade only)
     const closeButtons = screen.getAllByTitle('trades.closeTrade')
     expect(closeButtons).toHaveLength(1)
   })

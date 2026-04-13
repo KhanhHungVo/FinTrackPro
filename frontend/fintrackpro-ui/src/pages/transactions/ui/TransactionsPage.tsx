@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useTransactions, useDeleteTransaction } from '@/entities/transaction'
-import type { Transaction, TransactionType } from '@/entities/transaction'
+import { useTransactions, useTransactionSummary, useDeleteTransaction } from '@/entities/transaction'
+import type { Transaction } from '@/entities/transaction'
 import { useTransactionCategories } from '@/entities/transaction-category'
 import { AddTransactionForm } from '@/features/add-transaction'
 import { EditTransactionModal } from '@/features/edit-transaction'
+import { TransactionFilterBar } from '@/features/filter-transactions'
+import type { TransactionFilters } from '@/features/filter-transactions'
 import { useLocaleStore } from '@/features/locale'
 import { useExchangeRates } from '@/entities/exchange-rate'
 import { convertAmount } from '@/shared/lib/convertAmount'
@@ -13,7 +15,10 @@ import { formatCurrency } from '@/shared/lib/formatCurrency'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
 import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
-import { ConfirmDeleteDialog } from '@/shared/ui'
+import { useDebounce } from '@/shared/lib/useDebounce'
+import { ConfirmDeleteDialog, Pagination, SortableColumnHeader } from '@/shared/ui'
+
+type SortDir = 'asc' | 'desc' | null
 
 function monthsBack(n: number): string {
   const d = new Date()
@@ -21,66 +26,108 @@ function monthsBack(n: number): string {
   return d.toISOString().slice(0, 7)
 }
 
-const TYPE_COLORS: Record<TransactionType, string> = {
+const TYPE_COLORS: Record<string, string> = {
   Income: 'text-green-600',
   Expense: 'text-red-600',
 }
+
+const MONTHS = Array.from({ length: 6 }, (_, i) => monthsBack(i))
 
 export function TransactionsPage() {
   const { t, i18n } = useTranslation()
   const currency = useLocaleStore((s) => s.currency)
   const language = useLocaleStore((s) => s.language)
-  const [month, setMonth] = useState(monthsBack(0))
+
+  const [filters, setFilters] = useState<TransactionFilters>({
+    search: '',
+    month: monthsBack(0),
+    type: '',
+    categoryId: '',
+  })
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [sortBy, setSortBy] = useState<string | null>('date')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
-  const { data: transactions, isLoading } = useTransactions(month)
-  const { mutate: deleteTx } = useDeleteTransaction()
-  const { guarded: handleDelete, isPending: isDeleting } = useGuardedMutation<unknown, Error, string>(deleteTx)
-  const onDeleteClick = (id: string) => setPendingDeleteId(id)
+
+  const debouncedSearch = useDebounce(filters.search, 300)
+
+  // Reset to page 1 when filters/sort change
+  useEffect(() => { setPage(1) }, [filters, sortBy, sortDir])
+
+  const tableParams = {
+    page,
+    pageSize,
+    search: debouncedSearch || undefined,
+    month: filters.month || undefined,
+    type: filters.type || undefined,
+    categoryId: filters.categoryId || undefined,
+    sortBy: sortBy ?? 'date',
+    sortDir: sortDir ?? 'desc',
+  }
+
   const { data: rates } = useExchangeRates([currency])
   const preferredRate = rates?.[currency] ?? 0
+
+  const summaryParams = {
+    month: filters.month || undefined,
+    type: filters.type || undefined,
+    categoryId: filters.categoryId || undefined,
+    preferredCurrency: currency,
+    preferredRate: preferredRate || undefined,
+  }
+
+  const { data, isLoading } = useTransactions(tableParams)
+  const { data: summary } = useTransactionSummary(summaryParams)
+  const { mutate: deleteTx } = useDeleteTransaction()
+  const { guarded: handleDelete, isPending: isDeleting } = useGuardedMutation<unknown, Error, string>(deleteTx)
   const { data: allCategories } = useTransactionCategories()
+
   const resolveCategoryLabel = (slug: string) => {
     const cat = allCategories?.find((c) => c.slug === slug)
     if (!cat) return slug
     return `${cat.icon} ${language === 'vi' ? cat.labelVi : cat.labelEn}`
   }
 
-  const income  = transactions?.filter(t => t.type === 'Income').reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate, t.currency, currency), 0) ?? 0
-  const expense = transactions?.filter(t => t.type === 'Expense').reduce((s, t) => s + convertAmount(t.amount, t.rateToUsd, preferredRate, t.currency, currency), 0) ?? 0
+  // KPI values — backend returns totals already in preferredCurrency
+  const income = summary?.totalIncome ?? 0
+  const expense = summary?.totalExpense ?? 0
   const net = income - expense
 
-  // Build last 6 months for the selector
-  const monthOptions = Array.from({ length: 6 }, (_, i) => monthsBack(i))
+  function handleSort(field: string, dir: SortDir) {
+    if (dir === null) { setSortBy(null); setSortDir(null) }
+    else { setSortBy(field); setSortDir(dir) }
+  }
+
+  const transactions = data?.items ?? []
+  const totalPages = data?.totalPages ?? 1
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('transactions.title')}</h1>
-        <div className="flex items-center gap-2">
-          <select
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
-          >
-            {monthOptions.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setFormOpen((v) => !v)}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition-colors"
-          >
-            {formOpen ? t('common.cancel') : `+ ${t('transactions.addTransaction')}`}
-          </button>
-        </div>
+        <button
+          onClick={() => setFormOpen((v) => !v)}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition-colors"
+        >
+          {formOpen ? t('common.cancel') : `+ ${t('transactions.addTransaction')}`}
+        </button>
       </div>
 
       {/* Add form */}
       {formOpen && <AddTransactionForm onSuccess={() => setFormOpen(false)} />}
 
-      {/* Summary */}
+      {/* Filter bar */}
+      <TransactionFilterBar
+        value={filters}
+        onChange={(next) => setFilters((prev) => ({ ...prev, ...next }))}
+        categories={allCategories}
+        monthOptions={MONTHS}
+      />
+
+      {/* Summary KPIs — sourced from /summary, always over full filtered dataset */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="page-card p-4">
           <p className="text-xs text-gray-500 dark:text-slate-400">{t('transactions.income')}</p>
@@ -98,6 +145,35 @@ export function TransactionsPage() {
         </div>
       </div>
 
+      {/* Column headers (sortable) */}
+      {!isLoading && transactions.length > 0 && (
+        <div className="flex items-center gap-4 px-4 text-xs">
+          <SortableColumnHeader
+            label={t('transactions.category')}
+            field="category"
+            currentSortBy={sortBy}
+            currentSortDir={sortDir}
+            onSort={handleSort}
+          />
+          <SortableColumnHeader
+            label={t('transactions.amount')}
+            field="amount"
+            currentSortBy={sortBy}
+            currentSortDir={sortDir}
+            onSort={handleSort}
+            align="right"
+            className="ml-auto"
+          />
+          <SortableColumnHeader
+            label={t('transactions.month')}
+            field="date"
+            currentSortBy={sortBy}
+            currentSortDir={sortDir}
+            onSort={handleSort}
+          />
+        </div>
+      )}
+
       {/* List */}
       {isLoading ? (
         <div className="space-y-2">
@@ -105,13 +181,13 @@ export function TransactionsPage() {
             <div key={i} className="animate-pulse h-14 rounded-lg bg-gray-100 dark:bg-white/5" />
           ))}
         </div>
-      ) : transactions?.length === 0 ? (
+      ) : transactions.length === 0 ? (
         <p className="text-center text-sm text-gray-400 dark:text-slate-500 py-8">
           {t('transactions.noTransactions')}
         </p>
       ) : (
         <ul className="space-y-2">
-          {transactions?.map((tx) => {
+          {transactions.map((tx) => {
             const displayAmount = convertAmount(tx.amount, tx.rateToUsd, preferredRate, tx.currency, currency)
             return (
               <li
@@ -151,7 +227,7 @@ export function TransactionsPage() {
                     ✎
                   </button>
                   <button
-                    onClick={() => onDeleteClick(tx.id)}
+                    onClick={() => setPendingDeleteId(tx.id)}
                     disabled={isDeleting(tx.id)}
                     className="text-xs text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:text-slate-600"
                     title={t('common.delete')}
@@ -164,6 +240,16 @@ export function TransactionsPage() {
           })}
         </ul>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+        disabled={isLoading}
+      />
 
       <EditTransactionModal transaction={editingTx} onClose={() => setEditingTx(null)} />
       <ConfirmDeleteDialog

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useBudgets, useDeleteBudget, useUpdateBudget } from '@/entities/budget'
@@ -20,6 +20,8 @@ function monthsBack(n: number): string {
   return d.toISOString().slice(0, 7)
 }
 
+type BudgetSortField = 'spentPct' | 'category'
+
 export function BudgetsPage() {
   const { t, i18n } = useTranslation()
   const currency = useLocaleStore((s) => s.currency)
@@ -28,14 +30,20 @@ export function BudgetsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLimit, setEditLimit] = useState('')
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [showOverBudgetOnly, setShowOverBudgetOnly] = useState(false)
+  const [budgetSort, setBudgetSort] = useState<BudgetSortField>('spentPct')
+  const [budgetSortDir, setBudgetSortDir] = useState<'asc' | 'desc'>('desc')
+
   const { data: budgets, isLoading } = useBudgets(month)
-  const { data: transactions } = useTransactions(month)
+  const { data: transactionData } = useTransactions({ month, pageSize: 100 })
   const { data: allCategories } = useTransactionCategories()
+
   const resolveCategoryLabel = (slug: string) => {
     const cat = allCategories?.find((c) => c.slug === slug)
     if (!cat) return slug
     return `${cat.icon} ${language === 'vi' ? cat.labelVi : cat.labelEn}`
   }
+
   const { mutate: deleteBudget } = useDeleteBudget()
   const { guarded: guardedDelete, isPending: isDeleting } = useGuardedMutation(deleteBudget)
   const { mutate: updateBudget, isPending: isSaving } = useUpdateBudget()
@@ -61,33 +69,104 @@ export function BudgetsPage() {
       setEditingId(null)
     }
   }
+
   const monthOptions = Array.from({ length: 6 }, (_, i) => monthsBack(i))
 
   // Calculate spending per category from transactions (normalise to USD first, then to preferred)
   const spentByCategory: Record<string, number> = {}
-  transactions
-    ?.filter((t) => t.type === 'Expense')
-    .forEach((t) => {
-      const converted = convertAmount(t.amount, t.rateToUsd, preferredRate, t.currency, currency)
-      spentByCategory[t.category] = (spentByCategory[t.category] ?? 0) + converted
+  transactionData?.items
+    ?.filter((tx) => tx.type === 'Expense')
+    .forEach((tx) => {
+      const converted = convertAmount(tx.amount, tx.rateToUsd, preferredRate, tx.currency, currency)
+      spentByCategory[tx.category] = (spentByCategory[tx.category] ?? 0) + converted
     })
+
+  const displayBudgets = useMemo(() => {
+    if (!budgets) return []
+    return budgets
+      .map((b) => {
+        const limitInPreferred = convertAmount(b.limitAmount, b.rateToUsd, preferredRate, b.currency, currency)
+        const spent = spentByCategory[b.category] ?? 0
+        const pct = limitInPreferred > 0 ? (spent / limitInPreferred) * 100 : 0
+        return { ...b, limitInPreferred, spent, pct, overrun: spent > limitInPreferred }
+      })
+      .filter((b) => !showOverBudgetOnly || b.overrun)
+      .sort((a, b) => {
+        const aVal = budgetSort === 'spentPct' ? a.pct : a.category
+        const bVal = budgetSort === 'spentPct' ? b.pct : b.category
+        if (aVal < bVal) return budgetSortDir === 'asc' ? -1 : 1
+        if (aVal > bVal) return budgetSortDir === 'asc' ? 1 : -1
+        return 0
+      })
+  }, [budgets, showOverBudgetOnly, budgetSort, budgetSortDir, spentByCategory, preferredRate, currency])
+
+  function toggleSort(field: BudgetSortField) {
+    if (budgetSort === field) {
+      setBudgetSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+    } else {
+      setBudgetSort(field)
+      setBudgetSortDir('desc')
+    }
+  }
+
+  const sortIndicator = (field: BudgetSortField) =>
+    budgetSort === field ? (budgetSortDir === 'desc' ? ' ↓' : ' ↑') : ' ↕'
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('budgets.title')}</h1>
-        <select
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
-        >
-          {monthOptions.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          {/* Over-budget toggle */}
+          <button
+            onClick={() => setShowOverBudgetOnly((v) => !v)}
+            className={cn(
+              'rounded-md border px-3 py-1.5 text-sm transition-colors',
+              showOverBudgetOnly
+                ? 'border-red-400 bg-red-50 text-red-600 dark:bg-red-500/10 dark:border-red-500/40 dark:text-red-400'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-white/12 dark:text-slate-300 dark:hover:bg-white/5',
+            )}
+          >
+            {t('budgets.overBudgetOnly')}
+          </button>
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
+          >
+            {monthOptions.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <AddBudgetForm month={month} />
+
+      {/* Sort controls */}
+      {!isLoading && (displayBudgets.length > 0 || budgets?.length) && (
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-gray-400 dark:text-slate-500">{t('common.sortBy')}:</span>
+          <button
+            onClick={() => toggleSort('spentPct')}
+            className={cn(
+              'font-semibold uppercase tracking-wide transition-colors',
+              budgetSort === 'spentPct' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500 hover:text-gray-600',
+            )}
+          >
+            % {t('budgets.spent')}{sortIndicator('spentPct')}
+          </button>
+          <button
+            onClick={() => toggleSort('category')}
+            className={cn(
+              'font-semibold uppercase tracking-wide transition-colors',
+              budgetSort === 'category' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500 hover:text-gray-600',
+            )}
+          >
+            {t('transactions.category')}{sortIndicator('category')}
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-2">
@@ -95,18 +174,14 @@ export function BudgetsPage() {
             <div key={i} className="animate-pulse h-20 rounded-lg bg-gray-100 dark:bg-white/5" />
           ))}
         </div>
-      ) : budgets?.length === 0 ? (
+      ) : displayBudgets.length === 0 ? (
         <p className="text-center text-sm text-gray-400 dark:text-slate-500 py-8">
           {t('budgets.noBudgets')}
         </p>
       ) : (
         <ul className="space-y-3">
-          {budgets?.map((budget) => {
-            // Display budget limit in user's preferred currency
-            const limitInPreferred = convertAmount(budget.limitAmount, budget.rateToUsd, preferredRate, budget.currency, currency)
-            const spent = spentByCategory[budget.category] ?? 0
-            const pct = Math.min((spent / limitInPreferred) * 100, 100)
-            const overrun = spent > limitInPreferred
+          {displayBudgets.map((budget) => {
+            const pct = Math.min(budget.pct, 100)
 
             return (
               <li key={budget.id} className="page-card p-4 space-y-2">
@@ -133,12 +208,12 @@ export function BudgetsPage() {
                       <span
                         className={cn(
                           'text-sm font-semibold',
-                          overrun ? 'text-red-600' : 'text-gray-700 dark:text-slate-300',
+                          budget.overrun ? 'text-red-600' : 'text-gray-700 dark:text-slate-300',
                         )}
                       >
-                        {formatCurrency(spent, currency, i18n.language)}
+                        {formatCurrency(budget.spent, currency, i18n.language)}
                         <span className="font-normal text-gray-400 dark:text-slate-500">
-                          {' '}/ {formatCurrency(limitInPreferred, currency, i18n.language)}
+                          {' '}/ {formatCurrency(budget.limitInPreferred, currency, i18n.language)}
                         </span>
                       </span>
                     )}
@@ -167,15 +242,15 @@ export function BudgetsPage() {
                   <div
                     className={cn(
                       'h-2 rounded-full transition-all',
-                      overrun ? 'bg-red-500' : pct > 80 ? 'bg-yellow-400' : 'bg-green-500',
+                      budget.overrun ? 'bg-red-500' : pct > 80 ? 'bg-yellow-400' : 'bg-green-500',
                     )}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
 
-                {overrun && (
+                {budget.overrun && (
                   <p className="text-xs text-red-500">
-                    {t('budgets.overBudget')}: {formatCurrency(spent - limitInPreferred, currency, i18n.language)}
+                    {t('budgets.overBudget')}: {formatCurrency(budget.spent - budget.limitInPreferred, currency, i18n.language)}
                   </p>
                 )}
               </li>
