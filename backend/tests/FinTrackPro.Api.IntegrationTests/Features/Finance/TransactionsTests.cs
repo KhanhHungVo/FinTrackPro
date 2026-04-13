@@ -71,8 +71,8 @@ public class TransactionsTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/transactions");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var items = await response.Content.ReadFromJsonAsync<List<object>>();
-        items.Should().HaveCountGreaterOrEqualTo(2);
+        var paged = await response.Content.ReadFromJsonAsync<PagedResponse<JsonElement>>();
+        paged!.Items.Should().HaveCountGreaterOrEqualTo(2);
     }
 
     [Fact]
@@ -87,8 +87,8 @@ public class TransactionsTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/transactions?month={currentMonth}");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var items = await response.Content.ReadFromJsonAsync<List<object>>();
-        items.Should().HaveCount(1);
+        var paged = await response.Content.ReadFromJsonAsync<PagedResponse<JsonElement>>();
+        paged!.Items.Should().HaveCount(1);
     }
 
     [Fact]

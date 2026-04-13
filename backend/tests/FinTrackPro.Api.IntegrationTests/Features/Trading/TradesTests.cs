@@ -117,8 +117,8 @@ public class TradesTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/trades");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var items = await response.Content.ReadFromJsonAsync<List<object>>();
-        items.Should().HaveCountGreaterOrEqualTo(1);
+        var paged = await response.Content.ReadFromJsonAsync<PagedResponse<System.Text.Json.JsonElement>>();
+        paged!.Items.Should().HaveCountGreaterOrEqualTo(1);
     }
 
     [Fact]
@@ -127,10 +127,10 @@ public class TradesTests : IAsyncLifetime
         await _client.PostAsJsonAsync("/api/trades", TradeRequestBuilder.Build());
 
         var response = await _client.GetAsync("/api/trades");
-        var body = await response.Content.ReadFromJsonAsync<List<System.Text.Json.JsonElement>>();
+        var paged = await response.Content.ReadFromJsonAsync<PagedResponse<System.Text.Json.JsonElement>>();
 
-        body.Should().NotBeEmpty();
-        body![0].TryGetProperty("status", out _).Should().BeTrue();
+        paged!.Items.Should().NotBeEmpty();
+        paged.Items[0].TryGetProperty("status", out _).Should().BeTrue();
     }
 
     // ---------------------------------------------------------------
