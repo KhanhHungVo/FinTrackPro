@@ -9,7 +9,7 @@ import { errorToastMessage } from '@/shared/lib/apiError'
 
 const SUPPORTED_CURRENCIES = ['USD', 'VND']
 
-export function AddTransactionForm() {
+export function AddTransactionForm({ onSuccess }: { onSuccess?: () => void }) {
   const { t } = useTranslation()
   const { mutate, isPending } = useCreateTransaction()
   const defaultCurrency = useLocaleStore((s) => s.currency)
@@ -38,6 +38,7 @@ export function AddTransactionForm() {
           setLastUsedId(categoryId)
           setAmount('')
           setNote('')
+          onSuccess?.()
         },
         onError: (err) => toast.error(errorToastMessage(err)),
       },

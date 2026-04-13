@@ -58,6 +58,12 @@ export function TradesPage() {
         </button>
       </div>
 
+      {showForm && (
+        <div>
+          <AddTradeForm />
+        </div>
+      )}
+
       {/* Summary cards */}
       <div className={cn('grid grid-cols-1 gap-4', openTradesWithPrice.length > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
         <div className="page-card p-4">
@@ -83,12 +89,6 @@ export function TradesPage() {
           </div>
         )}
       </div>
-
-      {showForm && (
-        <div>
-          <AddTradeForm />
-        </div>
-      )}
 
       {/* Trade list */}
       {isLoading ? (

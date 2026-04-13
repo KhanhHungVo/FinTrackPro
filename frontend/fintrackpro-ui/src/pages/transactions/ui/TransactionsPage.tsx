@@ -33,6 +33,7 @@ export function TransactionsPage() {
   const [month, setMonth] = useState(monthsBack(0))
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
   const { data: transactions, isLoading } = useTransactions(month)
   const { mutate: deleteTx } = useDeleteTransaction()
   const { guarded: handleDelete, isPending: isDeleting } = useGuardedMutation<unknown, Error, string>(deleteTx)
@@ -57,16 +58,27 @@ export function TransactionsPage() {
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('transactions.title')}</h1>
-        <select
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
-        >
-          {monthOptions.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
+          >
+            {monthOptions.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => setFormOpen((v) => !v)}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition-colors"
+          >
+            {formOpen ? t('common.cancel') : `+ ${t('transactions.addTransaction')}`}
+          </button>
+        </div>
       </div>
+
+      {/* Add form */}
+      {formOpen && <AddTransactionForm onSuccess={() => setFormOpen(false)} />}
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -85,9 +97,6 @@ export function TransactionsPage() {
           </p>
         </div>
       </div>
-
-      {/* Add form */}
-      <AddTransactionForm />
 
       {/* List */}
       {isLoading ? (
