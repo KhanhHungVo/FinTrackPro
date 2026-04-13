@@ -10,6 +10,8 @@ const vi = {
     save: 'Lưu',
     cancel: 'Huỷ',
     delete: 'Xoá',
+    confirmDelete: 'Xoá?',
+    confirmDeleteDescription: 'Hành động này không thể hoàn tác.',
     edit: 'Sửa',
     add: 'Thêm',
     loading: 'Đang tải…',

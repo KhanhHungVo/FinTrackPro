@@ -10,6 +10,8 @@ const en = {
     save: 'Save',
     cancel: 'Cancel',
     delete: 'Delete',
+    confirmDelete: 'Delete?',
+    confirmDeleteDescription: 'This action cannot be undone.',
     edit: 'Edit',
     add: 'Add',
     loading: 'Loading…',

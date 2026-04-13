@@ -13,6 +13,7 @@ import { formatCurrency } from '@/shared/lib/formatCurrency'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
 import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
+import { ConfirmDeleteDialog } from '@/shared/ui'
 
 export function TradesPage() {
   const { t, i18n } = useTranslation()
@@ -23,6 +24,7 @@ export function TradesPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
   const [closingTrade, setClosingTrade] = useState<Trade | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const { data: rates } = useExchangeRates([currency])
   const preferredRate = rates?.[currency] ?? 0
 
@@ -232,7 +234,7 @@ export function TradesPage() {
                             ✎
                           </button>
                           <button
-                            onClick={() => guardedDelete(trade.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
+                            onClick={() => setPendingDeleteId(trade.id)}
                             disabled={isDeleting(trade.id)}
                             title={t('common.delete')}
                             className="rounded px-1.5 py-1 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50 transition-colors"
@@ -252,6 +254,18 @@ export function TradesPage() {
 
       <EditTradeModal trade={editingTrade} onClose={() => setEditingTrade(null)} />
       <ClosePositionModal trade={closingTrade} onClose={() => setClosingTrade(null)} />
+      <ConfirmDeleteDialog
+        open={pendingDeleteId !== null}
+        onConfirm={() => {
+          if (pendingDeleteId) {
+            guardedDelete(pendingDeleteId, {
+              onError: (err) => toast.error(errorToastMessage(err)),
+              onSettled: () => setPendingDeleteId(null),
+            })
+          }
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   )
 }

@@ -13,6 +13,7 @@ import { formatCurrency } from '@/shared/lib/formatCurrency'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
 import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
+import { ConfirmDeleteDialog } from '@/shared/ui'
 
 function monthsBack(n: number): string {
   const d = new Date()
@@ -31,11 +32,11 @@ export function TransactionsPage() {
   const language = useLocaleStore((s) => s.language)
   const [month, setMonth] = useState(monthsBack(0))
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const { data: transactions, isLoading } = useTransactions(month)
   const { mutate: deleteTx } = useDeleteTransaction()
   const { guarded: handleDelete, isPending: isDeleting } = useGuardedMutation<unknown, Error, string>(deleteTx)
-  const onDeleteClick = (id: string) =>
-    handleDelete(id, { onError: (err) => toast.error(errorToastMessage(err)) })
+  const onDeleteClick = (id: string) => setPendingDeleteId(id)
   const { data: rates } = useExchangeRates([currency])
   const preferredRate = rates?.[currency] ?? 0
   const { data: allCategories } = useTransactionCategories()
@@ -156,6 +157,18 @@ export function TransactionsPage() {
       )}
 
       <EditTransactionModal transaction={editingTx} onClose={() => setEditingTx(null)} />
+      <ConfirmDeleteDialog
+        open={pendingDeleteId !== null}
+        onConfirm={() => {
+          if (pendingDeleteId) {
+            handleDelete(pendingDeleteId, {
+              onError: (err) => toast.error(errorToastMessage(err)),
+              onSettled: () => setPendingDeleteId(null),
+            })
+          }
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   )
 }

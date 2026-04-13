@@ -12,6 +12,7 @@ import { formatCurrency } from '@/shared/lib/formatCurrency'
 import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
 import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
+import { ConfirmDeleteDialog } from '@/shared/ui'
 
 function monthsBack(n: number): string {
   const d = new Date()
@@ -26,6 +27,7 @@ export function BudgetsPage() {
   const [month, setMonth] = useState(monthsBack(0))
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLimit, setEditLimit] = useState('')
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const { data: budgets, isLoading } = useBudgets(month)
   const { data: transactions } = useTransactions(month)
   const { data: allCategories } = useTransactionCategories()
@@ -149,7 +151,7 @@ export function BudgetsPage() {
                       ✎
                     </button>
                     <button
-                      onClick={() => guardedDelete(budget.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
+                      onClick={() => setPendingDeleteId(budget.id)}
                       disabled={isDeleting(budget.id)}
                       className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 dark:text-slate-600"
                       aria-label={t('common.delete')}
@@ -181,6 +183,18 @@ export function BudgetsPage() {
           })}
         </ul>
       )}
+      <ConfirmDeleteDialog
+        open={pendingDeleteId !== null}
+        onConfirm={() => {
+          if (pendingDeleteId) {
+            guardedDelete(pendingDeleteId, {
+              onError: (err) => toast.error(errorToastMessage(err)),
+              onSettled: () => setPendingDeleteId(null),
+            })
+          }
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   )
 }
