@@ -8,14 +8,15 @@ test.describe('Budgets', () => {
   })
 
   test('create budget', async ({ page }) => {
+    // Use Education — less likely to already exist, to avoid 409 conflicts from prior runs
     // Selects on page: [0]=month, [1]=category (TransactionCategorySelector), [2]=currency
-    await page.locator('select').nth(1).selectOption({ label: '🍜 Food & Beverage' })
+    await page.locator('select').nth(1).selectOption({ label: '📚 Education' })
     await page.getByPlaceholder('500').fill('300')
     await page.getByRole('button', { name: /add budget/i }).click()
 
-    // BudgetsPage renders budget.category (slug), not label
-    await expect(page.getByText('food_beverage')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('/ $300.00')).toBeVisible()
+    // Scope both assertions to the same li to avoid matching pre-existing budgets
+    const budgetRow = page.locator('li').filter({ hasText: '📚 Education' }).filter({ hasText: '/ $300.00' })
+    await expect(budgetRow.first()).toBeVisible({ timeout: 10000 })
   })
 
   test('delete budget', async ({ page }) => {
@@ -24,13 +25,15 @@ test.describe('Budgets', () => {
     await page.getByPlaceholder('500').fill('999')
     await page.getByRole('button', { name: /add budget/i }).click()
 
-    // BudgetsPage shows slug "rent" and "/ $999"
-    const deleteRow = page.locator('li').filter({ hasText: 'rent' }).filter({ hasText: '/ $999' })
+    // BudgetsPage renders resolveCategoryLabel() → "🏠 Rent", and the spend/limit display
+    const deleteRow = page.locator('li').filter({ hasText: '🏠 Rent' }).filter({ hasText: '/ $999' })
     await expect(deleteRow.first()).toBeVisible({ timeout: 10000 })
     const before = await deleteRow.count()
 
-    // × button has aria-label="Delete"
+    // ✕ button has aria-label="Delete"; clicking it opens a confirmation dialog
     await deleteRow.first().getByRole('button', { name: 'Delete' }).click()
+    // Confirm deletion in the dialog
+    await page.getByRole('button', { name: 'Delete' }).last().click()
     await expect(deleteRow).toHaveCount(before - 1, { timeout: 10000 })
   })
 })
