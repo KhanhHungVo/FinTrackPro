@@ -20,7 +20,7 @@ public class Transaction : BaseEntity
     private Transaction() { }
 
     public void Update(
-        TransactionType type, decimal amount, string currency,
+        TransactionType type, decimal amount, string currency, decimal rateToUsd,
         string category, string? note, Guid? categoryId)
     {
         if (amount <= 0)
@@ -31,6 +31,7 @@ public class Transaction : BaseEntity
         Type = type;
         Amount = amount;
         Currency = currency.Trim().ToUpperInvariant();
+        RateToUsd = rateToUsd;
         Category = category.Trim();
         Note = note?.Trim();
         CategoryId = categoryId;

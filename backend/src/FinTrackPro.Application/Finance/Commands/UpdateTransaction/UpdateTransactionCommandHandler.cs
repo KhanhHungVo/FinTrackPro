@@ -1,3 +1,4 @@
+using FinTrackPro.Application.Common.Extensions;
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Domain.Entities;
 using FinTrackPro.Domain.Exceptions;
@@ -11,6 +12,7 @@ public class UpdateTransactionCommandHandler(
     ICurrentUser currentUser,
     IUserRepository userRepository,
     ITransactionRepository transactionRepository,
+    IExchangeRateService exchangeRateService,
     ITransactionCategoryRepository categoryRepository) : IRequestHandler<UpdateTransactionCommand>
 {
     public async Task Handle(UpdateTransactionCommand request, CancellationToken cancellationToken)
@@ -33,7 +35,9 @@ public class UpdateTransactionCommandHandler(
                 throw new AuthorizationException("Category does not belong to this user.");
         }
 
-        transaction.Update(request.Type, request.Amount, request.Currency,
+        var rateToUsd = await exchangeRateService.GetRateForCurrencyAsync(request.Currency, cancellationToken);
+
+        transaction.Update(request.Type, request.Amount, request.Currency, rateToUsd,
             request.Category, request.Note, request.CategoryId);
 
         await context.SaveChangesAsync(cancellationToken);

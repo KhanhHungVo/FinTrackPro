@@ -165,6 +165,38 @@ public class TransactionsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateTransaction_ChangingCurrency_RefreshesPersistedRateToUsd()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/transactions",
+            TransactionRequestBuilder.Build(amount: 75_000m, currency: "VND", categoryId: _expenseCategoryId));
+        var id = await createResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var update = new
+        {
+            type = "Expense",
+            amount = 75_000m,
+            currency = "USD",
+            category = "food_beverage",
+            note = "updated",
+            categoryId = _expenseCategoryId
+        };
+
+        var updateResponse = await _client.PatchAsJsonAsync($"/api/transactions/{id}", update);
+
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var getResponse = await _client.GetAsync("/api/transactions");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var paged = await getResponse.Content.ReadFromJsonAsync<PagedResponse<JsonElement>>();
+        var updated = paged!.Items.Single(item => item.GetProperty("id").GetGuid() == id);
+
+        updated.GetProperty("currency").GetString().Should().Be("USD");
+        updated.GetProperty("amount").GetDecimal().Should().Be(75_000m);
+        updated.GetProperty("rateToUsd").GetDecimal().Should().Be(1m);
+    }
+
+    [Fact]
     public async Task UpdateTransaction_NonExistentId_Returns404()
     {
         var update = new
