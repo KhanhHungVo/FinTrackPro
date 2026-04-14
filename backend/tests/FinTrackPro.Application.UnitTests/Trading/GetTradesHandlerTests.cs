@@ -69,7 +69,7 @@ public class GetTradesHandlerTests
             .GetPagedAsync(TestUser.Id, Arg.Any<TradePageQuery>(), Arg.Any<CancellationToken>())
             .Returns(((IReadOnlyList<Trade>)[], 0));
 
-        await _handler.Handle(new GetTradesQuery(Status: "Open"), CancellationToken.None);
+        await _handler.Handle(new GetTradesQuery { Status = "Open" }, CancellationToken.None);
 
         await _tradeRepository.Received(1).GetPagedAsync(
             TestUser.Id,
@@ -86,7 +86,7 @@ public class GetTradesHandlerTests
             .GetPagedAsync(TestUser.Id, Arg.Any<TradePageQuery>(), Arg.Any<CancellationToken>())
             .Returns(((IReadOnlyList<Trade>)[], 0));
 
-        var result = await _handler.Handle(new GetTradesQuery(PageSize: 500), CancellationToken.None);
+        var result = await _handler.Handle(new GetTradesQuery { PageSize = 500 }, CancellationToken.None);
 
         result.PageSize.Should().Be(100);
     }

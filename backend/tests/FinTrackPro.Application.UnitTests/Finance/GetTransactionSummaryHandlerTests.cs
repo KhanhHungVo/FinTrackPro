@@ -67,7 +67,7 @@ public class GetTransactionSummaryHandlerTests : IDisposable
 
         // Act
         var result = await _handler.Handle(
-            new GetTransactionSummaryQuery(PreferredCurrency: "VND", PreferredRate: 25_000m),
+            new GetTransactionSummaryQuery { PreferredCurrency = "VND", PreferredRate = 25_000m },
             CancellationToken.None);
 
         // Assert — short-circuit path: totals match raw amounts exactly
@@ -89,7 +89,7 @@ public class GetTransactionSummaryHandlerTests : IDisposable
         await _context.SaveChangesAsync(CancellationToken.None);
 
         var result = await _handler.Handle(
-            new GetTransactionSummaryQuery(PreferredCurrency: "VND", PreferredRate: 25_000m),
+            new GetTransactionSummaryQuery { PreferredCurrency = "VND", PreferredRate = 25_000m },
             CancellationToken.None);
 
         result.TotalIncome.Should().Be(750_000m); // 500_000 + 250_000
@@ -107,7 +107,7 @@ public class GetTransactionSummaryHandlerTests : IDisposable
 
         // preferredRate = 0 should be treated as 1 (guard against division/zero-multiply issues)
         var result = await _handler.Handle(
-            new GetTransactionSummaryQuery(PreferredCurrency: "USD", PreferredRate: 0m),
+            new GetTransactionSummaryQuery { PreferredCurrency = "USD", PreferredRate = 0m },
             CancellationToken.None);
 
         result.TotalIncome.Should().Be(100m); // USD == preferred → short-circuit fires
@@ -117,7 +117,7 @@ public class GetTransactionSummaryHandlerTests : IDisposable
     public async Task Handle_EmptyTransactions_ReturnsZeros()
     {
         var result = await _handler.Handle(
-            new GetTransactionSummaryQuery(PreferredCurrency: "VND", PreferredRate: 25_000m),
+            new GetTransactionSummaryQuery { PreferredCurrency = "VND", PreferredRate = 25_000m },
             CancellationToken.None);
 
         result.TotalIncome.Should().Be(0m);
@@ -147,7 +147,7 @@ public class GetTransactionSummaryHandlerTests : IDisposable
         await _context.SaveChangesAsync(CancellationToken.None);
 
         var result = await _handler.Handle(
-            new GetTransactionSummaryQuery(Month: "2026-04", PreferredCurrency: "VND", PreferredRate: 25_000m),
+            new GetTransactionSummaryQuery { Month = "2026-04", PreferredCurrency = "VND", PreferredRate = 25_000m },
             CancellationToken.None);
 
         result.TotalIncome.Should().Be(100_000m);

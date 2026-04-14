@@ -53,7 +53,7 @@ public class GetTransactionsHandlerTests
             .GetPagedAsync(TestUser.Id, Arg.Any<TransactionPageQuery>(), Arg.Any<CancellationToken>())
             .Returns(((IReadOnlyList<Transaction>)[], 0));
 
-        await _handler.Handle(new GetTransactionsQuery(Month: "2026-03"), CancellationToken.None);
+        await _handler.Handle(new GetTransactionsQuery { Month = "2026-03" }, CancellationToken.None);
 
         await _transactionRepository.Received(1).GetPagedAsync(
             TestUser.Id,
@@ -70,7 +70,7 @@ public class GetTransactionsHandlerTests
             .GetPagedAsync(TestUser.Id, Arg.Any<TransactionPageQuery>(), Arg.Any<CancellationToken>())
             .Returns(((IReadOnlyList<Transaction>)[], 0));
 
-        var result = await _handler.Handle(new GetTransactionsQuery(PageSize: 500), CancellationToken.None);
+        var result = await _handler.Handle(new GetTransactionsQuery { PageSize = 500 }, CancellationToken.None);
 
         result.PageSize.Should().Be(100);
     }
@@ -95,7 +95,7 @@ public class GetTransactionsHandlerTests
             .EnforceTransactionHistoryAccessAsync(Arg.Any<AppUser>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new PlanLimitExceededException("transaction_history", "History access denied.")));
 
-        var act = async () => await _handler.Handle(new GetTransactionsQuery(Month: "2025-01"), CancellationToken.None);
+        var act = async () => await _handler.Handle(new GetTransactionsQuery { Month = "2025-01" }, CancellationToken.None);
 
         await act.Should().ThrowAsync<PlanLimitExceededException>();
     }

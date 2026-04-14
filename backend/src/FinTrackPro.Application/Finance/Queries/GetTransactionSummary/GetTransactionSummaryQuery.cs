@@ -3,10 +3,11 @@ using MediatR;
 
 namespace FinTrackPro.Application.Finance.Queries.GetTransactionSummary;
 
-public record GetTransactionSummaryQuery(
-    string? Month = null,
-    string? Type = null,
-    Guid? CategoryId = null,
-    string? PreferredCurrency = null,
-    decimal PreferredRate = 1m
-) : IRequest<TransactionSummaryDto>;
+public record GetTransactionSummaryQuery : IRequest<TransactionSummaryDto>
+{
+    public string? Month { get; init; }
+    public string? Type { get; init; }
+    public Guid? CategoryId { get; init; }
+    public string? PreferredCurrency { get; init; }
+    public decimal PreferredRate { get; init; } = 1m;
+}

@@ -69,7 +69,7 @@ public class GetTradeSummaryHandlerTests : IDisposable
         await _context.SaveChangesAsync(CancellationToken.None);
 
         var result = await _handler.Handle(
-            new GetTradeSummaryQuery(PreferredCurrency: "USD", PreferredRate: 1m),
+            new GetTradeSummaryQuery { PreferredCurrency = "USD", PreferredRate = 1m },
             CancellationToken.None);
 
         result.TotalPnl.Should().Be(2485m); // 495 + 1990
@@ -91,7 +91,7 @@ public class GetTradeSummaryHandlerTests : IDisposable
         await _context.SaveChangesAsync(CancellationToken.None);
 
         var result = await _handler.Handle(
-            new GetTradeSummaryQuery(PreferredCurrency: "VND", PreferredRate: 25000m),
+            new GetTradeSummaryQuery { PreferredCurrency = "VND", PreferredRate = 25000m },
             CancellationToken.None);
 
         result.TotalPnl.Should().Be(12_470_000m); // 12_375_000 + 95_000
@@ -108,7 +108,7 @@ public class GetTradeSummaryHandlerTests : IDisposable
         await _context.SaveChangesAsync(CancellationToken.None);
 
         var result = await _handler.Handle(
-            new GetTradeSummaryQuery(PreferredCurrency: "VND", PreferredRate: 25000m),
+            new GetTradeSummaryQuery { PreferredCurrency = "VND", PreferredRate = 25000m },
             CancellationToken.None);
 
         result.UnrealizedPnl.Should().Be(-50_000_000m);
@@ -126,7 +126,7 @@ public class GetTradeSummaryHandlerTests : IDisposable
 
         // preferredRate = 0 → guarded to 1; USD == preferred → short-circuit
         var result = await _handler.Handle(
-            new GetTradeSummaryQuery(PreferredCurrency: "USD", PreferredRate: 0m),
+            new GetTradeSummaryQuery { PreferredCurrency = "USD", PreferredRate = 0m },
             CancellationToken.None);
 
         result.TotalPnl.Should().Be(495m);
@@ -136,7 +136,7 @@ public class GetTradeSummaryHandlerTests : IDisposable
     public async Task Handle_EmptyTrades_ReturnsZeros()
     {
         var result = await _handler.Handle(
-            new GetTradeSummaryQuery(PreferredCurrency: "VND", PreferredRate: 25000m),
+            new GetTradeSummaryQuery { PreferredCurrency = "VND", PreferredRate = 25000m },
             CancellationToken.None);
 
         result.TotalPnl.Should().Be(0m);
@@ -169,7 +169,7 @@ public class GetTradeSummaryHandlerTests : IDisposable
         await _context.SaveChangesAsync(CancellationToken.None);
 
         var result = await _handler.Handle(
-            new GetTradeSummaryQuery(PreferredCurrency: "USD", PreferredRate: 1m),
+            new GetTradeSummaryQuery { PreferredCurrency = "USD", PreferredRate = 1m },
             CancellationToken.None);
 
         result.WinRate.Should().Be(67);

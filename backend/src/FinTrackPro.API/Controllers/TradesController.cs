@@ -15,27 +15,12 @@ namespace FinTrackPro.API.Controllers;
 public class TradesController : BaseApiController
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        [FromQuery] string? search = null,
-        [FromQuery] string? status = null,
-        [FromQuery] string? direction = null,
-        [FromQuery] DateOnly? dateFrom = null,
-        [FromQuery] DateOnly? dateTo = null,
-        [FromQuery] string sortBy = "date",
-        [FromQuery] string sortDir = "desc")
-        => Ok(await Mediator.Send(new GetTradesQuery(page, pageSize, search, status, direction, dateFrom, dateTo, sortBy, sortDir)));
+    public async Task<IActionResult> GetAll([FromQuery] GetTradesQuery query)
+        => Ok(await Mediator.Send(query));
 
     [HttpGet("summary")]
-    public async Task<ActionResult<TradeSummaryDto>> GetSummary(
-        [FromQuery] string? status,
-        [FromQuery] string? direction,
-        [FromQuery] DateOnly? dateFrom,
-        [FromQuery] DateOnly? dateTo,
-        [FromQuery] string? preferredCurrency,
-        [FromQuery] decimal preferredRate = 1m)
-        => Ok(await Mediator.Send(new GetTradeSummaryQuery(status, direction, dateFrom, dateTo, preferredCurrency, preferredRate)));
+    public async Task<ActionResult<TradeSummaryDto>> GetSummary([FromQuery] GetTradeSummaryQuery query)
+        => Ok(await Mediator.Send(query));
 
     [HttpPost]
     public async Task<ActionResult<Guid>> Create(CreateTradeCommand command)

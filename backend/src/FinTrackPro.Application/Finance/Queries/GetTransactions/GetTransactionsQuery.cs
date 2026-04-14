@@ -3,13 +3,14 @@ using MediatR;
 
 namespace FinTrackPro.Application.Finance.Queries.GetTransactions;
 
-public record GetTransactionsQuery(
-    int Page = 1,
-    int PageSize = 20,
-    string? Search = null,
-    string? Month = null,
-    string? Type = null,
-    Guid? CategoryId = null,
-    string SortBy = "date",
-    string SortDir = "desc"
-) : IRequest<PagedResult<TransactionDto>>;
+public record GetTransactionsQuery : IRequest<PagedResult<TransactionDto>>
+{
+    public int Page { get; init; } = 1;
+    public int PageSize { get; init; } = 20;
+    public string? Search { get; init; }
+    public string? Month { get; init; }
+    public string? Type { get; init; }
+    public Guid? CategoryId { get; init; }
+    public string SortBy { get; init; } = "date";
+    public string SortDir { get; init; } = "desc";
+}

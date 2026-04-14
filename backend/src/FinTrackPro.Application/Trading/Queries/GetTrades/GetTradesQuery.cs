@@ -3,14 +3,15 @@ using MediatR;
 
 namespace FinTrackPro.Application.Trading.Queries.GetTrades;
 
-public record GetTradesQuery(
-    int Page = 1,
-    int PageSize = 20,
-    string? Search = null,
-    string? Status = null,
-    string? Direction = null,
-    DateOnly? DateFrom = null,
-    DateOnly? DateTo = null,
-    string SortBy = "date",
-    string SortDir = "desc"
-) : IRequest<PagedResult<TradeDto>>;
+public record GetTradesQuery : IRequest<PagedResult<TradeDto>>
+{
+    public int Page { get; init; } = 1;
+    public int PageSize { get; init; } = 20;
+    public string? Search { get; init; }
+    public string? Status { get; init; }
+    public string? Direction { get; init; }
+    public DateOnly? DateFrom { get; init; }
+    public DateOnly? DateTo { get; init; }
+    public string SortBy { get; init; } = "date";
+    public string SortDir { get; init; } = "desc";
+}
