@@ -4,6 +4,7 @@ using FinTrackPro.Domain.Entities;
 using FinTrackPro.Domain.Exceptions;
 using FinTrackPro.Domain.Repositories;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace FinTrackPro.Application.Trading.Commands.CreateTrade;
 
@@ -20,9 +21,12 @@ public class CreateTradeCommandHandler(
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
             ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
 
-        await subscriptionLimitService.EnforceTradeLimitAsync(user, tradeRepository, cancellationToken);
-
         var rateToUsd = await exchangeRateService.GetRateForCurrencyAsync(request.Currency, cancellationToken);
+
+        await using var tx = await context.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, cancellationToken);
+
+        await subscriptionLimitService.EnforceTradeLimitAsync(user, tradeRepository, cancellationToken);
 
         var trade = Trade.Create(
             user.Id, request.Symbol.ToUpperInvariant(), request.Direction, request.Status,
@@ -32,6 +36,7 @@ public class CreateTradeCommandHandler(
 
         context.Trades.Add(trade);
         await context.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
 
         return trade.Id;
     }

@@ -22,6 +22,10 @@ internal class TradeSummaryTestDbContext(DbContextOptions options) : DbContext(o
     public DbSet<Signal> Signals => Set<Signal>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
 
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(
+        System.Data.IsolationLevel isolationLevel, CancellationToken cancellationToken)
+        => throw new NotSupportedException("Transactions are not supported in the in-memory test context.");
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Ignore<BaseEvent>();

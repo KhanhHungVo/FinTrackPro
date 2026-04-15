@@ -20,6 +20,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
 
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(
+        System.Data.IsolationLevel isolationLevel, CancellationToken cancellationToken)
+        => Database.BeginTransactionAsync(isolationLevel, cancellationToken);
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.Ignore<BaseEvent>();

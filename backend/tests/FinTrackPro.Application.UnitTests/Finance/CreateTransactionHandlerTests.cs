@@ -107,6 +107,10 @@ public class CreateTransactionHandlerTests
     {
         _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
             .Returns(TestUser);
+        _categoryRepository.GetByIdAsync(SystemCategory.Id, Arg.Any<CancellationToken>())
+            .Returns(SystemCategory);
+        _context.BeginTransactionAsync(Arg.Any<System.Data.IsolationLevel>(), Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction>());
         _limitService
             .EnforceMonthlyTransactionLimitAsync(Arg.Any<AppUser>(), Arg.Any<ITransactionRepository>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new PlanLimitExceededException("transaction", "Monthly transaction limit reached.")));
