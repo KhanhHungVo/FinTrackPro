@@ -1,8 +1,9 @@
+using FinTrackPro.Domain.Common;
+
 namespace FinTrackPro.Domain.Entities;
 
-public class UserIdentity
+public class UserIdentity : CreatedEntity
 {
-    public Guid Id { get; private set; }
     public string ExternalUserId { get; private set; } = string.Empty;
     public string Provider { get; private set; } = string.Empty;
     public Guid UserId { get; private set; }

@@ -30,9 +30,9 @@ Infrastructure → Domain
 BackgroundJobs → Application
 ```
 
-- **Domain** — entities, value objects, domain exceptions, repository interfaces. Zero external dependencies.
-- **Application** — MediatR commands/queries/handlers, FluentValidation validators, DTOs with explicit `operator` conversions (no AutoMapper).
-- **Infrastructure** — EF Core Code-First (`ApplicationDbContext`), repository implementations, IAM provider abstraction (Keycloak or Auth0 — selected via `IdentityProvider:Provider`), external HTTP clients (Binance, CoinGecko, Fear & Greed), Telegram.Bot, Skender.Stock.Indicators.
+- **Domain** — entities, value objects, domain exceptions, repository interfaces. Zero external dependencies. Entity base classes: `CreatedEntity` (append-only — has `CreatedAt`) and `AuditableEntity : CreatedEntity` (mutable — also has `UpdatedAt`). Never set `CreatedAt`/`UpdatedAt` manually in entities; the interceptor owns them.
+- **Application** — MediatR commands/queries/handlers, FluentValidation validators, DTOs with explicit `operator` conversions (no AutoMapper). `IClock` interface lives here (implemented by `SystemClock` in Infrastructure).
+- **Infrastructure** — EF Core Code-First (`ApplicationDbContext`), repository implementations, IAM provider abstraction (Keycloak or Auth0 — selected via `IdentityProvider:Provider`), external HTTP clients (Binance, CoinGecko, Fear & Greed), Telegram.Bot, Skender.Stock.Indicators. `AuditableEntityInterceptor` auto-sets `CreatedAt`/`UpdatedAt` on every `SaveChanges`.
 - **API** — thin controllers delegating entirely to MediatR, `ExceptionHandlingMiddleware`, DI wiring via `AddApplicationServices()` / `AddInfrastructureServices()`.
 - **BackgroundJobs** — Hangfire job classes; registered in `Program.cs` as recurring jobs.
 

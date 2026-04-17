@@ -3,14 +3,14 @@ using FinTrackPro.Domain.Enums;
 
 namespace FinTrackPro.Domain.Entities;
 
-public class NotificationPreference : BaseEntity
+public class NotificationPreference : AuditableEntity
 {
     public Guid UserId { get; private set; }
     public NotificationChannel Channel { get; private set; }
     public string? TelegramChatId { get; private set; }
     public string? Email { get; private set; }
     public bool IsEnabled { get; private set; }
-    public DateTime CreatedAt { get; private set; }
+
 
     private NotificationPreference() { }
 
@@ -22,8 +22,7 @@ public class NotificationPreference : BaseEntity
             UserId = userId,
             Channel = NotificationChannel.Telegram,
             TelegramChatId = telegramChatId,
-            IsEnabled = true,
-            CreatedAt = DateTime.UtcNow
+            IsEnabled = true
         };
     }
 

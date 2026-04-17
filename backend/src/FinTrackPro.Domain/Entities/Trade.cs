@@ -4,7 +4,7 @@ using FinTrackPro.Domain.Exceptions;
 
 namespace FinTrackPro.Domain.Entities;
 
-public class Trade : BaseEntity
+public class Trade : AuditableEntity
 {
     public Guid UserId { get; private set; }
     public string Symbol { get; private set; } = string.Empty;
@@ -18,7 +18,7 @@ public class Trade : BaseEntity
     public string Currency { get; private set; } = "USD";
     public decimal RateToUsd { get; private set; } = 1.0m;
     public string? Notes { get; private set; }
-    public DateTime CreatedAt { get; private set; }
+
 
     // Realized P&L for closed trades — not persisted
     public decimal Result => Status == TradeStatus.Closed && ExitPrice.HasValue
@@ -72,8 +72,7 @@ public class Trade : BaseEntity
             Fees = fees,
             Currency = currency.Trim().ToUpperInvariant(),
             RateToUsd = rateToUsd,
-            Notes = notes?.Trim(),
-            CreatedAt = DateTime.UtcNow
+            Notes = notes?.Trim()
         };
     }
 

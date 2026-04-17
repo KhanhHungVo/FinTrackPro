@@ -17,7 +17,8 @@ public class TransactionCategoryConfiguration : IEntityTypeConfiguration<Transac
         builder.Property(c => c.IsSystem).IsRequired().HasDefaultValue(false);
         builder.Property(c => c.IsActive).IsRequired().HasDefaultValue(true);
         builder.Property(c => c.SortOrder).IsRequired().HasDefaultValue(0);
-        builder.Property(c => c.CreatedAt).IsRequired();
+        builder.Property(c => c.CreatedAt).IsRequired().HasDefaultValueSql("NOW()");
+        builder.Property(c => c.UpdatedAt).IsRequired().HasDefaultValueSql("NOW()");
 
         builder.HasIndex(c => new { c.UserId, c.Slug }).IsUnique();
 

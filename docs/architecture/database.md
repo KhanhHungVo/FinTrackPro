@@ -16,7 +16,8 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Id | uuid | PK |
 | Email | character varying(200) | nullable, INDEX |
 | DisplayName | character varying(100) | NOT NULL |
-| CreatedAt | timestamp | NOT NULL |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
+| UpdatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 | IsActive | boolean | NOT NULL, DEFAULT true |
 | PreferredLanguage | character varying(10) | NOT NULL, DEFAULT 'en' |
 | PreferredCurrency | character varying(3) | NOT NULL, DEFAULT 'USD' |
@@ -38,6 +39,7 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | ExternalUserId | character varying(200) | NOT NULL |
 | Provider | character varying(200) | NOT NULL |
 | UserId | uuid | FK → Users, CASCADE DELETE |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 | — | — | UNIQUE INDEX (ExternalUserId, Provider) |
 
 > One `AppUser` can have multiple `UserIdentity` rows — one per IAM provider (e.g., Keycloak + Auth0 Google). `UserContextMiddleware` resolves the local user via this table on every authenticated request.
@@ -57,7 +59,8 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | CategoryId | uuid | nullable, FK → TransactionCategories, SET NULL on DELETE |
 | Note | character varying(500) | nullable |
 | BudgetMonth | character varying(7) | NOT NULL (YYYY-MM) |
-| CreatedAt | timestamp | NOT NULL |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
+| UpdatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 
 > `Currency` and `RateToUsd` are stored at creation time. `RateToUsd` = units of the record's currency per 1 USD. Display conversion: `displayAmount = (amount / rateToUsd) × preferredRateToUsd`.
 > `Category` always holds the resolved slug from `TransactionCategory.Slug` for budget-matching compatibility. `CategoryId` is nullable — old rows have `NULL` (Phase 1 migration strategy).
@@ -77,7 +80,8 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | IsSystem | boolean | NOT NULL, DEFAULT false |
 | IsActive | boolean | NOT NULL, DEFAULT true |
 | SortOrder | integer | NOT NULL, DEFAULT 0 |
-| CreatedAt | timestamp | NOT NULL |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
+| UpdatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 | — | — | UNIQUE INDEX (UserId, Slug) |
 
 > `UserId = NULL` = system category (globally unique slug). `UserId = <user>` = user-owned custom category (slug unique per user). System categories are seeded idempotently by `TransactionCategoryDataSeeder` on every startup — 5 Income + 12 Expense = 17 total. System categories cannot be updated or deleted (HTTP 403 via domain guard). Custom categories are soft-deleted (`IsActive = false`).
@@ -94,7 +98,8 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Currency | character varying(3) | NOT NULL, DEFAULT 'USD' |
 | RateToUsd | numeric(18,8) | NOT NULL, DEFAULT 1.0 |
 | Month | character varying(7) | NOT NULL (YYYY-MM) |
-| CreatedAt | timestamp | NOT NULL |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
+| UpdatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 | — | — | UNIQUE INDEX (UserId, Category, Month) |
 
 ---
@@ -115,7 +120,8 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Currency | character varying(3) | NOT NULL, DEFAULT 'USD' |
 | RateToUsd | numeric(18,8) | NOT NULL, DEFAULT 1.0 |
 | Notes | character varying(1000) | nullable |
-| CreatedAt | timestamp | NOT NULL |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
+| UpdatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 
 > `Result` (realized P&L) is a **computed property** on the entity: `(ExitPrice - EntryPrice) × PositionSize - Fees` for Long Closed trades (direction-aware). Not persisted.
 > `UnrealizedResult` is computed from `CurrentPrice` for Open trades with a current price. Not persisted.
@@ -129,7 +135,7 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Id | uuid | PK |
 | UserId | uuid | FK → Users, CASCADE DELETE |
 | Symbol | character varying(20) | NOT NULL (uppercased) |
-| CreatedAt | timestamp | NOT NULL |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 | — | — | UNIQUE INDEX (UserId, Symbol) |
 
 ---
@@ -145,7 +151,7 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Value | numeric(18,8) | |
 | Timeframe | character varying(10) | |
 | IsNotified | boolean | NOT NULL |
-| CreatedAt | timestamp | NOT NULL |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 | — | — | INDEX (UserId, CreatedAt) |
 
 ---
@@ -159,21 +165,28 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | TelegramChatId | character varying(100) | nullable |
 | Email | character varying(200) | nullable |
 | IsEnabled | boolean | NOT NULL |
-| CreatedAt | timestamp | NOT NULL |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
+| UpdatedAt | timestamp | NOT NULL, DEFAULT NOW() |
 
 ---
 
 ## Running Migrations
+
+Migrations are **applied automatically at startup** via `db.Database.MigrateAsync()` in `Program.cs`. No manual `dotnet ef database update` is needed in CI or production.
+
+To generate a new migration after a schema change (developer action only):
 
 ```bash
 # From backend/ directory
 dotnet ef migrations add <MigrationName> \
   --project src/FinTrackPro.Infrastructure \
   --startup-project src/FinTrackPro.API
+```
 
-dotnet ef database update \
-  --project src/FinTrackPro.Infrastructure \
-  --startup-project src/FinTrackPro.API
+For multi-instance deployments, run migrations before instances start using the `--migrate-only` flag:
+
+```bash
+dotnet run --project src/FinTrackPro.API -- --migrate-only
 ```
 
 The active provider is determined by `DatabaseProvider:Provider` (`appsettings.json` or env var). Set via user-secrets for targeting production:

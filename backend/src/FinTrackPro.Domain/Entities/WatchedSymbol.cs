@@ -3,11 +3,11 @@ using FinTrackPro.Domain.Exceptions;
 
 namespace FinTrackPro.Domain.Entities;
 
-public class WatchedSymbol : BaseEntity
+public class WatchedSymbol : CreatedEntity
 {
     public Guid UserId { get; private set; }
     public string Symbol { get; private set; } = string.Empty;
-    public DateTime CreatedAt { get; private set; }
+
 
     private WatchedSymbol() { }
 
@@ -20,8 +20,7 @@ public class WatchedSymbol : BaseEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Symbol = symbol.Trim().ToUpperInvariant(),
-            CreatedAt = DateTime.UtcNow
+            Symbol = symbol.Trim().ToUpperInvariant()
         };
     }
 }

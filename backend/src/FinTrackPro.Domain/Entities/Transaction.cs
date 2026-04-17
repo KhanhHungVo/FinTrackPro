@@ -4,7 +4,7 @@ using FinTrackPro.Domain.Exceptions;
 
 namespace FinTrackPro.Domain.Entities;
 
-public class Transaction : BaseEntity
+public class Transaction : AuditableEntity
 {
     public Guid UserId { get; private set; }
     public TransactionType Type { get; private set; }
@@ -14,7 +14,7 @@ public class Transaction : BaseEntity
     public string Category { get; private set; } = string.Empty;
     public string? Note { get; private set; }
     public string BudgetMonth { get; private set; } = string.Empty; // YYYY-MM
-    public DateTime CreatedAt { get; private set; }
+
     public Guid? CategoryId { get; private set; }
 
     private Transaction() { }
@@ -61,7 +61,6 @@ public class Transaction : BaseEntity
             Category = category.Trim(),
             Note = note?.Trim(),
             BudgetMonth = budgetMonth,
-            CreatedAt = DateTime.UtcNow,
             CategoryId = categoryId
         };
     }

@@ -55,6 +55,7 @@ graph TD
 - Entities, enums, domain exceptions
 - Repository interfaces (`IUserRepository`, etc.)
 - Zero external dependencies
+- Entity base class hierarchy: `BaseEntity` (Id + domain events) → `CreatedEntity` (+ `CreatedAt`) → `AuditableEntity` (+ `UpdatedAt`). Append-only entities (`Signal`, `WatchedSymbol`, `UserIdentity`) inherit `CreatedEntity`; mutable entities inherit `AuditableEntity`. Timestamps are **never set manually** — `AuditableEntityInterceptor` in Infrastructure sets them automatically on `SaveChanges`.
 
 ### Application (`FinTrackPro.Application`)
 - CQRS commands and queries via MediatR — feature groups: `Finance/`, `Trading/`, `Notifications/`, `Subscription/`

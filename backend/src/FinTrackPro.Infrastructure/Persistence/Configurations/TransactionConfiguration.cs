@@ -16,6 +16,8 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(t => t.Note).HasMaxLength(500);
         builder.Property(t => t.BudgetMonth).HasMaxLength(7).IsRequired();
         builder.Property(t => t.Type).IsRequired();
+        builder.Property(t => t.CreatedAt).IsRequired().HasDefaultValueSql("NOW()");
+        builder.Property(t => t.UpdatedAt).IsRequired().HasDefaultValueSql("NOW()");
 
         builder.HasOne<AppUser>()
                .WithMany()

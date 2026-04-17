@@ -15,7 +15,6 @@ public class AppUserTests
         user.DisplayName.Should().Be("Test User");    // trimmed
         user.IsActive.Should().BeTrue();
         user.Identities.Should().BeEmpty();
-        user.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     [Fact]

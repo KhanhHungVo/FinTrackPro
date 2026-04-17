@@ -14,6 +14,8 @@ public class BudgetConfiguration : IEntityTypeConfiguration<Budget>
         builder.Property(b => b.Currency).HasMaxLength(3).IsRequired().HasDefaultValue("USD");
         builder.Property(b => b.RateToUsd).HasPrecision(18, 8).IsRequired().HasDefaultValue(1.0m);
         builder.Property(b => b.Month).HasMaxLength(7).IsRequired();
+        builder.Property(b => b.CreatedAt).IsRequired().HasDefaultValueSql("NOW()");
+        builder.Property(b => b.UpdatedAt).IsRequired().HasDefaultValueSql("NOW()");
 
         builder.HasIndex(b => new { b.UserId, b.Category, b.Month }).IsUnique();
 

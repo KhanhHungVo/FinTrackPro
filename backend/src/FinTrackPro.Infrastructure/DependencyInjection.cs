@@ -8,6 +8,7 @@ using FinTrackPro.Infrastructure.ExternalServices.ExchangeRate;
 using FinTrackPro.Infrastructure.Http;
 using FinTrackPro.Infrastructure.Identity;
 using FinTrackPro.Infrastructure.Persistence;
+using FinTrackPro.Infrastructure.Persistence.Interceptors;
 using FinTrackPro.Infrastructure.Persistence.Repositories;
 using FinTrackPro.Infrastructure.Services;
 using FinTrackPro.Infrastructure.Stripe;
@@ -58,8 +59,13 @@ public static class DependencyInjection
 
     private static void AddDatabase(IServiceCollection services, DatabaseConfiguration db)
     {
-        services.AddDbContext<ApplicationDbContext>(options =>
+        services.AddSingleton<IClock, Services.SystemClock>();
+        services.AddSingleton<AuditableEntityInterceptor>();
+
+        services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
+            options.AddInterceptors(sp.GetRequiredService<AuditableEntityInterceptor>());
+
             if (db.IsPostgres)
                 options.UseNpgsql(
                     db.ConnectionString,

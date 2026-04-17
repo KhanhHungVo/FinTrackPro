@@ -14,6 +14,7 @@ public class SignalConfiguration : IEntityTypeConfiguration<Signal>
         builder.Property(s => s.Message).HasMaxLength(500).IsRequired();
         builder.Property(s => s.Value).HasPrecision(18, 8);
         builder.Property(s => s.Timeframe).HasMaxLength(10);
+        builder.Property(s => s.CreatedAt).IsRequired().HasDefaultValueSql("NOW()");
         builder.HasIndex(s => new { s.UserId, s.CreatedAt });
 
         builder.HasOne<AppUser>()

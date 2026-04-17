@@ -3,7 +3,7 @@ using FinTrackPro.Domain.Exceptions;
 
 namespace FinTrackPro.Domain.Entities;
 
-public class Budget : BaseEntity
+public class Budget : AuditableEntity
 {
     public Guid UserId { get; private set; }
     public string Category { get; private set; } = string.Empty;
@@ -11,7 +11,7 @@ public class Budget : BaseEntity
     public string Currency { get; private set; } = "USD";
     public decimal RateToUsd { get; private set; } = 1.0m;
     public string Month { get; private set; } = string.Empty; // YYYY-MM
-    public DateTime CreatedAt { get; private set; }
+
 
     private Budget() { }
 
@@ -34,8 +34,7 @@ public class Budget : BaseEntity
             LimitAmount = limitAmount,
             Currency = currency.Trim().ToUpperInvariant(),
             RateToUsd = rateToUsd,
-            Month = month,
-            CreatedAt = DateTime.UtcNow
+            Month = month
         };
     }
 

@@ -11,6 +11,7 @@ public class UserIdentityConfiguration : IEntityTypeConfiguration<UserIdentity>
         builder.HasKey(i => i.Id);
         builder.Property(i => i.ExternalUserId).HasMaxLength(200).IsRequired();
         builder.Property(i => i.Provider).HasMaxLength(200).IsRequired();
+        builder.Property(i => i.CreatedAt).IsRequired().HasDefaultValueSql("NOW()");
 
         builder.HasIndex(i => new { i.ExternalUserId, i.Provider }).IsUnique();
 

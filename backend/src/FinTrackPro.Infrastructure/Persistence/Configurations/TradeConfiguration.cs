@@ -20,6 +20,8 @@ public class TradeConfiguration : IEntityTypeConfiguration<Trade>
         builder.Property(t => t.Currency).HasMaxLength(3).IsRequired().HasDefaultValue("USD");
         builder.Property(t => t.RateToUsd).HasPrecision(18, 8).IsRequired().HasDefaultValue(1.0m);
         builder.Property(t => t.Notes).HasMaxLength(1000);
+        builder.Property(t => t.CreatedAt).IsRequired().HasDefaultValueSql("NOW()");
+        builder.Property(t => t.UpdatedAt).IsRequired().HasDefaultValueSql("NOW()");
 
         // Computed properties — not stored in DB
         builder.Ignore(t => t.Result);

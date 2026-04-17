@@ -11,7 +11,7 @@ public class AppUser : AggregateRoot
     public string DisplayName { get; private set; } = string.Empty;
     public string PreferredLanguage { get; private set; } = "en";
     public string PreferredCurrency { get; private set; } = "USD";
-    public DateTime CreatedAt { get; private set; }
+
     public bool IsActive { get; private set; } = true;
 
     // Subscription
@@ -31,7 +31,6 @@ public class AppUser : AggregateRoot
             Id = Guid.NewGuid(),
             Email = email?.Trim().ToLowerInvariant(),
             DisplayName = displayName.Trim(),
-            CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
     }

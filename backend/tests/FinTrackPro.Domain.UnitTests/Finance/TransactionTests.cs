@@ -23,7 +23,6 @@ public class TransactionTests
         tx.Category.Should().Be("food_beverage");
         tx.CategoryId.Should().Be(categoryId);
         tx.BudgetMonth.Should().Be("2026-03");
-        tx.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     [Theory]

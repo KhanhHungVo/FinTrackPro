@@ -4,7 +4,7 @@ using FinTrackPro.Domain.Exceptions;
 
 namespace FinTrackPro.Domain.Entities;
 
-public class TransactionCategory : BaseEntity
+public class TransactionCategory : AuditableEntity
 {
     public Guid? UserId { get; private set; }
     public TransactionType Type { get; private set; }
@@ -15,7 +15,7 @@ public class TransactionCategory : BaseEntity
     public bool IsSystem { get; private set; }
     public bool IsActive { get; private set; }
     public int SortOrder { get; private set; }
-    public DateTime CreatedAt { get; private set; }
+
 
     private TransactionCategory() { }
 
@@ -47,8 +47,7 @@ public class TransactionCategory : BaseEntity
             Icon = icon.Trim(),
             IsSystem = isSystem,
             IsActive = true,
-            SortOrder = sortOrder,
-            CreatedAt = DateTime.UtcNow
+            SortOrder = sortOrder
         };
     }
 
