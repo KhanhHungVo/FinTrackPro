@@ -188,6 +188,7 @@ dotnet user-secrets set "Stripe:WebhookSecret" "<whsec_...>" --project backend/s
 - `docs/decisions/preventing-duplicate-calls-on-fast-clicks.md` — useGuardedMutation hook design rationale
 - `docs/decisions/transaction-category-system.md` — structured TransactionCategory entity (system-seeded defaults + user-custom, three-phase migration strategy)
 - `docs/decisions/open-positions-trade-status.md` — Open/Closed status model for trades; nullable exitPrice, ClosePositionCommand, realized vs. unrealized P&L split
+- `docs/planned/dashboard-command-center.md` — Dashboard redesign: personalized command center (expense allocation, budget health, trading intelligence, recent activity, contextual signals); market data moved to `/market`
 
 ### Planned (not yet implemented)
 - `docs/planned/monetisation-subscription-design.md` — Freemium subscription system with Stripe (fully implemented: backend + frontend)

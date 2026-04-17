@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next'
-import { FearGreedWidget } from '@/widgets/fear-greed-widget'
-import { SignalsList } from '@/widgets/signals-list'
-import { TrendingCoinsWidget } from '@/widgets/trending-coins-widget'
 import { KpiSummaryWidget } from '@/widgets/kpi-summary'
 import { FreePlanAdBanner } from '@/shared/ui/FreePlanAdBanner'
 import { useAuthStore } from '@/features/auth'
+import { ExpenseAllocationWidget } from '@/widgets/expense-allocation'
+import { BudgetHealthWidget } from '@/widgets/budget-health'
+import { TradingIntelligenceWidget } from '@/widgets/trading-intelligence'
+import { RecentActivityWidget } from '@/widgets/recent-activity'
+import { ContextualSignalsWidget } from '@/widgets/contextual-signals'
 
 function useGreeting() {
   const { t } = useTranslation()
@@ -15,7 +17,6 @@ function useGreeting() {
 }
 
 export function DashboardPage() {
-  const { t } = useTranslation()
   const displayName = useAuthStore((s) => s.displayName)
   const firstName = displayName?.split(' ')[0] ?? ''
   const greeting = useGreeting()
@@ -39,17 +40,23 @@ export function DashboardPage() {
           </div>
         </div>
 
+        {/* Section 1: KPI Header */}
         <KpiSummaryWidget />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FearGreedWidget />
-          <TrendingCoinsWidget />
+        {/* Section 2: Expense Allocation + Budget Health */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ExpenseAllocationWidget />
+          <BudgetHealthWidget />
         </div>
 
-        <div>
-          <h2 className="text-lg font-semibold mb-3">{t('dashboard.recentSignals')}</h2>
-          <SignalsList />
-        </div>
+        {/* Section 3: Trading Intelligence (hidden if 0 trades) */}
+        <TradingIntelligenceWidget />
+
+        {/* Section 4: Recent Activity */}
+        <RecentActivityWidget />
+
+        {/* Section 5: Contextual Signals (hidden if watchlist empty) */}
+        <ContextualSignalsWidget />
       </div>
     </>
   )

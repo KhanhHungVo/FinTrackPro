@@ -10,9 +10,13 @@ const signalColors: Record<string, string> = {
   BbSqueeze: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400',
 }
 
-export function SignalsList() {
+interface SignalsListProps {
+  count?: number
+}
+
+export function SignalsList({ count = 20 }: SignalsListProps) {
   const { t } = useTranslation()
-  const { data, isLoading } = useSignals()
+  const { data, isLoading } = useSignals(count)
 
   const signalLabels: Record<string, string> = {
     RsiOversold: t('signals.rsiOversold'),

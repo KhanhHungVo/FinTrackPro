@@ -13,6 +13,7 @@ function useNavLinks() {
     { to: '/transactions', label: t('nav.transactions') },
     { to: '/budgets',      label: t('nav.budgets')      },
     { to: '/trades',       label: t('nav.trades')       },
+    { to: '/market',       label: t('nav.market')       },
     { to: '/settings',     label: t('nav.settings')     },
   ]
 }

@@ -1,6 +1,6 @@
 # FinTrackPro — UI Flows
 
-> Last updated: 2026-04-13
+> Last updated: 2026-04-17
 > Format: screen-by-screen reference for UI design and Figma workflow generation.
 
 ---
@@ -15,9 +15,10 @@
                           ├── /transactions                │
                           ├── /budgets                     │
                           ├── /trades                      │
+                          ├── /market                      │
                           └── /settings                    │
                                                            ▼
-                          Dashboard → Transactions → Budgets → Trades → Settings
+                          Dashboard → Transactions → Budgets → Trades → Market → Settings
 ```
 
 ---
@@ -28,7 +29,7 @@
 
 ### Layout
 - Left: Logo ("FinTrackPro")
-- Centre: Nav links — Dashboard, Transactions, Budgets, Trades, Settings
+- Centre: Nav links — Dashboard, Transactions, Budgets, Trades, Market, Settings
 - Right: User avatar (first initial of name), hover reveals name + email + Logout button
 
 ### States
@@ -74,19 +75,25 @@
 ## Screen: Dashboard
 
 **Route:** `/dashboard` (default after login)
-**Purpose:** High-level overview of the user's financial health and market context for the current month.
+**Purpose:** Personalized command center — surfaces the user's own financial data (allocation, budget health, trading performance, recent activity) plus contextual market signals for their watchlist. Generic market data (Fear & Greed, Trending Coins) moved to `/market`.
 
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Good morning, Alex 👋                               │  ← Greeting header
-│  Sunday, April 13                                    │  ← Date subtitle
+│  [FreePlanAdBanner — Free users only]                │
 ├─────────────────────────────────────────────────────┤
-│  Income (month)   │  Expenses (month)  │  Trading P&L │  ← Summary cards
-├───────────────────┴────────────────────┴─────────────┤
-│  Fear & Greed Gauge (left)  │  Trending Coins (right) │  ← Market widgets
+│  Good morning, Alex 👋   Sunday, April 17            │  ← Greeting header
 ├─────────────────────────────────────────────────────┤
-│  Recent Signals (full width)                         │  ← Signals list
+│  Income · Month │ Expenses · Month │ P&L · Month │ Unrealized P&L │  ← KPI header (4-col)
+├─────────────────────────────────────────────────────┤
+│  Expense Allocation (donut)  │  Budget Health        │  ← Section 2 (side-by-side)
+├─────────────────────────────────────────────────────┤
+│  Trading Intelligence (hidden if 0 trades)           │  ← Section 3
+│    Open Positions panel · Closed Trades panel        │
+├─────────────────────────────────────────────────────┤
+│  Recent Activity (merged transactions + trades)      │  ← Section 4
+├─────────────────────────────────────────────────────┤
+│  Signals for Your Watchlist (hidden if watchlist=∅)  │  ← Section 5
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -95,43 +102,109 @@
 **Greeting Header**
 - Time-based greeting using the user's first name: "Good morning / afternoon / evening, [First name] 👋"
   - Morning: before 12:00 · Afternoon: 12:00–17:59 · Evening: 18:00+
-- Subtitle shows today's date, formatted with the browser's locale (e.g. "Sunday, April 13")
+- Subtitle shows today's date, formatted with the browser's locale (e.g. "Sunday, April 17")
 - Greeting text is i18n-keyed and translated in both EN and VI
 
-**Summary Cards (3-column grid)**
-- Each card has a coloured left-border accent for at-a-glance category recognition:
-  - Income: green left border — formatted as currency
-  - Expenses: red left border — formatted as currency
-  - Trading P&L: blue left border — green if positive, red if negative
-- Month-over-month delta badge shown below each value when previous month data is available
+**KPI Header — 4 cards (`grid-cols-2 lg:grid-cols-4`)**
+| Card | Color | Period | Subtitle |
+|---|---|---|---|
+| Income | green border | This month | Last month value; delta badge |
+| Expenses | red border | This month | Last month value; delta badge |
+| Trading P&L | blue border | This month (closed trades) | Last month value; delta badge |
+| Unrealized P&L | purple border | All open positions | "N open position(s)" or "No open positions" |
 
-**Fear & Greed Widget**
-- SVG semicircle gauge with animated needle
-- 5 colour zones: Extreme Fear (0–20, red) / Fear (20–40, orange) / Neutral (40–60, yellow) / Greed (60–80, green) / Extreme Greed (80–100, dark green)
-- Numeric value displayed below gauge
-- Data refreshed every hour
+**Expense Allocation** (`ExpenseAllocationWidget`)
+- Recharts donut chart grouping current-month Expense transactions by category
+- Center label: total expenses in preferred currency
+- Legend: category emoji + name + amount + percentage (top categories; "+ N more" overflow)
+- Empty state: "No expenses this month" + link to /transactions
+- Data: `useTransactions({ month, type: 'Expense', pageSize: 200 })` grouped client-side
 
-**Trending Coins**
-- List of top 7 trending coins: coin name, symbol, market cap rank
-- Data refreshed every 15 minutes
+**Budget Health** (`BudgetHealthWidget`)
+- Compact progress bar list sorted worst-first; max 5 shown
+- Summary header: "X of Y on track"
+- Bar colors: green (< 60%), yellow (60–90%), red (> 90%)
+- Footer: "View all budgets" link to /budgets
+- Empty state: "No budgets set" + link to /budgets
 
-**Recent Signals**
-- List of latest market signals across all watched symbols
-- Each row: signal type badge (colour-coded) + symbol + message preview + timestamp
-- Signal type badge colours: RsiOversold=red, RsiOverbought=orange, VolumeSpike=blue
+**Trading Intelligence** (`TradingIntelligenceWidget`) — hidden when `totalTrades === 0`
+- *Open Positions panel* — unrealized P&L card + open count card + capital allocation donut (one slice per symbol) + winning/losing position lists + risk signals (concentration warnings)
+- *Closed Trades panel* — realised P&L + win rate + avg P&L/trade cards + cumulative P&L line chart (weekly buckets) + by-symbol / by-direction breakdowns + avg win/loss/R:R metrics
+- Empty state for closed panel: "No closed trades this month" (open panel still shown above)
+
+**Recent Activity** (`RecentActivityWidget`)
+- Merged feed: latest 5 transactions + latest 5 trades, sorted by `createdAt` desc, top 8 shown
+- Left-border color coding: green = income, red = expense, blue = trade
+- Empty state: "No recent activity yet"
+
+**Contextual Signals** (`ContextualSignalsWidget`) — hidden when watchlist is empty
+- Wraps `SignalsList` (5 items) with section heading + "Manage watchlist" link to /settings
+- Full signals list available on the Market page
 
 ### States
 | State | Description |
 |---|---|
-| Loading | Animated skeleton placeholders for each region |
-| Loaded | All data displayed |
-| No signals | "No signals yet — add symbols to your watchlist." |
+| Loading | Animated skeleton placeholders per region |
+| Loaded | All sections rendered |
+| No trades | Trading Intelligence section hidden entirely |
+| No watchlist | Contextual Signals section hidden entirely |
+| No expenses | Expense Allocation shows empty state |
+| No budgets | Budget Health shows empty state |
 
 ### User Actions
 None — Dashboard is read-only (all widgets are display-only).
 
 ### Navigates To
 - Any page via Navbar
+- `/transactions` via Expense Allocation empty state link
+- `/budgets` via Budget Health links
+- `/trades` via Trading Intelligence "View all" links
+- `/settings` via Contextual Signals "Manage watchlist" link
+
+---
+
+## Screen: Market
+
+**Route:** `/market`
+**Purpose:** Dedicated page for generic market data — Fear & Greed Index, trending coins, and the full signals list. Previously embedded in Dashboard; moved to reduce dashboard noise for users without active trading.
+
+### Layout
+```
+┌─────────────────────────────────────────────────────┐
+│  Market                                              │  ← Page title
+├──────────────────────────┬──────────────────────────┤
+│  Fear & Greed Index      │  Trending Coins           │  ← Market widgets (2-col)
+├─────────────────────────────────────────────────────┤
+│  Recent Signals (up to 20, full width)               │  ← Signals list
+└─────────────────────────────────────────────────────┘
+```
+
+### Regions
+
+**Fear & Greed Widget**
+- SVG semicircle gauge with animated needle
+- 5 colour zones: Extreme Fear (0–20, red) / Fear (20–40, orange) / Neutral (40–60, yellow) / Greed (60–80, green) / Extreme Greed (80–100, dark green)
+- Numeric value and label displayed below gauge
+- Data refreshed every hour
+
+**Trending Coins**
+- List of top 7 trending coins: coin name, symbol, market cap rank
+- Powered by CoinGecko; data refreshed every 15 minutes
+
+**Recent Signals (full list)**
+- Up to 20 latest market signals across all watched symbols
+- Each row: signal type badge (colour-coded) + symbol + message preview + timestamp
+- Empty state: "No signals yet — add symbols to your watchlist."
+
+### States
+| State | Description |
+|---|---|
+| Loading | Animated skeleton placeholders |
+| Loaded | All three regions displayed |
+| No signals | "No signals yet — add symbols to your watchlist." |
+
+### User Actions
+None — Market page is read-only.
 
 ---
 
@@ -551,6 +624,11 @@ Settings → Subscription section → "Manage subscription"
 | Budget list | Skeleton boxes | "No budgets set for [month]." | — |
 | Trade table | Skeleton rows | "No trades logged yet." | — |
 | Signals list | Skeleton block | "No signals yet — add symbols to your watchlist." | — |
+| Expense Allocation | Skeleton block | "No expenses this month" | — |
+| Budget Health | Skeleton block | "No budgets set" | — |
+| Trading Intelligence | Hidden | Hidden (when 0 trades) | — |
+| Recent Activity | Skeleton block | "No recent activity yet" | — |
+| Contextual Signals | Hidden | Hidden (when watchlist empty) | — |
 | Fear & Greed gauge | Skeleton block | — | — |
 | Notification form | Skeleton block | — | — |
 | Watchlist | Skeleton block | "No symbols watched yet." | Red message below input |
@@ -568,7 +646,8 @@ Settings → Subscription section → "Manage subscription"
 | Yellow/Orange | Budget 80–100% of limit |
 | Red | Expense, negative P&L, Short direction, budget overrun |
 | Blue | Primary action buttons, active nav link |
-| Emerald | Open trade status, unrealised P&L card, close action |
+| Purple | Unrealized P&L KPI card (Dashboard); capital allocation donut accents |
+| Emerald | Open trade status, close action button |
 | Gray | Secondary text, dates, inactive states, closed trade status |
 
 ### Signal Badge Colours

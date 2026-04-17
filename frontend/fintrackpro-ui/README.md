@@ -122,7 +122,7 @@ Common patterns used across all pages (Dashboard, Transactions, Budgets, Trades,
 - **Navigation** — hamburger drawer on mobile (`< md`), horizontal links on desktop (`≥ md`)
 - **Stat grids** — `grid-cols-1 sm:grid-cols-3` (stacked → 3 columns)
 - **Form layouts** — `sm:grid-cols-2` or `sm:flex-row` (stacked → side-by-side)
-- **Widget rows** — `md:grid-cols-2` (e.g. FearGreed + TrendingCoins on Dashboard)
+- **Widget rows** — `lg:grid-cols-2` (e.g. Expense Allocation + Budget Health on Dashboard; Fear & Greed + Trending Coins on Market page)
 - **Table bleed** — `-mx-4 sm:mx-0` (extends to screen edges on mobile)
 
 ## Further Reading

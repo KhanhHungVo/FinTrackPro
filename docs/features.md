@@ -89,8 +89,8 @@ All generated signals are stored in your account. Each entry shows the symbol, s
 
 Live market context available to all users:
 
-- **Fear & Greed Index** — a sentiment indicator (0–100) reflecting the current emotional state of the crypto market. Values near 0 indicate extreme fear; values near 100 indicate extreme greed. Refreshed every hour. Displayed on the Dashboard with an animated gauge.
-- **Trending coins** — the top 7 trending cryptocurrencies right now, including name, symbol, and market cap rank. Refreshed every 15 minutes. Displayed on the Dashboard.
+- **Fear & Greed Index** — a sentiment indicator (0–100) reflecting the current emotional state of the crypto market. Values near 0 indicate extreme fear; values near 100 indicate extreme greed. Refreshed every hour. Displayed on the Market page (`/market`) with an animated gauge.
+- **Trending coins** — the top 7 trending cryptocurrencies right now, including name, symbol, and market cap rank. Refreshed every 15 minutes. Displayed on the Market page.
 
 ---
 

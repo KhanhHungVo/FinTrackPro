@@ -9,6 +9,7 @@ import { BudgetsPage } from '@/pages/budgets'
 import { TradesPage } from '@/pages/trades'
 import { SettingsPage } from '@/pages/settings'
 import { PricingPage } from '@/pages/pricing'
+import { MarketPage } from '@/pages/market'
 import { PlanLimitModal, BankTransferModal } from '@/features/upgrade'
 import { NotFoundPage } from '@/shared/ui/NotFoundPage'
 import { DonationFooter } from '@/shared/ui/DonationFooter'
@@ -50,6 +51,7 @@ export function App() {
                   <Route path="/trades"       element={<TradesPage />} />
                   <Route path="/settings"     element={<SettingsPage />} />
                   <Route path="/pricing"      element={<PricingPage />} />
+                  <Route path="/market"       element={<MarketPage />} />
                   <Route path="*"             element={<NotFoundPage />} />
                 </Route>
               </Routes>

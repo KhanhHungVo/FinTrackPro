@@ -119,8 +119,8 @@ app → pages → widgets → features → entities → shared
 | Layer | Contents |
 |---|---|
 | `app/` | QueryProvider, AuthProvider, LocaleProvider, BrowserRouter + Outlet layout, global CSS, i18n initialization; mounts `<PlanLimitModal />` globally |
-| `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage, PricingPage — all translated via `useTranslation()`, amounts converted via `convertAmount()` + `formatCurrency()` |
-| `widgets/` | Navbar (translated links + LocaleSettingsDropdown + PlanBadge in user dropdown), FearGreedWidget, SignalsList, TrendingCoinsWidget |
+| `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage, PricingPage, MarketPage — all translated via `useTranslation()`, amounts converted via `convertAmount()` + `formatCurrency()` |
+| `widgets/` | Navbar (translated links + LocaleSettingsDropdown + PlanBadge in user dropdown), KpiSummaryWidget (4-card: income/expenses/trading P&L/unrealized P&L), ExpenseAllocationWidget (donut), BudgetHealthWidget, TradingIntelligenceWidget (open positions + closed trades panels), RecentActivityWidget, ContextualSignalsWidget, FearGreedWidget, SignalsList, TrendingCoinsWidget |
 | `features/` | AddTransactionForm, AddTradeForm, EditTradeModal, AddBudgetForm (all include currency selector), NotificationSettingsForm (disabled overlay for Free users), WatchlistManager, authStore (Zustand), localeStore (Zustand + persist — `language`, `currency`), `upgrade/` (planLimitStore, PlanLimitModal, UpgradeButton, SubscriptionSection), `plan-badge/` (PlanBadge pill) |
 | `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference, exchange-rate, user-preferences, subscription — types + React Query hooks |
 | `shared/` | Axios client (Bearer injection + 402 interceptor → planLimitStore + redirect on 401), `auth/` adapter (Keycloak or Auth0), env config, `cn()`, `formatCurrency()`, `convertAmount()`, `FreePlanAdBanner`, i18n resources (en/vi) |
@@ -130,7 +130,8 @@ app → pages → widgets → features → entities → shared
 The frontend uses a mobile-first approach with TailwindCSS v4 breakpoints:
 
 - `md` (768px) is the primary layout threshold — navigation switches from hamburger drawer to desktop links, and multi-column page layouts activate
-- `sm` (640px) adapts form grids and stat cards (e.g. `grid-cols-1 sm:grid-cols-3`)
+- `sm` (640px) adapts form grids and stat cards (e.g. `grid-cols-2` for KPI cards on Dashboard)
+- `lg` (1024px) switches Dashboard KPI grid from 2×2 to 4-column and widget rows from stacked to side-by-side
 - Spacing scales from `p-4` (mobile) to `p-6` (md+)
 - Tables use a `-mx-4 sm:mx-0` bleed pattern on mobile
 
