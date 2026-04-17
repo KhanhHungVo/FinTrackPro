@@ -133,6 +133,7 @@ Roles (`User`, `Admin`) are stored only in the IAM provider — never in the dat
 | `PaymentGateway__PriceId` | `appsettings.json` / env — logical Pro plan price identifier (provider-neutral) |
 | `Stripe__SecretKey` | env var / `dotnet user-secrets` — Stripe API secret key |
 | `Stripe__WebhookSecret` | env var / `dotnet user-secrets` — Stripe webhook endpoint signing secret |
+| `LoggingBehavior__SlowHandlerThresholdMs` | `appsettings.json` — MediatR handler warning threshold in ms (default `500`) |
 | `VITE_AUTH_PROVIDER` | `frontend/fintrackpro-ui/.env` (`"keycloak"` or `"auth0"`) |
 | `VITE_API_BASE_URL` | `frontend/fintrackpro-ui/.env` |
 | `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` (Keycloak mode) |

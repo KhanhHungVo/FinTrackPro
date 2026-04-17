@@ -67,7 +67,7 @@ graph TD
   - `IPaymentWebhookHandler` — provider-neutral webhook processing; accepts raw payload + headers dict
 - Strongly-typed options: `SubscriptionPlanOptions` (limits per tier), `PaymentGatewayOptions` (provider + price ID)
 - DTOs (explicit `operator` conversions, no AutoMapper)
-- Pipeline behaviors: `ValidationBehavior` → `LoggingBehavior`
+- Pipeline behaviors: `ValidationBehavior` → `LoggingBehavior` (configurable slow-handler threshold via `LoggingBehavior:SlowHandlerThresholdMs`; emits `Warning` for slow handlers, structured debug serialization of request/response)
 
 ### Infrastructure (`FinTrackPro.Infrastructure`)
 - EF Core `ApplicationDbContext` + entity configurations

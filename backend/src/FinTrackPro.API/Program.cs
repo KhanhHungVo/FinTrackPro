@@ -1,6 +1,7 @@
 using FinTrackPro.API.Infrastructure;
 using FinTrackPro.API.Middleware;
 using FinTrackPro.Application;
+using FinTrackPro.Application.Common.Behaviors;
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.BackgroundJobs;
 using FinTrackPro.BackgroundJobs.Jobs;
@@ -32,6 +33,8 @@ builder.Host.UseSerilog((ctx, lc) => lc
 
 // Application & Infrastructure
 builder.Services.AddApplicationServices();
+builder.Services.AddOptions<LoggingBehaviorOptions>()
+    .BindConfiguration(LoggingBehaviorOptions.SectionName);
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // RFC 7807 Problem Details support (used by InvalidModelStateResponseFactory and ExceptionHandlingMiddleware)
