@@ -4,6 +4,7 @@ import { useTrades } from '@/entities/trade'
 import { useExchangeRates } from '@/entities/exchange-rate'
 import { useLocaleStore } from '@/features/locale'
 import { convertAmount } from '@/shared/lib/convertAmount'
+import { useCategoryLabel } from '@/shared/lib/useCategoryLabel'
 
 export type ActivityKind = 'income' | 'expense' | 'trade'
 
@@ -23,12 +24,13 @@ export function useMergedActivity() {
   const { data: tradesData, isLoading: loadingTrades } = useTrades({ pageSize: 5, sortBy: 'date', sortDir: 'desc' })
   const { data: rates } = useExchangeRates([currency])
   const preferredRate = rates?.[currency] ?? 1
+  const resolveLabel = useCategoryLabel()
 
   const items = useMemo<ActivityItem[]>(() => {
     const txItems: ActivityItem[] = (txData?.items ?? []).map((tx) => ({
       id: `tx-${tx.id}`,
       kind: tx.type === 'Income' ? 'income' : 'expense',
-      label: tx.category,
+      label: resolveLabel(tx.category),
       amount: convertAmount(tx.amount, tx.rateToUsd, preferredRate, tx.currency, currency),
       currency,
       detail: tx.type,
@@ -53,7 +55,7 @@ export function useMergedActivity() {
     return [...txItems, ...tradeItems]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 8)
-  }, [txData, tradesData, preferredRate, currency])
+  }, [txData, tradesData, preferredRate, currency, resolveLabel])
 
   return { items, isLoading: loadingTx || loadingTrades }
 }

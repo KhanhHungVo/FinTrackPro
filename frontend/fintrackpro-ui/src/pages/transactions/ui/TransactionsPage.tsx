@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useTransactions, useTransactionSummary, useDeleteTransaction } from '@/entities/transaction'
@@ -16,6 +16,7 @@ import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
 import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
 import { useDebounce } from '@/shared/lib/useDebounce'
+import { useCategoryLabel } from '@/shared/lib/useCategoryLabel'
 import { ConfirmDeleteDialog, Pagination, SortableColumnHeader } from '@/shared/ui'
 
 type SortDir = 'asc' | 'desc' | null
@@ -36,7 +37,7 @@ const MONTHS = Array.from({ length: 6 }, (_, i) => monthsBack(i))
 export function TransactionsPage() {
   const { t, i18n } = useTranslation()
   const currency = useLocaleStore((s) => s.currency)
-  const language = useLocaleStore((s) => s.language)
+  const resolveCategoryLabel = useCategoryLabel()
 
   const [filters, setFilters] = useState<TransactionFilters>({
     search: '',
@@ -53,9 +54,6 @@ export function TransactionsPage() {
   const [formOpen, setFormOpen] = useState(false)
 
   const debouncedSearch = useDebounce(filters.search, 300)
-
-  // Reset to page 1 when filters/sort change
-  useEffect(() => { setPage(1) }, [filters, sortBy, sortDir])
 
   const tableParams = {
     page,
@@ -85,12 +83,6 @@ export function TransactionsPage() {
   const { guarded: handleDelete, isPending: isDeleting } = useGuardedMutation<unknown, Error, string>(deleteTx)
   const { data: allCategories } = useTransactionCategories()
 
-  const resolveCategoryLabel = (slug: string) => {
-    const cat = allCategories?.find((c) => c.slug === slug)
-    if (!cat) return slug
-    return `${cat.icon} ${language === 'vi' ? cat.labelVi : cat.labelEn}`
-  }
-
   // KPI values — backend returns totals already in preferredCurrency
   const income = summary?.totalIncome ?? 0
   const expense = summary?.totalExpense ?? 0
@@ -99,6 +91,7 @@ export function TransactionsPage() {
   function handleSort(field: string, dir: SortDir) {
     if (dir === null) { setSortBy(null); setSortDir(null) }
     else { setSortBy(field); setSortDir(dir) }
+    setPage(1)
   }
 
   const transactions = data?.items ?? []
@@ -122,7 +115,7 @@ export function TransactionsPage() {
       {/* Filter bar */}
       <TransactionFilterBar
         value={filters}
-        onChange={(next) => setFilters((prev) => ({ ...prev, ...next }))}
+        onChange={(next) => { setFilters((prev) => ({ ...prev, ...next })); setPage(1) }}
         categories={allCategories}
         monthOptions={MONTHS}
       />

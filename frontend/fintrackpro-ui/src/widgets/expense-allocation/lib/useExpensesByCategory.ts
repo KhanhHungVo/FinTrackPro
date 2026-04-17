@@ -3,6 +3,7 @@ import { useTransactions } from '@/entities/transaction'
 import { useExchangeRates } from '@/entities/exchange-rate'
 import { useLocaleStore } from '@/features/locale'
 import { convertAmount } from '@/shared/lib/convertAmount'
+import { useCategoryLabel } from '@/shared/lib/useCategoryLabel'
 
 export interface CategorySlice {
   category: string
@@ -15,6 +16,7 @@ export function useExpensesByCategory(month: string) {
   const { data: txData, isLoading } = useTransactions({ month, type: 'Expense', pageSize: 100 })
   const { data: rates } = useExchangeRates([currency])
   const preferredRate = rates?.[currency] ?? 1
+  const resolveLabel = useCategoryLabel()
 
   const { slices, total } = useMemo(() => {
     const expenses = txData?.items?.filter((tx) => tx.type === 'Expense') ?? []
@@ -28,14 +30,14 @@ export function useExpensesByCategory(month: string) {
     const total = Object.values(byCategory).reduce((s, v) => s + v, 0)
     const slices: CategorySlice[] = Object.entries(byCategory)
       .map(([category, amount]) => ({
-        category,
+        category: resolveLabel(category),
         amount,
         percentage: total > 0 ? (amount / total) * 100 : 0,
       }))
       .sort((a, b) => b.amount - a.amount)
 
     return { slices, total }
-  }, [txData, preferredRate, currency])
+  }, [txData, preferredRate, currency, resolveLabel])
 
   return { slices, total, isLoading, currency }
 }
