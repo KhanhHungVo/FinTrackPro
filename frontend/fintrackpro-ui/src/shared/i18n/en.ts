@@ -58,6 +58,8 @@ const en = {
     setBudgets: 'Set up budgets',
     budgetsOnTrack: '{{count}} of {{total}} on track',
     viewAllBudgets: 'View all budgets',
+    noTrades: 'No trades yet',
+    goToTrades: 'Start trading',
     tradingIntelligence: 'Trading Intelligence',
     openPositionsCount: 'Open Positions',
     liveSnapshot: 'Live snapshot',

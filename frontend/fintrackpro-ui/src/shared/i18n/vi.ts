@@ -58,6 +58,8 @@ const vi = {
     setBudgets: 'Thiết lập ngân sách',
     budgetsOnTrack: '{{count}}/{{total}} đang trong giới hạn',
     viewAllBudgets: 'Xem tất cả ngân sách',
+    noTrades: 'Chưa có lệnh nào',
+    goToTrades: 'Bắt đầu giao dịch',
     tradingIntelligence: 'Phân tích đầu tư',
     openPositionsCount: 'Vị thế đang mở',
     liveSnapshot: 'Trực tiếp',

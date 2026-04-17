@@ -15,7 +15,7 @@ Transform the dashboard into a personalized command center that:
 ## Design Principles
 
 1. **Non-empty sections first** — Expense allocation and budget health render above trading widgets because they have data as soon as the user records any transaction or budget
-2. **Conditional sections hide cleanly** — Trading performance and signals only render when the user has trades/watchlist symbols; no empty placeholders
+2. **Consistent empty states** — Trading Intelligence shows a "No trades yet" card with a link to `/trades` when the user has no trades (same pattern as Expense Allocation and Budget Health). Contextual Signals hides entirely when the watchlist is empty (no meaningful CTA).
 3. **Market data moves to its own page** — Fear & Greed and Trending Coins get a dedicated `/market` route
 4. **All data from existing endpoints** — No new backend endpoints required; client-side grouping from paginated lists (same pattern BudgetsPage already uses)
 5. **Trading is the primary priority** — KPI header is rebalanced: Income + Expenses (finance) + Trading P&L + Unrealized P&L (trading). Net Savings is dropped in favour of exposing Unrealized P&L, which is a primary trading signal currently buried in the trading section
@@ -66,7 +66,7 @@ Transform the dashboard into a personalized command center that:
 |                                                                         |
 +-------------------------------------------------------------------------+
 
-+-- SECTION 3: TRADING INTELLIGENCE (hidden if 0 trades) -----------------+
++-- SECTION 3: TRADING INTELLIGENCE (empty state with link if 0 trades) --+
 |                                                                         |
 |  Trading Intelligence                                                   |
 |                                                                         |
@@ -290,7 +290,7 @@ Income, Expenses, and Trading P&L show month-over-month delta badges. Unrealized
 
 ### Section 3: Trading Intelligence (conditional)
 
-- **Visibility:** Hidden entirely when `totalTrades === 0`
+- **Visibility:** Shows an empty-state card ("No trades yet" + "Start trading →" link to `/trades`) when `totalTrades === 0`, consistent with Expense Allocation and Budget Health empty states. Does not hide entirely.
 
 #### 3a — Open Positions (live snapshot, no period filter)
 
