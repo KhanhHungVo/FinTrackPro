@@ -22,6 +22,17 @@ const string BearerScheme   = "Bearer";
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Pre-deploy migration mode: run migrations and exit (used by Render pre-deploy job for multi-instance safety)
+if (args.Contains("--migrate-only"))
+{
+    builder.Services.AddInfrastructureServices(builder.Configuration);
+    var migrateApp = builder.Build();
+    using var migrateScope = migrateApp.Services.CreateScope();
+    var migrateDb = migrateScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await migrateDb.Database.MigrateAsync();
+    return;
+}
+
 var iam      = builder.Configuration.GetSection(IdentityProviderOptions.SectionName).Get<IdentityProviderOptions>() ?? new();
 var keycloak = builder.Configuration.GetSection(KeycloakOptions.SectionName).Get<KeycloakOptions>() ?? new();
 var auth0    = builder.Configuration.GetSection(Auth0Options.SectionName).Get<Auth0Options>() ?? new();
@@ -91,7 +102,9 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
     Authorization = [new HangfireBasicAuthFilter(app.Configuration)]
 });
 
-// Run database migrations and seed system categories on startup
+// Run database migrations and seed system categories on startup.
+// Safe for single-instance deployments (dev + Render free tier).
+// For multi-instance: remove MigrateAsync() here and rely solely on the --migrate-only pre-deploy job instead.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
