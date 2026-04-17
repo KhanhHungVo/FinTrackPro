@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // Mirrors backend regex: uppercase letters/digits, optional / or - separator.
 // Valid: BTCUSDT, AAPL, EUR/USD, BTC-USDT, VIC
-const symbolRegex = /^[A-Z0-9]{1,10}([/\-][A-Z0-9]{1,10})?$/
+const symbolRegex = /^[A-Z0-9]{1,10}([/-][A-Z0-9]{1,10})?$/
 
 const baseSchema = z.object({
   symbol: z
@@ -36,7 +36,7 @@ const baseSchema = z.object({
 export const createTradeSchema = baseSchema.superRefine((val, ctx) => {
   if (val.status === 'Closed' && !val.exitPrice) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Exit price is required for a closed trade',
       path: ['exitPrice'],
     })
@@ -46,7 +46,7 @@ export const createTradeSchema = baseSchema.superRefine((val, ctx) => {
 export const updateTradeSchema = baseSchema.superRefine((val, ctx) => {
   if (val.status === 'Closed' && !val.exitPrice) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Exit price is required for a closed trade',
       path: ['exitPrice'],
     })
