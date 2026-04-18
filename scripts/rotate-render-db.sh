@@ -181,7 +181,7 @@ OLD_INTERNAL_URL=$(echo "$SERVICE_ENV_VARS" | jq -r \
 
 # Replace internal host (bare DB id) with the external fully-qualified hostname.
 OLD_EXTERNAL_URL=$(echo "$OLD_INTERNAL_URL" | \
-  sed "s|@${OLD_DB_ID}[:/]|@${OLD_DB_ID}.${OLD_DB_REGION}-postgres.render.com:|")
+  sed "s|@${OLD_DB_ID}/|@${OLD_DB_ID}.${OLD_DB_REGION}-postgres.render.com/|")
 
 [[ "$OLD_EXTERNAL_URL" != "$OLD_INTERNAL_URL" ]] \
   || err "Failed to patch internal hostname to external. Internal URL: $OLD_INTERNAL_URL"
