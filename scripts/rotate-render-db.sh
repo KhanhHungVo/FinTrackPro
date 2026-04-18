@@ -51,14 +51,6 @@ debug()  { echo "[$(date -u '+%H:%M:%S')] [DEBUG] $*"; }
 warn()   { echo "[$(date -u '+%H:%M:%S')] [WARN]  $*"; }
 err()    { echo "[$(date -u '+%H:%M:%S')] [ERROR] $*" >&2; exit 1; }
 
-cleanup() {
-  if [[ -f "$DUMP_FILE" ]]; then
-    rm -f "$DUMP_FILE"
-    log "Temp dump file removed."
-  fi
-}
-trap cleanup EXIT
-
 check_deps() {
   log "Checking required tools: curl jq pg_dump pg_restore..."
   local missing=()
@@ -69,73 +61,76 @@ check_deps() {
   log "  All tools present."
 }
 
+_RENDER_BODY_FILE="$(mktemp /tmp/render_resp.XXXXXX)"
+
+cleanup() {
+  rm -f "$_RENDER_BODY_FILE"
+  if [[ -f "${DUMP_FILE:-}" ]]; then
+    rm -f "$DUMP_FILE"
+    log "Temp dump file removed."
+  fi
+}
+trap cleanup EXIT
+
 render_get() {
   local path="$1"
-  local resp http_code body
   debug "GET ${path}"
-  resp=$(curl -s -w "\n%{http_code}" \
+  local http_code
+  http_code=$(curl -s -o "$_RENDER_BODY_FILE" -w "%{http_code}" \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Accept: application/json" \
     "${RENDER_API}${path}")
-  http_code=$(echo "$resp" | tail -n1)
-  body=$(echo "$resp" | head -n -1)
   debug "  → HTTP $http_code"
   if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
-    err "GET ${path} failed (HTTP $http_code)"
+    err "GET ${path} failed (HTTP $http_code): $(cat "$_RENDER_BODY_FILE")"
   fi
-  echo "$body"
+  cat "$_RENDER_BODY_FILE"
 }
 
 render_post() {
   local path="$1" data="$2"
-  local resp http_code body
   debug "POST ${path}"
-  resp=$(curl -s -w "\n%{http_code}" -X POST \
+  local http_code
+  http_code=$(curl -s -o "$_RENDER_BODY_FILE" -w "%{http_code}" -X POST \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -d "$data" \
     "${RENDER_API}${path}")
-  http_code=$(echo "$resp" | tail -n1)
-  body=$(echo "$resp" | head -n -1)
   debug "  → HTTP $http_code"
   if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
-    err "POST ${path} failed (HTTP $http_code)"
+    err "POST ${path} failed (HTTP $http_code): $(cat "$_RENDER_BODY_FILE")"
   fi
-  echo "$body"
+  cat "$_RENDER_BODY_FILE"
 }
 
 render_put() {
   local path="$1" data="$2"
-  local resp http_code body
   debug "PUT ${path}"
-  resp=$(curl -s -w "\n%{http_code}" -X PUT \
+  local http_code
+  http_code=$(curl -s -o "$_RENDER_BODY_FILE" -w "%{http_code}" -X PUT \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -d "$data" \
     "${RENDER_API}${path}")
-  http_code=$(echo "$resp" | tail -n1)
-  body=$(echo "$resp" | head -n -1)
   debug "  → HTTP $http_code"
   if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
-    err "PUT ${path} failed (HTTP $http_code)"
+    err "PUT ${path} failed (HTTP $http_code): $(cat "$_RENDER_BODY_FILE")"
   fi
-  echo "$body"
+  cat "$_RENDER_BODY_FILE"
 }
 
 render_delete() {
   local path="$1"
-  local resp http_code body
   debug "DELETE ${path}"
-  resp=$(curl -s -w "\n%{http_code}" -X DELETE \
+  local http_code
+  http_code=$(curl -s -o "$_RENDER_BODY_FILE" -w "%{http_code}" -X DELETE \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     "${RENDER_API}${path}")
-  http_code=$(echo "$resp" | tail -n1)
-  body=$(echo "$resp" | head -n -1)
   debug "  → HTTP $http_code"
   if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
-    err "DELETE ${path} failed (HTTP $http_code)"
+    err "DELETE ${path} failed (HTTP $http_code): $(cat "$_RENDER_BODY_FILE")"
   fi
 }
 
