@@ -7,14 +7,31 @@ test.describe('Budgets', () => {
     await page.goto('/budgets')
   })
 
-  test('create budget', async ({ page }) => {
-    // Use Education — less likely to already exist, to avoid 409 conflicts from prior runs
+  test('create budget', async ({ page, request }) => {
+    // Ensure idempotency: delete any pre-existing Education budget before creating,
+    // so repeated runs don't hit a 409 conflict.
+    const token = process.env.E2E_TOKEN!
+    const apiBase = process.env.E2E_API_BASE_URL ?? 'http://localhost:5018'
+    const month = new Date().toISOString().slice(0, 7)
+    const listResp = await request.get(`${apiBase}/api/budgets/${month}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (listResp.ok()) {
+      const existing = (await listResp.json()) as Array<{ id: string; category: string }>
+      const education = existing.find((b) => b.category === 'education')
+      if (education) {
+        await request.delete(`${apiBase}/api/budgets/${education.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      }
+    }
+
     // Selects on page: [0]=month, [1]=category (TransactionCategorySelector), [2]=currency
     await page.locator('select').nth(1).selectOption({ label: '📚 Education' })
     await page.getByPlaceholder('500').fill('300')
     await page.getByRole('button', { name: /add budget/i }).click()
 
-    // Scope both assertions to the same li to avoid matching pre-existing budgets
+    // Scope assertion to the same li to avoid matching pre-existing budgets
     const budgetRow = page.locator('li').filter({ hasText: '📚 Education' }).filter({ hasText: '/ $300.00' })
     await expect(budgetRow.first()).toBeVisible({ timeout: 10000 })
   })
