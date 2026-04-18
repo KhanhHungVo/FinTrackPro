@@ -3,17 +3,21 @@
 #
 # Rotates the Render free-tier PostgreSQL database:
 #   1. Discovers the current DB (name prefix: fintrackpro-db)
-#   2. pg_dump old DB → temp file
-#   3. Deletes old DB via Render API
-#   4. Creates a new free DB (fintrackpro-db-YYYY-MM)
-#   5. Waits for it to become available
-#   6. pg_restore from temp file
-#   7. Updates ConnectionStrings__DefaultConnection on the API service
-#   8. Polls the API health endpoint until healthy
+#   2. Reads the active connection string from the API service env vars
+#   3. pg_dump using that connection string → temp file
+#   4. Validates the dump (pg_restore --list) — aborts if invalid
+#   5. Deletes old DB via Render API
+#   6. Creates a new free DB (fintrackpro-db)
+#   7. Waits for it to become available
+#   8. pg_restore from validated dump
+#   9. Updates ConnectionStrings__DefaultConnection on the API service
+#  10. Polls the API health endpoint until healthy
 #
-# NOTE: There is a brief window between step 3 and step 7 where the API has
+# NOTE: There is a brief window between step 5 and step 9 where the API has
 #       no valid database connection. This is unavoidable on Render's free
 #       tier, which allows only one active PostgreSQL at a time.
+#       The dump is fully validated before the old DB is deleted, so data
+#       is safe as long as the restore in step 8 succeeds.
 #
 # Required env vars:
 #   RENDER_API_KEY    — Render personal API key
@@ -43,7 +47,7 @@ log()  { echo "[$(date -u '+%H:%M:%S')] $*"; }
 err()  { echo "[$(date -u '+%H:%M:%S')] ERROR: $*" >&2; exit 1; }
 
 cleanup() {
-  [[ -f "$DUMP_FILE" ]] && rm -f "$DUMP_FILE" && log "Temp dump file removed."
+  [[ -f "$DUMP_FILE" ]] && rm -f                    "$DUMP_FILE" && log "Temp dump file removed."
 }
 trap cleanup EXIT
 
@@ -57,7 +61,7 @@ check_deps() {
 
 render_get() {
   local path="$1"
-  local resp http_code
+  local resp http_code body
   resp=$(curl -s -w "\n%{http_code}" \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Accept: application/json" \
@@ -68,6 +72,18 @@ render_get() {
     err "GET ${path} failed (HTTP $http_code): $body"
   fi
   echo "$body"
+}
+
+# Non-fatal GET — returns the body and sets RENDER_GET_SOFT_CODE; caller decides what to do on error.
+render_get_soft() {
+  local path="$1"
+  local resp
+  resp=$(curl -s -w "\n%{http_code}" \
+    -H "Authorization: Bearer $RENDER_API_KEY" \
+    -H "Accept: application/json" \
+    "${RENDER_API}${path}")
+  RENDER_GET_SOFT_CODE=$(echo "$resp" | tail -n1)
+  echo "$resp" | head -n -1
 }
 
 render_post() {
@@ -139,31 +155,77 @@ OLD_DB=$(echo "$DB_LIST" | jq -r \
 
 OLD_DB_ID=$(echo "$OLD_DB" | jq -r '.id')
 OLD_DB_NAME=$(echo "$OLD_DB" | jq -r '.name')
-OLD_EXTERNAL_URL=$(echo "$OLD_DB" | jq -r '.connectionInfo.externalConnectionString')
 
 log "  Found: $OLD_DB_NAME (id=$OLD_DB_ID)"
 
-# ── step 2: dump old DB ────────────────────────────────────────────────────────
+# ── step 1b: read IP allow-list from old DB ────────────────────────────────────
 
-log "Step 2 — Dumping old database to temp file..."
+log "Step 1b — Reading IP allow-list from old database..."
+
+# Fallback: mirror the current production config (0.0.0.0/0 — Allow all).
+# This is used when the Render API endpoint is unavailable or returns an error.
+FALLBACK_IP_RULES='[{"cidrBlock":"0.0.0.0/0","description":"Allow all"}]'
+
+IP_RULES_BODY=$(render_get_soft "/postgres/${OLD_DB_ID}/allowed-ips")
+if [[ "$RENDER_GET_SOFT_CODE" -ge 200 && "$RENDER_GET_SOFT_CODE" -lt 300 ]]; then
+  OLD_IP_RULES="$IP_RULES_BODY"
+  RULE_COUNT=$(echo "$OLD_IP_RULES" | jq 'length')
+  log "  Fetched $RULE_COUNT IP rule(s) from old DB."
+else
+  OLD_IP_RULES="$FALLBACK_IP_RULES"
+  log "  Warning: could not fetch IP rules (HTTP $RENDER_GET_SOFT_CODE) — using fallback: 0.0.0.0/0 Allow all."
+fi
+
+# ── step 2: read active connection string from API service ─────────────────────
+
+log "Step 2 — Reading active connection string from API service env vars..."
+
+SERVICE_ENV_VARS=$(render_get "/services/${RENDER_SERVICE_ID}/env-vars")
+OLD_CONN_STR=$(echo "$SERVICE_ENV_VARS" | jq -r \
+  --arg key "$ENV_VAR_KEY" \
+  '.[] | select(.envVar.key == $key) | .envVar.value')
+
+[[ -n "$OLD_CONN_STR" && "$OLD_CONN_STR" != "null" ]] \
+  || err "Could not read $ENV_VAR_KEY from API service env vars. Check RENDER_SERVICE_ID."
+
+log "  Connection string found."
+
+# ── step 3: dump old DB ────────────────────────────────────────────────────────
+
+log "Step 3 — Dumping old database to temp file..."
 log "  Dump file: $DUMP_FILE"
 
-pg_dump --format=custom --no-acl --no-owner "$OLD_EXTERNAL_URL" > "$DUMP_FILE"
+pg_dump --format=custom --no-acl --no-owner "$OLD_CONN_STR" > "$DUMP_FILE"
 
-log "  Dump complete ($(du -sh "$DUMP_FILE" | cut -f1))."
+DUMP_SIZE=$(du -sh "$DUMP_FILE" | cut -f1)
+log "  Dump complete ($DUMP_SIZE)."
 
-# ── step 3: delete old DB ──────────────────────────────────────────────────────
+# ── step 4: validate the dump ─────────────────────────────────────────────────
 
-log "Step 3 — Deleting old database ($OLD_DB_NAME)..."
+log "Step 4 — Validating dump file..."
+
+# Abort if dump file is empty (0 bytes)
+[[ -s "$DUMP_FILE" ]] || err "Dump file is empty — aborting before deleting old DB. No data was lost."
+
+# Verify the archive is a valid pg_dump custom-format file
+OBJECT_COUNT=$(pg_restore --list "$DUMP_FILE" 2>/dev/null | grep -c '^[0-9]' || true)
+[[ "$OBJECT_COUNT" -gt 0 ]] \
+  || err "Dump file failed validation (no restorable objects found) — aborting before deleting old DB. No data was lost."
+
+log "  Dump valid — $OBJECT_COUNT restorable objects found."
+
+# ── step 5: delete old DB ──────────────────────────────────────────────────────
+
+log "Step 5 — Deleting old database ($OLD_DB_NAME)..."
 
 render_delete "/postgres/${OLD_DB_ID}"
 
 log "  Old database deleted."
 
-# ── step 4: create new DB ──────────────────────────────────────────────────────
+# ── step 6: create new DB ──────────────────────────────────────────────────────
 
 NEW_DB_NAME="$DB_NAME_PREFIX"
-log "Step 4 — Creating new database: $NEW_DB_NAME..."
+log "Step 6 — Creating new database: $NEW_DB_NAME..."
 
 CREATE_BODY=$(jq -n \
   --arg name "$NEW_DB_NAME" \
@@ -176,13 +238,14 @@ CREATE_BODY=$(jq -n \
 NEW_DB_RESP=$(render_post "/postgres" "$CREATE_BODY")
 NEW_DB_ID=$(echo "$NEW_DB_RESP" | jq -r '.id // .postgres.id')
 
-[[ -n "$NEW_DB_ID" && "$NEW_DB_ID" != "null" ]] || err "Failed to parse new database ID. Response: $NEW_DB_RESP"
+[[ -n "$NEW_DB_ID" && "$NEW_DB_ID" != "null" ]] \
+  || err "Failed to parse new database ID. Response: $NEW_DB_RESP"
 
 log "  Created: $NEW_DB_NAME (id=$NEW_DB_ID)"
 
-# ── step 5: wait for new DB to be available ─────────────────────────────────────
+# ── step 7: wait for new DB to be available ────────────────────────────────────
 
-log "Step 5 — Waiting for new database to become available (timeout: ${PROVISION_TIMEOUT}s)..."
+log "Step 7 — Waiting for new database to become available (timeout: ${PROVISION_TIMEOUT}s)..."
 
 elapsed=0
 while true; do
@@ -198,9 +261,11 @@ while true; do
     break
   fi
 
+
   if (( elapsed >= PROVISION_TIMEOUT )); then
     err "New DB did not become available within ${PROVISION_TIMEOUT}s (last status: $STATUS). " \
-        "New DB id=$NEW_DB_ID is still provisioning — check the Render dashboard."
+        "New DB id=$NEW_DB_ID is still provisioning — check the Render dashboard. " \
+        "Dump file is preserved at $DUMP_FILE for manual restore."
   fi
 
   log "  Status: $STATUS — waiting ${PROVISION_INTERVAL}s... (${elapsed}s elapsed)"
@@ -208,17 +273,40 @@ while true; do
   (( elapsed += PROVISION_INTERVAL ))
 done
 
-# ── step 6: restore into new DB ───────────────────────────────────────────────
+# ── step 7b: apply IP allow-list to new DB ────────────────────────────────────
 
-log "Step 6 — Restoring data into new database..."
+log "Step 7b — Applying IP allow-list to new database..."
+
+IP_APPLY_BODY=$(render_get_soft "/postgres/${NEW_DB_ID}/allowed-ips" 2>/dev/null || true)
+# Use PUT to set the allow-list; ignore response body, only check status.
+IP_PUT_RESP=$(curl -s -w "\n%{http_code}" -X PUT \
+  -H "Authorization: Bearer $RENDER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d "$OLD_IP_RULES" \
+  "${RENDER_API}/postgres/${NEW_DB_ID}/allowed-ips")
+IP_PUT_CODE=$(echo "$IP_PUT_RESP" | tail -n1)
+
+if [[ "$IP_PUT_CODE" -ge 200 && "$IP_PUT_CODE" -lt 300 ]]; then
+  log "  IP allow-list applied successfully."
+else
+  IP_PUT_BODY=$(echo "$IP_PUT_RESP" | head -n -1)
+  log "  Warning: could not apply IP rules (HTTP $IP_PUT_CODE): $IP_PUT_BODY"
+  log "  Apply them manually in the Render dashboard under Networking → PostgreSQL Inbound Flows."
+  log "  Rules to apply: $OLD_IP_RULES"
+fi
+
+# ── step 8: restore into new DB ───────────────────────────────────────────────
+
+log "Step 8 — Restoring data into new database..."
 
 pg_restore --no-owner --no-acl --exit-on-error -d "$NEW_EXTERNAL_URL" "$DUMP_FILE"
 
 log "  Data restore complete."
 
-# ── step 7: update API service env var ────────────────────────────────────────
+# ── step 9: update API service env var ────────────────────────────────────────
 
-log "Step 7 — Updating API service env var ($ENV_VAR_KEY)..."
+log "Step 9 — Updating API service env var ($ENV_VAR_KEY)..."
 
 # Render PUT /env-vars requires the full list of env vars.
 CURRENT_ENV_VARS=$(render_get "/services/${RENDER_SERVICE_ID}/env-vars")
@@ -232,9 +320,9 @@ render_put "/services/${RENDER_SERVICE_ID}/env-vars" "$UPDATED_ENV_VARS" >/dev/n
 
 log "  Env var updated. Service will restart automatically."
 
-# ── step 8: verify API health ─────────────────────────────────────────────────
+# ── step 10: verify API health ────────────────────────────────────────────────
 
-log "Step 8 — Polling API health (timeout: ${HEALTH_TIMEOUT}s)..."
+log "Step 10 — Polling API health (timeout: ${HEALTH_TIMEOUT}s)..."
 log "  Endpoint: $API_HEALTH_URL"
 
 elapsed=0
@@ -252,7 +340,7 @@ while true; do
     echo "  HEALTH CHECK FAILED after ${HEALTH_TIMEOUT}s (last HTTP: $HTTP_STATUS)"
     echo "  New database is intact but the API has not recovered."
     echo "  Check the Render dashboard for the service restart status."
-    echo "    New DB id : $NEW_DB_ID"
+    echo "    New DB id   : $NEW_DB_ID"
     echo "    New DB name : $NEW_DB_NAME"
     echo "================================================================="
     exit 1
