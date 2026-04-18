@@ -3,12 +3,17 @@
 #
 # Rotates the Render free-tier PostgreSQL database:
 #   1. Discovers the current DB (name prefix: fintrackpro-db)
-#   2. Creates a new free DB (fintrackpro-db-YYYY-MM)
-#   3. Waits for it to become available
-#   4. pg_dump old → pg_restore new
-#   5. Updates ConnectionStrings__DefaultConnection on the API service
-#   6. Polls the API health endpoint until healthy
-#   7. Prints old DB ID for manual deletion after you verify data
+#   2. pg_dump old DB → temp file
+#   3. Deletes old DB via Render API
+#   4. Creates a new free DB (fintrackpro-db-YYYY-MM)
+#   5. Waits for it to become available
+#   6. pg_restore from temp file
+#   7. Updates ConnectionStrings__DefaultConnection on the API service
+#   8. Polls the API health endpoint until healthy
+#
+# NOTE: There is a brief window between step 3 and step 7 where the API has
+#       no valid database connection. This is unavoidable on Render's free
+#       tier, which allows only one active PostgreSQL at a time.
 #
 # Required env vars:
 #   RENDER_API_KEY    — Render personal API key
@@ -30,11 +35,17 @@ PROVISION_INTERVAL=10   # polling interval (seconds)
 HEALTH_TIMEOUT=180      # seconds to wait for API to recover after env var update
 HEALTH_INTERVAL=15      # polling interval (seconds)
 ENV_VAR_KEY="ConnectionStrings__DefaultConnection"
+DUMP_FILE="$(mktemp /tmp/fintrackpro-db-dump.XXXXXX)"
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 log()  { echo "[$(date -u '+%H:%M:%S')] $*"; }
 err()  { echo "[$(date -u '+%H:%M:%S')] ERROR: $*" >&2; exit 1; }
+
+cleanup() {
+  [[ -f "$DUMP_FILE" ]] && rm -f "$DUMP_FILE" && log "Temp dump file removed."
+}
+trap cleanup EXIT
 
 check_deps() {
   local missing=()
@@ -46,37 +57,64 @@ check_deps() {
 
 render_get() {
   local path="$1"
-  curl -sf \
+  local resp http_code
+  resp=$(curl -s -w "\n%{http_code}" \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Accept: application/json" \
-    "${RENDER_API}${path}"
+    "${RENDER_API}${path}")
+  http_code=$(echo "$resp" | tail -n1)
+  body=$(echo "$resp" | head -n -1)
+  if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+    err "GET ${path} failed (HTTP $http_code): $body"
+  fi
+  echo "$body"
 }
 
 render_post() {
-  local path="$1" body="$2"
-  curl -sf -X POST \
+  local path="$1" data="$2"
+  local resp http_code body
+  resp=$(curl -s -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
-    -d "$body" \
-    "${RENDER_API}${path}"
+    -d "$data" \
+    "${RENDER_API}${path}")
+  http_code=$(echo "$resp" | tail -n1)
+  body=$(echo "$resp" | head -n -1)
+  if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+    err "POST ${path} failed (HTTP $http_code): $body"
+  fi
+  echo "$body"
 }
 
 render_put() {
-  local path="$1" body="$2"
-  curl -sf -X PUT \
+  local path="$1" data="$2"
+  local resp http_code body
+  resp=$(curl -s -w "\n%{http_code}" -X PUT \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
-    -d "$body" \
-    "${RENDER_API}${path}"
+    -d "$data" \
+    "${RENDER_API}${path}")
+  http_code=$(echo "$resp" | tail -n1)
+  body=$(echo "$resp" | head -n -1)
+  if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+    err "PUT ${path} failed (HTTP $http_code): $body"
+  fi
+  echo "$body"
 }
 
 render_delete() {
   local path="$1"
-  curl -sf -X DELETE \
+  local resp http_code body
+  resp=$(curl -s -w "\n%{http_code}" -X DELETE \
     -H "Authorization: Bearer $RENDER_API_KEY" \
-    "${RENDER_API}${path}"
+    "${RENDER_API}${path}")
+  http_code=$(echo "$resp" | tail -n1)
+  body=$(echo "$resp" | head -n -1)
+  if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+    err "DELETE ${path} failed (HTTP $http_code): $body"
+  fi
 }
 
 # ── validate inputs ─────────────────────────────────────────────────────────────
@@ -105,10 +143,27 @@ OLD_EXTERNAL_URL=$(echo "$OLD_DB" | jq -r '.connectionInfo.externalConnectionStr
 
 log "  Found: $OLD_DB_NAME (id=$OLD_DB_ID)"
 
-# ── step 2: create new DB ──────────────────────────────────────────────────────
+# ── step 2: dump old DB ────────────────────────────────────────────────────────
 
-NEW_DB_NAME="${DB_NAME_PREFIX}-$(date -u '+%Y-%m')"
-log "Step 2 — Creating new database: $NEW_DB_NAME..."
+log "Step 2 — Dumping old database to temp file..."
+log "  Dump file: $DUMP_FILE"
+
+pg_dump --format=custom --no-acl --no-owner "$OLD_EXTERNAL_URL" > "$DUMP_FILE"
+
+log "  Dump complete ($(du -sh "$DUMP_FILE" | cut -f1))."
+
+# ── step 3: delete old DB ──────────────────────────────────────────────────────
+
+log "Step 3 — Deleting old database ($OLD_DB_NAME)..."
+
+render_delete "/postgres/${OLD_DB_ID}"
+
+log "  Old database deleted."
+
+# ── step 4: create new DB ──────────────────────────────────────────────────────
+
+NEW_DB_NAME="$DB_NAME_PREFIX"
+log "Step 4 — Creating new database: $NEW_DB_NAME..."
 
 CREATE_BODY=$(jq -n \
   --arg name "$NEW_DB_NAME" \
@@ -121,13 +176,13 @@ CREATE_BODY=$(jq -n \
 NEW_DB_RESP=$(render_post "/postgres" "$CREATE_BODY")
 NEW_DB_ID=$(echo "$NEW_DB_RESP" | jq -r '.id // .postgres.id')
 
-[[ -n "$NEW_DB_ID" && "$NEW_DB_ID" != "null" ]] || err "Failed to create new database. Response: $NEW_DB_RESP"
+[[ -n "$NEW_DB_ID" && "$NEW_DB_ID" != "null" ]] || err "Failed to parse new database ID. Response: $NEW_DB_RESP"
 
 log "  Created: $NEW_DB_NAME (id=$NEW_DB_ID)"
 
-# ── step 3: wait for new DB to be available ─────────────────────────────────────
+# ── step 5: wait for new DB to be available ─────────────────────────────────────
 
-log "Step 3 — Waiting for new database to become available (timeout: ${PROVISION_TIMEOUT}s)..."
+log "Step 5 — Waiting for new database to become available (timeout: ${PROVISION_TIMEOUT}s)..."
 
 elapsed=0
 while true; do
@@ -145,7 +200,7 @@ while true; do
 
   if (( elapsed >= PROVISION_TIMEOUT )); then
     err "New DB did not become available within ${PROVISION_TIMEOUT}s (last status: $STATUS). " \
-        "New DB id=$NEW_DB_ID is still running — delete it manually if you want to retry."
+        "New DB id=$NEW_DB_ID is still provisioning — check the Render dashboard."
   fi
 
   log "  Status: $STATUS — waiting ${PROVISION_INTERVAL}s... (${elapsed}s elapsed)"
@@ -153,20 +208,17 @@ while true; do
   (( elapsed += PROVISION_INTERVAL ))
 done
 
-# ── step 4: dump + restore ─────────────────────────────────────────────────────
+# ── step 6: restore into new DB ───────────────────────────────────────────────
 
-log "Step 4 — Migrating data (pg_dump | pg_restore)..."
+log "Step 6 — Restoring data into new database..."
 
-# pg_dump produces a custom-format archive; pg_restore deserializes it.
-# --no-owner and --no-acl ensure roles from the old instance are not applied to the new one.
-pg_dump --format=custom --no-acl --no-owner "$OLD_EXTERNAL_URL" \
-  | pg_restore --no-owner --no-acl --exit-on-error -d "$NEW_EXTERNAL_URL"
+pg_restore --no-owner --no-acl --exit-on-error -d "$NEW_EXTERNAL_URL" "$DUMP_FILE"
 
-log "  Data migration complete."
+log "  Data restore complete."
 
-# ── step 5: update API service env var ────────────────────────────────────────
+# ── step 7: update API service env var ────────────────────────────────────────
 
-log "Step 5 — Updating API service env var ($ENV_VAR_KEY)..."
+log "Step 7 — Updating API service env var ($ENV_VAR_KEY)..."
 
 # Render PUT /env-vars requires the full list of env vars.
 CURRENT_ENV_VARS=$(render_get "/services/${RENDER_SERVICE_ID}/env-vars")
@@ -180,9 +232,9 @@ render_put "/services/${RENDER_SERVICE_ID}/env-vars" "$UPDATED_ENV_VARS" >/dev/n
 
 log "  Env var updated. Service will restart automatically."
 
-# ── step 6: verify API health ─────────────────────────────────────────────────
+# ── step 8: verify API health ─────────────────────────────────────────────────
 
-log "Step 6 — Polling API health (timeout: ${HEALTH_TIMEOUT}s)..."
+log "Step 8 — Polling API health (timeout: ${HEALTH_TIMEOUT}s)..."
 log "  Endpoint: $API_HEALTH_URL"
 
 elapsed=0
@@ -198,11 +250,10 @@ while true; do
     echo ""
     echo "================================================================="
     echo "  HEALTH CHECK FAILED after ${HEALTH_TIMEOUT}s (last HTTP: $HTTP_STATUS)"
-    echo "  Both databases are still intact."
-    echo "  To roll back: update $ENV_VAR_KEY on the API service in the"
-    echo "  Render dashboard to point back to the old DB."
-    echo "    Old DB id : $OLD_DB_ID"
+    echo "  New database is intact but the API has not recovered."
+    echo "  Check the Render dashboard for the service restart status."
     echo "    New DB id : $NEW_DB_ID"
+    echo "    New DB name : $NEW_DB_NAME"
     echo "================================================================="
     exit 1
   fi
@@ -212,23 +263,13 @@ while true; do
   (( elapsed += HEALTH_INTERVAL ))
 done
 
-# ── step 7: print summary ─────────────────────────────────────────────────────
+# ── summary ───────────────────────────────────────────────────────────────────
 
 echo ""
 echo "================================================================="
 echo "  DB ROTATION COMPLETE"
 echo "================================================================="
-echo "  Old DB   : $OLD_DB_NAME (id=$OLD_DB_ID)"
+echo "  Old DB   : $OLD_DB_NAME (deleted)"
 echo "  New DB   : $NEW_DB_NAME (id=$NEW_DB_ID)"
 echo "  API      : healthy"
-echo ""
-echo "  The OLD database is still running."
-echo "  After you verify data in the app, delete it:"
-echo ""
-echo "    curl -X DELETE \\"
-echo "      -H \"Authorization: Bearer \$RENDER_API_KEY\" \\"
-echo "      \"https://api.render.com/v1/postgres/${OLD_DB_ID}\""
-echo ""
-echo "  Or delete it from the Render dashboard:"
-echo "    https://dashboard.render.com/d/${OLD_DB_ID}"
 echo "================================================================="
