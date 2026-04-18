@@ -3,11 +3,11 @@
 #
 # Rotates the Render free-tier PostgreSQL database:
 #   1. Discovers the current DB (name prefix: fintrackpro-db)
-#   2. Reads the active connection string from the API service env vars
-#   3. pg_dump using that connection string → temp file
+#   2. Reads credentials directly from the Render API
+#   3. pg_dump using external connection string → temp file
 #   4. Validates the dump (pg_restore --list) — aborts if invalid
 #   5. Deletes old DB via Render API
-#   6. Creates a new free DB (fintrackpro-db)
+#   6. Creates a new free DB (fintrackpro-db) in the same project
 #   7. Waits for it to become available
 #   8. pg_restore from validated dump
 #   9. Updates ConnectionStrings__DefaultConnection on the API service
@@ -30,6 +30,7 @@
 set -euo pipefail
 
 RENDER_API="https://api.render.com/v1"
+RENDER_PROJECT_ID="prj-d71q2o7pm1nc73f2n99g"
 DB_NAME_PREFIX="fintrackpro-db"
 DB_REGION="oregon"
 DB_VERSION="18"
@@ -41,43 +42,54 @@ HEALTH_INTERVAL=15      # polling interval (seconds)
 ENV_VAR_KEY="ConnectionStrings__DefaultConnection"
 DUMP_FILE="$(mktemp /tmp/fintrackpro-db-dump.XXXXXX)"
 
+SCRIPT_START=$(date -u '+%H:%M:%S')
+
 # ── helpers ────────────────────────────────────────────────────────────────────
 
-log()  { echo "[$(date -u '+%H:%M:%S')] $*"; }
-err()  { echo "[$(date -u '+%H:%M:%S')] ERROR: $*" >&2; exit 1; }
+log()    { echo "[$(date -u '+%H:%M:%S')] $*"; }
+debug()  { echo "[$(date -u '+%H:%M:%S')] [DEBUG] $*"; }
+warn()   { echo "[$(date -u '+%H:%M:%S')] [WARN]  $*"; }
+err()    { echo "[$(date -u '+%H:%M:%S')] [ERROR] $*" >&2; exit 1; }
 
 cleanup() {
-  [[ -f "$DUMP_FILE" ]] && rm -f                    "$DUMP_FILE" && log "Temp dump file removed."
+  if [[ -f "$DUMP_FILE" ]]; then
+    rm -f "$DUMP_FILE"
+    log "Temp dump file removed."
+  fi
 }
 trap cleanup EXIT
 
 check_deps() {
+  log "Checking required tools: curl jq pg_dump pg_restore..."
   local missing=()
   for cmd in curl jq pg_dump pg_restore; do
     command -v "$cmd" &>/dev/null || missing+=("$cmd")
   done
   [[ ${#missing[@]} -eq 0 ]] || err "Missing required tools: ${missing[*]}"
+  log "  All tools present."
 }
 
 render_get() {
   local path="$1"
   local resp http_code body
+  debug "GET ${path}"
   resp=$(curl -s -w "\n%{http_code}" \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Accept: application/json" \
     "${RENDER_API}${path}")
   http_code=$(echo "$resp" | tail -n1)
   body=$(echo "$resp" | head -n -1)
+  debug "  → HTTP $http_code"
   if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
-    err "GET ${path} failed (HTTP $http_code): $body"
+    err "GET ${path} failed (HTTP $http_code)"
   fi
   echo "$body"
 }
 
-
 render_post() {
   local path="$1" data="$2"
   local resp http_code body
+  debug "POST ${path}"
   resp=$(curl -s -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
@@ -86,8 +98,9 @@ render_post() {
     "${RENDER_API}${path}")
   http_code=$(echo "$resp" | tail -n1)
   body=$(echo "$resp" | head -n -1)
+  debug "  → HTTP $http_code"
   if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
-    err "POST ${path} failed (HTTP $http_code): $body"
+    err "POST ${path} failed (HTTP $http_code)"
   fi
   echo "$body"
 }
@@ -95,6 +108,7 @@ render_post() {
 render_put() {
   local path="$1" data="$2"
   local resp http_code body
+  debug "PUT ${path}"
   resp=$(curl -s -w "\n%{http_code}" -X PUT \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
@@ -103,8 +117,9 @@ render_put() {
     "${RENDER_API}${path}")
   http_code=$(echo "$resp" | tail -n1)
   body=$(echo "$resp" | head -n -1)
+  debug "  → HTTP $http_code"
   if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
-    err "PUT ${path} failed (HTTP $http_code): $body"
+    err "PUT ${path} failed (HTTP $http_code)"
   fi
   echo "$body"
 }
@@ -112,118 +127,148 @@ render_put() {
 render_delete() {
   local path="$1"
   local resp http_code body
+  debug "DELETE ${path}"
   resp=$(curl -s -w "\n%{http_code}" -X DELETE \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     "${RENDER_API}${path}")
   http_code=$(echo "$resp" | tail -n1)
   body=$(echo "$resp" | head -n -1)
+  debug "  → HTTP $http_code"
   if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
-    err "DELETE ${path} failed (HTTP $http_code): $body"
+    err "DELETE ${path} failed (HTTP $http_code)"
   fi
 }
 
 # ── validate inputs ─────────────────────────────────────────────────────────────
 
+echo ""
+echo "================================================================="
+echo "  FINTRACKPRO DB ROTATION — started at $SCRIPT_START UTC"
+echo "================================================================="
+echo ""
+
 check_deps
 
+log "Validating required environment variables..."
 : "${RENDER_API_KEY:?RENDER_API_KEY is required}"
 : "${RENDER_OWNER_ID:?RENDER_OWNER_ID is required}"
 : "${RENDER_SERVICE_ID:?RENDER_SERVICE_ID is required}"
 : "${API_HEALTH_URL:?API_HEALTH_URL is required}"
+log "  RENDER_API_KEY    = set"
+log "  RENDER_OWNER_ID   = set"
+log "  RENDER_SERVICE_ID = set"
+log "  RENDER_PROJECT_ID = $RENDER_PROJECT_ID"
+log "  API_HEALTH_URL    = $API_HEALTH_URL"
+log "  DUMP_FILE         = $DUMP_FILE"
+log "  All env vars present."
 
 # ── step 1: discover old DB ────────────────────────────────────────────────────
 
+echo ""
 log "Step 1 — Discovering current database..."
 
 DB_LIST=$(render_get "/postgres?ownerId=${RENDER_OWNER_ID}&limit=20")
+DB_COUNT=$(echo "$DB_LIST" | jq 'length')
+debug "  Total postgres instances returned: $DB_COUNT"
+
 OLD_DB=$(echo "$DB_LIST" | jq -r \
   --arg prefix "$DB_NAME_PREFIX" \
   '[.[] | select(.postgres.name | startswith($prefix))] | sort_by(.postgres.createdAt) | last | .postgres')
 
-[[ "$OLD_DB" != "null" && -n "$OLD_DB" ]] || err "No database with name prefix '$DB_NAME_PREFIX' found."
+[[ "$OLD_DB" != "null" && -n "$OLD_DB" ]] \
+  || err "No database with name prefix '$DB_NAME_PREFIX' found. Instances found: $DB_COUNT"
 
 OLD_DB_ID=$(echo "$OLD_DB" | jq -r '.id')
 OLD_DB_NAME=$(echo "$OLD_DB" | jq -r '.name')
+OLD_DB_STATUS=$(echo "$OLD_DB" | jq -r '.status')
 
-log "  Found: $OLD_DB_NAME (id=$OLD_DB_ID)"
+log "  Found: $OLD_DB_NAME  id: $OLD_DB_ID  status: $OLD_DB_STATUS"
 
-# ── step 1b: fetch full DB details (IP rules + region) ────────────────────────
+# ── step 1b: fetch full DB details (IP rules + region + credentials) ──────────
 
+echo ""
 log "Step 1b — Fetching full details for old database..."
 
 OLD_DB_INFO=$(render_get "/postgres/${OLD_DB_ID}")
 OLD_DB_REGION=$(echo "$OLD_DB_INFO" | jq -r '.region')
+debug "  region: $OLD_DB_REGION"
+debug "  connectionInfo keys: $(echo "$OLD_DB_INFO" | jq -c '.connectionInfo | keys? // "none"')"
 
-# ipAllowList is returned directly in the GET /postgres/{id} response.
 OLD_IP_RULES=$(echo "$OLD_DB_INFO" | jq '.ipAllowList // []')
 RULE_COUNT=$(echo "$OLD_IP_RULES" | jq 'length')
 if [[ "$RULE_COUNT" -gt 0 ]]; then
-  log "  Fetched $RULE_COUNT IP rule(s) from old DB."
+  log "  Fetched $RULE_COUNT IP rule(s)."
 else
   OLD_IP_RULES='[{"cidrBlock":"0.0.0.0/0","description":"Allow all"}]'
-  log "  No IP rules found — using fallback: 0.0.0.0/0 Allow all."
+  warn "  No IP rules on old DB — using fallback: 0.0.0.0/0 Allow all."
 fi
 
-# ── step 2: build external connection string ───────────────────────────────────
+# ── step 2: build external connection string for pg_dump ──────────────────────
 
-log "Step 2 — Building external connection string..."
+echo ""
+log "Step 2 — Extracting credentials and building external connection string..."
+log "  DB: $OLD_DB_NAME  region: $OLD_DB_REGION"
 
-# The API service stores the internal connection string (hostname = DB id only,
-# e.g. dpg-xxx). The external hostname is dpg-xxx.{region}-postgres.render.com.
-# We read the credentials from the service env var and patch the hostname.
-SERVICE_ENV_VARS=$(render_get "/services/${RENDER_SERVICE_ID}/env-vars")
-OLD_INTERNAL_URL=$(echo "$SERVICE_ENV_VARS" | jq -r \
-  --arg key "$ENV_VAR_KEY" \
-  '.[] | select(.envVar.key == $key) | .envVar.value')
+OLD_DB_USER=$(echo "$OLD_DB_INFO"     | jq -r '.connectionInfo.user     // .user     // empty')
+OLD_DB_PASS=$(echo "$OLD_DB_INFO"     | jq -r '.connectionInfo.password  // .password  // empty')
+OLD_DB_DATABASE=$(echo "$OLD_DB_INFO" | jq -r '.connectionInfo.database  // .databaseName // empty')
 
-[[ -n "$OLD_INTERNAL_URL" && "$OLD_INTERNAL_URL" != "null" ]] \
-  || err "Could not read $ENV_VAR_KEY from API service env vars. Check RENDER_SERVICE_ID."
+debug "  credentials extracted: user=$([[ -n "$OLD_DB_USER" ]] && echo "yes" || echo "no")  pass=$([[ -n "$OLD_DB_PASS" ]] && echo "yes" || echo "no")  db=$([[ -n "$OLD_DB_DATABASE" ]] && echo "yes" || echo "no")"
 
-# Replace internal host (bare DB id) with the external fully-qualified hostname.
-OLD_EXTERNAL_URL=$(echo "$OLD_INTERNAL_URL" | \
-  sed "s|@${OLD_DB_ID}/|@${OLD_DB_ID}.${OLD_DB_REGION}-postgres.render.com/|")
+[[ -n "$OLD_DB_USER" && -n "$OLD_DB_PASS" && -n "$OLD_DB_DATABASE" ]] \
+  || err "Could not extract credentials from old DB. connectionInfo keys: $(echo "$OLD_DB_INFO" | jq -c '.connectionInfo | keys? // "none"')"
 
-[[ "$OLD_EXTERNAL_URL" != "$OLD_INTERNAL_URL" ]] \
-  || err "Failed to patch internal hostname to external. Internal URL: $OLD_INTERNAL_URL"
-
-log "  External connection string built (region: $OLD_DB_REGION)."
+OLD_EXTERNAL_URL="postgresql://${OLD_DB_USER}:${OLD_DB_PASS}@${OLD_DB_ID}.${OLD_DB_REGION}-postgres.render.com/${OLD_DB_DATABASE}"
+log "  External connection string built."
 
 # ── step 3: dump old DB ────────────────────────────────────────────────────────
 
+echo ""
 log "Step 3 — Dumping old database to temp file..."
-log "  Dump file: $DUMP_FILE"
+log "  Source: $OLD_DB_NAME  region: $OLD_DB_REGION"
+log "  Target: $DUMP_FILE"
 
+DUMP_START=$(date +%s)
 pg_dump --format=custom --no-acl --no-owner "$OLD_EXTERNAL_URL" > "$DUMP_FILE"
+DUMP_END=$(date +%s)
 
 DUMP_SIZE=$(du -sh "$DUMP_FILE" | cut -f1)
-log "  Dump complete ($DUMP_SIZE)."
+DUMP_BYTES=$(wc -c < "$DUMP_FILE")
+log "  Dump complete in $(( DUMP_END - DUMP_START ))s — size: $DUMP_SIZE ($DUMP_BYTES bytes)."
 
 # ── step 4: validate the dump ─────────────────────────────────────────────────
 
+echo ""
 log "Step 4 — Validating dump file..."
 
-# Abort if dump file is empty (0 bytes)
-[[ -s "$DUMP_FILE" ]] || err "Dump file is empty — aborting before deleting old DB. No data was lost."
+[[ -s "$DUMP_FILE" ]] \
+  || err "Dump file is empty (0 bytes) — aborting before deleting old DB. No data was lost."
 
-# Verify the archive is a valid pg_dump custom-format file
-OBJECT_COUNT=$(pg_restore --list "$DUMP_FILE" 2>/dev/null | grep -c '^[0-9]' || true)
+OBJECT_LIST=$(pg_restore --list "$DUMP_FILE" 2>/dev/null || true)
+OBJECT_COUNT=$(echo "$OBJECT_LIST" | grep -c '^[0-9]' || true)
+debug "  First 10 objects in dump:"
+echo "$OBJECT_LIST" | grep '^[0-9]' | head -10 | while read -r line; do debug "    $line"; done
+
 [[ "$OBJECT_COUNT" -gt 0 ]] \
-  || err "Dump file failed validation (no restorable objects found) — aborting before deleting old DB. No data was lost."
+  || err "Dump file failed validation (no restorable objects) — aborting before deleting old DB. No data was lost."
 
 log "  Dump valid — $OBJECT_COUNT restorable objects found."
 
 # ── step 5: delete old DB ──────────────────────────────────────────────────────
 
-log "Step 5 — Deleting old database ($OLD_DB_NAME)..."
+echo ""
+log "Step 5 — Deleting old database ($OLD_DB_NAME / $OLD_DB_ID)..."
 
 render_delete "/postgres/${OLD_DB_ID}"
 
-log "  Old database deleted."
+log "  Old database deleted successfully."
 
 # ── step 6: create new DB ──────────────────────────────────────────────────────
 
+echo ""
 NEW_DB_NAME="$DB_NAME_PREFIX"
 log "Step 6 — Creating new database: $NEW_DB_NAME..."
+log "  plan: $DB_PLAN  region: $DB_REGION  version: $DB_VERSION  project: $RENDER_PROJECT_ID"
 
 CREATE_BODY=$(jq -n \
   --arg name "$NEW_DB_NAME" \
@@ -231,19 +276,20 @@ CREATE_BODY=$(jq -n \
   --arg plan "$DB_PLAN" \
   --arg region "$DB_REGION" \
   --arg version "$DB_VERSION" \
-  '{name: $name, ownerId: $owner, plan: $plan, region: $region, version: $version}')
+  --arg project "$RENDER_PROJECT_ID" \
+  '{name: $name, ownerId: $owner, plan: $plan, region: $region, version: $version, projectId: $project}')
 
 NEW_DB_RESP=$(render_post "/postgres" "$CREATE_BODY")
-log "  DEBUG create response: $(echo "$NEW_DB_RESP" | jq -c '.')"
 NEW_DB_ID=$(echo "$NEW_DB_RESP" | jq -r '.id // .postgres.id')
 
 [[ -n "$NEW_DB_ID" && "$NEW_DB_ID" != "null" ]] \
-  || err "Failed to parse new database ID. Response: $NEW_DB_RESP"
+  || err "Failed to parse new database ID from create response."
 
-log "  Created: $NEW_DB_NAME (id=$NEW_DB_ID)"
+log "  Created: $NEW_DB_NAME  id: $NEW_DB_ID"
 
 # ── step 7: wait for new DB to be available ────────────────────────────────────
 
+echo ""
 log "Step 7 — Waiting for new database to become available (timeout: ${PROVISION_TIMEOUT}s)..."
 
 elapsed=0
@@ -252,19 +298,37 @@ while true; do
   STATUS=$(echo "$DB_INFO" | jq -r '.status // .postgres.status')
 
   if [[ "$STATUS" == "available" ]]; then
-    NEW_INTERNAL_URL=$(echo "$DB_INFO" | jq -r \
-      '.connectionInfo.internalConnectionString // .postgres.connectionInfo.internalConnectionString')
-    NEW_EXTERNAL_URL=$(echo "$DB_INFO" | jq -r \
-      '.connectionInfo.externalConnectionString // .postgres.connectionInfo.externalConnectionString')
-    log "  New DB is available."
+    debug "  connectionInfo keys: $(echo "$DB_INFO" | jq -c '.connectionInfo | keys? // []')"
+
+    DB_USER=$(echo "$DB_INFO"     | jq -r '.connectionInfo.user     // .user     // empty')
+    DB_PASS=$(echo "$DB_INFO"     | jq -r '.connectionInfo.password  // .password  // empty')
+    DB_DATABASE=$(echo "$DB_INFO" | jq -r '.connectionInfo.database  // .databaseName // empty')
+
+    debug "  credentials extracted: user=$([[ -n "$DB_USER" ]] && echo "yes" || echo "no")  pass=$([[ -n "$DB_PASS" ]] && echo "yes" || echo "no")  db=$([[ -n "$DB_DATABASE" ]] && echo "yes" || echo "no")"
+
+    [[ -n "$DB_USER" && -n "$DB_PASS" && -n "$DB_DATABASE" ]] \
+      || err "Could not extract new DB credentials. connectionInfo keys: $(echo "$DB_INFO" | jq -c '.connectionInfo | keys? // "none"')"
+
+    # postgresql:// URI for pg_restore (uses external hostname)
+    NEW_EXTERNAL_URL="postgresql://${DB_USER}:${DB_PASS}@${NEW_DB_ID}.${DB_REGION}-postgres.render.com/${DB_DATABASE}"
+
+    # .NET Npgsql connection string for ConnectionStrings__DefaultConnection
+    NEW_INTERNAL_CONN_STR=$(echo "$DB_INFO" | jq -r '.connectionInfo.internalConnectionString // empty')
+
+    if [[ -z "$NEW_INTERNAL_CONN_STR" || "$NEW_INTERNAL_CONN_STR" == "null" ]]; then
+      NEW_INTERNAL_CONN_STR="Host=${NEW_DB_ID};Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
+      warn "  internalConnectionString not in API response — constructed Npgsql string from parts."
+    elif [[ "$NEW_INTERNAL_CONN_STR" == postgresql://* ]]; then
+      warn "  API returned postgresql:// URI for internal — converting to Npgsql format."
+      NEW_INTERNAL_CONN_STR="Host=${NEW_DB_ID};Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
+    fi
+
+    log "  New DB is available. name: $NEW_DB_NAME  region: $DB_REGION  id: $NEW_DB_ID  (${elapsed}s elapsed)"
     break
   fi
 
-
   if (( elapsed >= PROVISION_TIMEOUT )); then
-    err "New DB did not become available within ${PROVISION_TIMEOUT}s (last status: $STATUS). " \
-        "New DB id=$NEW_DB_ID is still provisioning — check the Render dashboard. " \
-        "Dump file is preserved at $DUMP_FILE for manual restore."
+    err "New DB did not become available within ${PROVISION_TIMEOUT}s (last status: $STATUS). Check Render dashboard for id=$NEW_DB_ID."
   fi
 
   log "  Status: $STATUS — waiting ${PROVISION_INTERVAL}s... (${elapsed}s elapsed)"
@@ -274,9 +338,9 @@ done
 
 # ── step 7b: apply IP allow-list to new DB ────────────────────────────────────
 
-log "Step 7b — Applying IP allow-list to new database..."
+echo ""
+log "Step 7b — Applying IP allow-list ($RULE_COUNT rule(s)) to new database..."
 
-# ipAllowList is set via PATCH /postgres/{id} with the full update body.
 IP_PATCH_BODY=$(jq -n --argjson rules "$OLD_IP_RULES" '{ipAllowList: $rules}')
 IP_PATCH_RESP=$(curl -s -w "\n%{http_code}" -X PATCH \
   -H "Authorization: Bearer $RENDER_API_KEY" \
@@ -285,34 +349,44 @@ IP_PATCH_RESP=$(curl -s -w "\n%{http_code}" -X PATCH \
   -d "$IP_PATCH_BODY" \
   "${RENDER_API}/postgres/${NEW_DB_ID}")
 IP_PATCH_CODE=$(echo "$IP_PATCH_RESP" | tail -n1)
+debug "  PATCH /postgres/${NEW_DB_ID} → HTTP $IP_PATCH_CODE"
 
 if [[ "$IP_PATCH_CODE" -ge 200 && "$IP_PATCH_CODE" -lt 300 ]]; then
   log "  IP allow-list applied successfully."
 else
-  IP_PATCH_BODY_OUT=$(echo "$IP_PATCH_RESP" | head -n -1)
-  log "  Warning: could not apply IP rules (HTTP $IP_PATCH_CODE): $IP_PATCH_BODY_OUT"
-  log "  Apply them manually in the Render dashboard under Networking → PostgreSQL Inbound Flows."
-  log "  Rules to apply: $OLD_IP_RULES"
+  warn "  Could not apply IP rules (HTTP $IP_PATCH_CODE). Apply manually in the Render dashboard: Networking → PostgreSQL Inbound Flows."
 fi
 
 # ── step 8: restore into new DB ───────────────────────────────────────────────
 
+echo ""
 log "Step 8 — Restoring data into new database..."
+log "  Source: $DUMP_FILE ($DUMP_SIZE)"
+log "  Target: $NEW_DB_NAME  region: $DB_REGION  id: $NEW_DB_ID"
 
+RESTORE_START=$(date +%s)
 pg_restore --no-owner --no-acl --exit-on-error -d "$NEW_EXTERNAL_URL" "$DUMP_FILE"
+RESTORE_END=$(date +%s)
 
-log "  Data restore complete."
+log "  Data restore complete in $(( RESTORE_END - RESTORE_START ))s."
 
 # ── step 9: update API service env var ────────────────────────────────────────
 
+echo ""
 log "Step 9 — Updating API service env var ($ENV_VAR_KEY)..."
 
-# Render PUT /env-vars requires the full list of env vars.
 CURRENT_ENV_VARS=$(render_get "/services/${RENDER_SERVICE_ID}/env-vars")
+CURRENT_VAR_COUNT=$(echo "$CURRENT_ENV_VARS" | jq 'length')
+debug "  Env var count on service: $CURRENT_VAR_COUNT"
+
+KEY_EXISTS=$(echo "$CURRENT_ENV_VARS" | jq --arg key "$ENV_VAR_KEY" '[.[] | select(.envVar.key == $key)] | length')
+[[ "$KEY_EXISTS" -gt 0 ]] \
+  || err "$ENV_VAR_KEY not found in service env vars — cannot update. Check RENDER_SERVICE_ID."
+debug "  Key '$ENV_VAR_KEY' found — updating."
 
 UPDATED_ENV_VARS=$(echo "$CURRENT_ENV_VARS" | jq \
   --arg key "$ENV_VAR_KEY" \
-  --arg val "$NEW_INTERNAL_URL" \
+  --arg val "$NEW_INTERNAL_CONN_STR" \
   '[.[] | if .envVar.key == $key then .envVar.value = $val else . end | .envVar]')
 
 render_put "/services/${RENDER_SERVICE_ID}/env-vars" "$UPDATED_ENV_VARS" >/dev/null
@@ -321,15 +395,17 @@ log "  Env var updated. Service will restart automatically."
 
 # ── step 10: verify API health ────────────────────────────────────────────────
 
+echo ""
 log "Step 10 — Polling API health (timeout: ${HEALTH_TIMEOUT}s)..."
 log "  Endpoint: $API_HEALTH_URL"
 
 elapsed=0
 while true; do
   HTTP_STATUS=$(curl -so /dev/null -w "%{http_code}" --max-time 10 "$API_HEALTH_URL" || true)
+  debug "  Health poll at ${elapsed}s → HTTP $HTTP_STATUS"
 
   if [[ "$HTTP_STATUS" == "200" ]]; then
-    log "  API is healthy (HTTP 200)."
+    log "  API is healthy (HTTP 200) after ${elapsed}s."
     break
   fi
 
@@ -339,8 +415,9 @@ while true; do
     echo "  HEALTH CHECK FAILED after ${HEALTH_TIMEOUT}s (last HTTP: $HTTP_STATUS)"
     echo "  New database is intact but the API has not recovered."
     echo "  Check the Render dashboard for the service restart status."
-    echo "    New DB id   : $NEW_DB_ID"
     echo "    New DB name : $NEW_DB_NAME"
+    echo "    New DB id   : $NEW_DB_ID"
+    echo "    Region      : $DB_REGION"
     echo "================================================================="
     exit 1
   fi
@@ -352,11 +429,15 @@ done
 
 # ── summary ───────────────────────────────────────────────────────────────────
 
+SCRIPT_END=$(date -u '+%H:%M:%S')
 echo ""
 echo "================================================================="
 echo "  DB ROTATION COMPLETE"
 echo "================================================================="
-echo "  Old DB   : $OLD_DB_NAME (deleted)"
-echo "  New DB   : $NEW_DB_NAME (id=$NEW_DB_ID)"
+echo "  Started  : $SCRIPT_START UTC"
+echo "  Finished : $SCRIPT_END UTC"
+echo "  Old DB   : $OLD_DB_NAME / $OLD_DB_ID (deleted)"
+echo "  New DB   : $NEW_DB_NAME / $NEW_DB_ID  region: $DB_REGION"
+echo "  Project  : $RENDER_PROJECT_ID"
 echo "  API      : healthy"
 echo "================================================================="
