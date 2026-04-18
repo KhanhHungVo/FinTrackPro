@@ -32,6 +32,7 @@ const vi = {
     search: 'Tìm kiếm',
     sortBy: 'Sắp xếp theo',
     total: 'Tổng',
+    saved: 'Đã lưu',
   },
   dashboard: {
     title: 'Tổng quan',

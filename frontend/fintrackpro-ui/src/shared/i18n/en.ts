@@ -32,6 +32,7 @@ const en = {
     search: 'Search',
     sortBy: 'Sort by',
     total: 'Total',
+    saved: 'Saved',
   },
   dashboard: {
     title: 'Dashboard',

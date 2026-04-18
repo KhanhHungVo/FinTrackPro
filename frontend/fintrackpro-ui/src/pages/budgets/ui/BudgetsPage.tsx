@@ -29,6 +29,7 @@ export function BudgetsPage() {
   const [month, setMonth] = useState(monthsBack(0))
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLimit, setEditLimit] = useState('')
+  const [savedId, setSavedId] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [showOverBudgetOnly, setShowOverBudgetOnly] = useState(false)
   const [budgetSort, setBudgetSort] = useState<BudgetSortField>('spentPct')
@@ -61,7 +62,11 @@ export function BudgetsPage() {
       updateBudget(
         { id, limitAmount: val },
         {
-          onSuccess: () => setEditingId(null),
+          onSuccess: () => {
+            setEditingId(null)
+            setSavedId(id)
+            setTimeout(() => setSavedId(null), 2000)
+          },
           onError: (err) => { setEditingId(null); toast.error(errorToastMessage(err)) },
         },
       )
@@ -189,51 +194,94 @@ export function BudgetsPage() {
                   <p className="font-medium">{resolveCategoryLabel(budget.category)}</p>
                   <div className="flex items-center gap-2">
                     {editingId === budget.id ? (
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={editLimit}
-                        onChange={(e) => setEditLimit(e.target.value)}
-                        onBlur={() => commitEdit(budget.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') { e.currentTarget.blur() }
-                          if (e.key === 'Escape') setEditingId(null)
-                        }}
-                        disabled={isSaving}
-                        className="w-24 rounded border px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-400 dark:bg-slate-800 dark:border-white/10 dark:text-white"
-                        autoFocus
-                      />
+                      <>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editLimit}
+                          onChange={(e) => setEditLimit(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitEdit(budget.id)
+                            if (e.key === 'Escape') setEditingId(null)
+                          }}
+                          disabled={isSaving}
+                          className="w-28 rounded border px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-400 dark:bg-slate-800 dark:border-white/10 dark:text-white"
+                          autoFocus
+                        />
+                        {/* Save button */}
+                        <button
+                          onClick={() => commitEdit(budget.id)}
+                          disabled={isSaving}
+                          className="flex items-center justify-center w-6 h-6 rounded text-green-500 hover:bg-green-500/15 transition-colors disabled:opacity-50"
+                          aria-label={t('common.save')}
+                          title={t('common.save')}
+                        >
+                          {isSaving ? (
+                            <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                        {/* Cancel button */}
+                        <button
+                          onClick={() => setEditingId(null)}
+                          disabled={isSaving}
+                          className="flex items-center justify-center w-6 h-6 rounded text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                          aria-label={t('common.cancel')}
+                          title={t('common.cancel')}
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </>
                     ) : (
-                      <span
-                        className={cn(
-                          'text-sm font-semibold',
-                          budget.overrun ? 'text-red-600' : 'text-gray-700 dark:text-slate-300',
+                      <>
+                        {savedId === budget.id ? (
+                          <span className="flex items-center gap-1 text-sm font-medium text-green-500">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            {t('common.saved')}
+                          </span>
+                        ) : (
+                          <span
+                            className={cn(
+                              'text-sm font-semibold',
+                              budget.overrun ? 'text-red-600' : 'text-gray-700 dark:text-slate-300',
+                            )}
+                          >
+                            {formatCurrency(budget.spent, currency, i18n.language)}
+                            <span className="font-normal text-gray-400 dark:text-slate-500">
+                              {' '}/ {formatCurrency(budget.limitInPreferred, currency, i18n.language)}
+                            </span>
+                          </span>
                         )}
-                      >
-                        {formatCurrency(budget.spent, currency, i18n.language)}
-                        <span className="font-normal text-gray-400 dark:text-slate-500">
-                          {' '}/ {formatCurrency(budget.limitInPreferred, currency, i18n.language)}
-                        </span>
-                      </span>
+                        <button
+                          onClick={() => startEdit(budget.id, budget.limitAmount)}
+                          className="text-gray-400 hover:text-blue-500 transition-colors text-sm dark:text-slate-600"
+                          aria-label={t('common.edit')}
+                          title={t('common.edit')}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          onClick={() => setPendingDeleteId(budget.id)}
+                          disabled={isDeleting(budget.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 dark:text-slate-600"
+                          aria-label={t('common.delete')}
+                          title={t('common.delete')}
+                        >
+                          ✕
+                        </button>
+                      </>
                     )}
-                    <button
-                      onClick={() => startEdit(budget.id, budget.limitAmount)}
-                      className="text-gray-400 hover:text-blue-500 transition-colors text-sm dark:text-slate-600"
-                      aria-label={t('common.edit')}
-                      title={t('common.edit')}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      onClick={() => setPendingDeleteId(budget.id)}
-                      disabled={isDeleting(budget.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 dark:text-slate-600"
-                      aria-label={t('common.delete')}
-                      title={t('common.delete')}
-                    >
-                      ✕
-                    </button>
                   </div>
                 </div>
 
