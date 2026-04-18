@@ -163,6 +163,7 @@ echo ""
 log "Step 1 — Discovering current database..."
 
 DB_LIST=$(render_get "/postgres?ownerId=${RENDER_OWNER_ID}&limit=20")
+debug "  Raw DB list response (first 300 chars): ${DB_LIST:0:300}"
 DB_COUNT=$(echo "$DB_LIST" | jq 'length')
 debug "  Total postgres instances returned: $DB_COUNT"
 
