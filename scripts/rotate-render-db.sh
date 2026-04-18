@@ -171,26 +171,25 @@ else
   log "  Warning: could not fetch IP rules (HTTP $_ip_code) — using fallback: 0.0.0.0/0 Allow all."
 fi
 
-# ── step 2: read active connection string from API service ─────────────────────
+# ── step 2: fetch external connection string for old DB ───────────────────────
 
-log "Step 2 — Reading active connection string from API service env vars..."
+log "Step 2 — Fetching external connection string for old database..."
 
-SERVICE_ENV_VARS=$(render_get "/services/${RENDER_SERVICE_ID}/env-vars")
-OLD_CONN_STR=$(echo "$SERVICE_ENV_VARS" | jq -r \
-  --arg key "$ENV_VAR_KEY" \
-  '.[] | select(.envVar.key == $key) | .envVar.value')
+OLD_DB_INFO=$(render_get "/postgres/${OLD_DB_ID}")
+OLD_EXTERNAL_URL=$(echo "$OLD_DB_INFO" | jq -r \
+  '.connectionInfo.externalConnectionString // .postgres.connectionInfo.externalConnectionString')
 
-[[ -n "$OLD_CONN_STR" && "$OLD_CONN_STR" != "null" ]] \
-  || err "Could not read $ENV_VAR_KEY from API service env vars. Check RENDER_SERVICE_ID."
+[[ -n "$OLD_EXTERNAL_URL" && "$OLD_EXTERNAL_URL" != "null" ]] \
+  || err "Could not read externalConnectionString for old DB (id=$OLD_DB_ID). Check Render API response."
 
-log "  Connection string found."
+log "  External connection string found."
 
 # ── step 3: dump old DB ────────────────────────────────────────────────────────
 
 log "Step 3 — Dumping old database to temp file..."
 log "  Dump file: $DUMP_FILE"
 
-pg_dump --format=custom --no-acl --no-owner "$OLD_CONN_STR" > "$DUMP_FILE"
+pg_dump --format=custom --no-acl --no-owner "$OLD_EXTERNAL_URL" > "$DUMP_FILE"
 
 DUMP_SIZE=$(du -sh "$DUMP_FILE" | cut -f1)
 log "  Dump complete ($DUMP_SIZE)."
