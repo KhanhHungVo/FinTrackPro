@@ -4,7 +4,7 @@ name: Rotate Render PostgreSQL
 # free-tier PostgreSQL before its 30-day expiry. Can also be triggered manually.
 #
 # Required secrets  : RENDER_API_KEY, RENDER_OWNER_ID
-# Required variables: RENDER_SERVICE_ID, API_HEALTH_URL
+# Required variables: RENDER_SERVICE_ID, RENDER_PROJECT_ID, RENDER_ENVIRONMENT_ID, API_HEALTH_URL
 #
 # See docs/guides/db-rotation.md for setup instructions.
 
@@ -40,10 +40,12 @@ jobs:
 
       - name: Rotate database
         env:
-          RENDER_API_KEY:    ${{ secrets.RENDER_API_KEY }}
-          RENDER_OWNER_ID:   ${{ secrets.RENDER_OWNER_ID }}
-          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
-          API_HEALTH_URL:    ${{ vars.API_HEALTH_URL }}
+          RENDER_API_KEY:          ${{ secrets.RENDER_API_KEY }}
+          RENDER_OWNER_ID:         ${{ secrets.RENDER_OWNER_ID }}
+          RENDER_SERVICE_ID:       ${{ vars.RENDER_SERVICE_ID }}
+          RENDER_PROJECT_ID:       ${{ vars.RENDER_PROJECT_ID }}
+          RENDER_ENVIRONMENT_ID:   ${{ vars.RENDER_ENVIRONMENT_ID }}
+          API_HEALTH_URL:          ${{ vars.API_HEALTH_URL }}
         run: bash scripts/rotate-render-db.sh
 
       - name: Annotate on failure

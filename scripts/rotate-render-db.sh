@@ -20,17 +20,18 @@
 #       is safe as long as the restore in step 8 succeeds.
 #
 # Required env vars:
-#   RENDER_API_KEY    — Render personal API key
-#   RENDER_OWNER_ID   — Render owner/team ID
-#   RENDER_SERVICE_ID — Render web service ID for fintrackpro-api (srv-...)
-#   API_HEALTH_URL    — Health endpoint to poll (e.g. https://fintrackpro-api.onrender.com/health)
+#   RENDER_API_KEY          — Render personal API key
+#   RENDER_OWNER_ID         — Render owner/team ID (tea-...)
+#   RENDER_SERVICE_ID       — Render web service ID for fintrackpro-api (srv-...)
+#   RENDER_PROJECT_ID       — Render project ID (prj-...)
+#   RENDER_ENVIRONMENT_ID   — Render environment ID within the project (evm-...)
+#   API_HEALTH_URL          — Health endpoint to poll (e.g. https://fintrackpro-api.onrender.com/health)
 #
 # Usage: bash scripts/rotate-render-db.sh
 
 set -euo pipefail
 
 RENDER_API="https://api.render.com/v1"
-RENDER_PROJECT_ID="prj-d71q2o7pm1nc73f2n99g"
 DB_NAME_PREFIX="fintrackpro-db"
 DB_REGION="oregon"
 DB_VERSION="18"
@@ -148,13 +149,16 @@ log "Validating required environment variables..."
 : "${RENDER_API_KEY:?RENDER_API_KEY is required}"
 : "${RENDER_OWNER_ID:?RENDER_OWNER_ID is required}"
 : "${RENDER_SERVICE_ID:?RENDER_SERVICE_ID is required}"
+: "${RENDER_PROJECT_ID:?RENDER_PROJECT_ID is required}"
+: "${RENDER_ENVIRONMENT_ID:?RENDER_ENVIRONMENT_ID is required}"
 : "${API_HEALTH_URL:?API_HEALTH_URL is required}"
-log "  RENDER_API_KEY    = set"
-log "  RENDER_OWNER_ID   = set"
-log "  RENDER_SERVICE_ID = set"
-log "  RENDER_PROJECT_ID = $RENDER_PROJECT_ID"
-log "  API_HEALTH_URL    = $API_HEALTH_URL"
-log "  DUMP_FILE         = $DUMP_FILE"
+log "  RENDER_API_KEY        = set"
+log "  RENDER_OWNER_ID       = set"
+log "  RENDER_SERVICE_ID     = set"
+log "  RENDER_PROJECT_ID     = $RENDER_PROJECT_ID"
+log "  RENDER_ENVIRONMENT_ID = $RENDER_ENVIRONMENT_ID"
+log "  API_HEALTH_URL        = $API_HEALTH_URL"
+log "  DUMP_FILE             = $DUMP_FILE"
 log "  All env vars present."
 
 # ── step 1: discover old DB ────────────────────────────────────────────────────
@@ -211,27 +215,13 @@ echo ""
 log "Step 2 — Extracting credentials and building external connection string..."
 log "  DB: $OLD_DB_NAME  region: $OLD_DB_REGION"
 
-OLD_DB_DATABASE=$(echo "$OLD_DB_INFO" | jq -r '.databaseName // empty')
-OLD_DB_USER=$(echo "$OLD_CONN_INFO"   | jq -r '.username // .user // empty')
-OLD_DB_PASS=$(echo "$OLD_CONN_INFO"   | jq -r '.password // empty')
+# Use externalConnectionString directly — it contains the correct hostname from Render
+OLD_EXTERNAL_URL=$(echo "$OLD_CONN_INFO" | jq -r '.externalConnectionString // empty')
 
-# fall back to externalConnectionString if individual fields are absent
-if [[ -z "$OLD_DB_USER" || -z "$OLD_DB_PASS" ]]; then
-  EXT_URL=$(echo "$OLD_CONN_INFO" | jq -r '.externalConnectionString // .postgresConnectionString // empty')
-  if [[ -n "$EXT_URL" ]]; then
-    OLD_DB_USER=$(echo "$EXT_URL" | sed 's|postgresql://\([^:]*\):.*|\1|')
-    OLD_DB_PASS=$(echo "$EXT_URL" | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
-    OLD_DB_DATABASE=$(echo "$EXT_URL" | sed 's|.*/||')
-    warn "  Used externalConnectionString to extract credentials."
-  fi
-fi
+[[ -n "$OLD_EXTERNAL_URL" ]] \
+  || err "Could not extract externalConnectionString. connection-info keys: $(echo "$OLD_CONN_INFO" | jq -c 'keys? // "none"')"
 
-debug "  credentials extracted: user=$([[ -n "$OLD_DB_USER" ]] && echo "yes" || echo "no")  pass=$([[ -n "$OLD_DB_PASS" ]] && echo "yes" || echo "no")  db=$([[ -n "$OLD_DB_DATABASE" ]] && echo "yes" || echo "no")"
-
-[[ -n "$OLD_DB_USER" && -n "$OLD_DB_PASS" && -n "$OLD_DB_DATABASE" ]] \
-  || err "Could not extract credentials. connection-info keys: $(echo "$OLD_CONN_INFO" | jq -c 'keys? // "none"')"
-
-OLD_EXTERNAL_URL="postgresql://${OLD_DB_USER}:${OLD_DB_PASS}@${OLD_DB_ID}.${OLD_DB_REGION}-postgres.render.com/${OLD_DB_DATABASE}"
+debug "  externalConnectionString: obtained"
 log "  External connection string built."
 
 # ── step 3: dump old DB ────────────────────────────────────────────────────────
@@ -290,10 +280,13 @@ CREATE_BODY=$(jq -n \
   --arg region "$DB_REGION" \
   --arg version "$DB_VERSION" \
   --arg project "$RENDER_PROJECT_ID" \
-  '{name: $name, ownerId: $owner, plan: $plan, region: $region, version: $version, projectId: $project}')
+  --arg env "$RENDER_ENVIRONMENT_ID" \
+  '{name: $name, ownerId: $owner, plan: $plan, region: $region, version: $version, projectId: $project, environmentId: $env}')
 
 NEW_DB_RESP=$(render_post "/postgres" "$CREATE_BODY")
 NEW_DB_ID=$(echo "$NEW_DB_RESP" | jq -r '.id // .postgres.id')
+debug "  create response keys: $(echo "$NEW_DB_RESP" | jq -c 'keys? // "none"')"
+debug "  environmentId in response: $(echo "$NEW_DB_RESP" | jq -r '.environmentId // "absent"')"
 
 [[ -n "$NEW_DB_ID" && "$NEW_DB_ID" != "null" ]] \
   || err "Failed to parse new database ID from create response."
@@ -315,37 +308,33 @@ while true; do
     NEW_CONN_INFO=$(render_get "/postgres/${NEW_DB_ID}/connection-info")
     debug "  connection-info keys: $(echo "$NEW_CONN_INFO" | jq -c 'keys? // "none"')"
 
-    DB_DATABASE=$(echo "$DB_INFO"      | jq -r '.databaseName // empty')
-    DB_USER=$(echo "$NEW_CONN_INFO"    | jq -r '.username // .user // empty')
-    DB_PASS=$(echo "$NEW_CONN_INFO"    | jq -r '.password // empty')
+    # Use connection strings directly from the API — they contain correct hostnames
+    NEW_EXTERNAL_URL=$(echo "$NEW_CONN_INFO" | jq -r '.externalConnectionString // empty')
+    INT_URL=$(echo "$NEW_CONN_INFO"          | jq -r '.internalConnectionString // empty')
 
-    # fall back to externalConnectionString if individual fields are absent
-    if [[ -z "$DB_USER" || -z "$DB_PASS" ]]; then
-      EXT_URL=$(echo "$NEW_CONN_INFO" | jq -r '.externalConnectionString // .postgresConnectionString // empty')
-      if [[ -n "$EXT_URL" ]]; then
-        DB_USER=$(echo "$EXT_URL" | sed 's|postgresql://\([^:]*\):.*|\1|')
-        DB_PASS=$(echo "$EXT_URL" | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
-        DB_DATABASE=$(echo "$EXT_URL" | sed 's|.*/||')
-        warn "  Used externalConnectionString to extract new DB credentials."
-      fi
-    fi
+    [[ -n "$NEW_EXTERNAL_URL" ]] \
+      || err "Could not extract externalConnectionString for new DB. connection-info keys: $(echo "$NEW_CONN_INFO" | jq -c 'keys? // "none"')"
 
-    debug "  credentials extracted: user=$([[ -n "$DB_USER" ]] && echo "yes" || echo "no")  pass=$([[ -n "$DB_PASS" ]] && echo "yes" || echo "no")  db=$([[ -n "$DB_DATABASE" ]] && echo "yes" || echo "no")"
-
-    [[ -n "$DB_USER" && -n "$DB_PASS" && -n "$DB_DATABASE" ]] \
-      || err "Could not extract new DB credentials. connection-info keys: $(echo "$NEW_CONN_INFO" | jq -c 'keys? // "none"')"
-
-    # postgresql:// URI for pg_restore (uses external hostname)
-    NEW_EXTERNAL_URL="postgresql://${DB_USER}:${DB_PASS}@${NEW_DB_ID}.${DB_REGION}-postgres.render.com/${DB_DATABASE}"
-
-    # .NET Npgsql connection string for ConnectionStrings__DefaultConnection
-    INT_URL=$(echo "$NEW_CONN_INFO" | jq -r '.internalConnectionString // empty')
-    if [[ -n "$INT_URL" && "$INT_URL" != postgresql://* ]]; then
+    # Convert postgresql:// URI → Npgsql key=value format for .NET
+    if [[ -n "$INT_URL" && "$INT_URL" == postgresql://* ]]; then
+      DB_USER=$(echo "$INT_URL"     | sed 's|postgresql://\([^:]*\):.*|\1|')
+      DB_PASS=$(echo "$INT_URL"     | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
+      DB_HOST=$(echo "$INT_URL"     | sed 's|postgresql://[^@]*@\([^/]*\)/.*|\1|')
+      DB_DATABASE=$(echo "$INT_URL" | sed 's|.*/||')
+      NEW_INTERNAL_CONN_STR="Host=${DB_HOST};Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
+      warn "  Converted internalConnectionString URI to Npgsql format."
+    elif [[ -n "$INT_URL" ]]; then
       NEW_INTERNAL_CONN_STR="$INT_URL"
     else
+      DB_USER=$(echo "$NEW_EXTERNAL_URL" | sed 's|postgresql://\([^:]*\):.*|\1|')
+      DB_PASS=$(echo "$NEW_EXTERNAL_URL" | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
+      DB_DATABASE=$(echo "$NEW_EXTERNAL_URL" | sed 's|.*/||')
+      DB_DATABASE=$(echo "$DB_INFO" | jq -r '.databaseName // empty')
       NEW_INTERNAL_CONN_STR="Host=${NEW_DB_ID};Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
-      warn "  internalConnectionString absent or is a URI — constructed Npgsql string from parts."
+      warn "  internalConnectionString absent — constructed Npgsql string from externalConnectionString."
     fi
+
+    debug "  externalConnectionString: obtained  internalConnStr: set"
 
     log "  New DB is available. name: $NEW_DB_NAME  region: $DB_REGION  id: $NEW_DB_ID  (${elapsed}s elapsed)"
     break
