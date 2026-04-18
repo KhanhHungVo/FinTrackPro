@@ -373,20 +373,22 @@ log "  Target: $NEW_DB_NAME  region: $DB_REGION  id: $NEW_DB_ID"
 EXT_HOST=$(echo "$NEW_EXTERNAL_URL" | sed 's|postgresql://[^@]*@\([^/:]*\).*|\1|')
 debug "  pg_restore target host: $EXT_HOST"
 
-# Wait for the external port to be reachable before attempting restore.
-# Render marks the DB 'available' before the TCP port is fully open.
-log "  Waiting for external port to be reachable..."
-TCP_TIMEOUT=120
-TCP_ELAPSED=0
-until nc -z -w5 "$EXT_HOST" 5432 2>/dev/null; do
-  if (( TCP_ELAPSED >= TCP_TIMEOUT )); then
-    err "External port $EXT_HOST:5432 not reachable after ${TCP_TIMEOUT}s."
+# Wait for PostgreSQL to be ready to accept connections.
+# Render marks status 'available' and opens the TCP port before the SSL
+# handshake is functional — pg_isready speaks the PG protocol and confirms
+# the server is truly accepting connections.
+log "  Waiting for PostgreSQL to accept connections..."
+PG_READY_TIMEOUT=120
+PG_READY_ELAPSED=0
+until pg_isready -h "$EXT_HOST" -p 5432 -U postgres -t 5 &>/dev/null; do
+  if (( PG_READY_ELAPSED >= PG_READY_TIMEOUT )); then
+    err "PostgreSQL at $EXT_HOST:5432 not ready after ${PG_READY_TIMEOUT}s."
   fi
-  log "  Port not yet open — retrying in 5s... (${TCP_ELAPSED}s elapsed)"
+  log "  Not ready yet — retrying in 5s... (${PG_READY_ELAPSED}s elapsed)"
   sleep 5
-  (( TCP_ELAPSED += 5 ))
+  (( PG_READY_ELAPSED += 5 ))
 done
-log "  External port open after ${TCP_ELAPSED}s."
+log "  PostgreSQL ready after ${PG_READY_ELAPSED}s."
 
 RESTORE_START=$(date +%s)
 pg_restore --no-owner --no-acl --exit-on-error -d "$NEW_EXTERNAL_URL" "$DUMP_FILE"
