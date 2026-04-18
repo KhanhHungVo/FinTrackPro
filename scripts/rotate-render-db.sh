@@ -176,6 +176,7 @@ fi
 log "Step 2 — Fetching external connection string for old database..."
 
 OLD_DB_INFO=$(render_get "/postgres/${OLD_DB_ID}")
+log "  DEBUG raw response: $(echo "$OLD_DB_INFO" | jq -c '.')"
 OLD_EXTERNAL_URL=$(echo "$OLD_DB_INFO" | jq -r \
   '.connectionInfo.externalConnectionString // .postgres.connectionInfo.externalConnectionString')
 
