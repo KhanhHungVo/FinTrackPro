@@ -10,7 +10,7 @@
 #   6. Creates a new free DB (fintrackpro-db) in the same project
 #   7. Waits for it to become available
 #   8. pg_restore from validated dump
-#   9. Updates ConnectionStrings__DefaultConnection on the API service
+#   9. Updates ConnectionStrings__DefaultConnection on the API service + triggers clear-cache deploy
 #  10. Polls the API health endpoint until healthy
 #
 # NOTE: There is a brief window between step 5 and step 9 where the API has
@@ -417,7 +417,13 @@ UPDATED_ENV_VARS=$(echo "$CURRENT_ENV_VARS" | jq \
 
 render_put "/services/${RENDER_SERVICE_ID}/env-vars" "$UPDATED_ENV_VARS" >/dev/null
 
-log "  Env var updated. Service will restart automatically."
+log "  Env var updated."
+
+# Updating env vars alone only restarts with cached build; trigger a
+# clear-cache deploy so the new connection string is picked up cleanly.
+log "  Triggering clear-cache deploy..."
+render_post "/services/${RENDER_SERVICE_ID}/deploys" '{"clearCache":"clear"}' >/dev/null
+log "  Clear-cache deploy triggered. Waiting for service to come back up..."
 
 # ── step 10: verify API health ────────────────────────────────────────────────
 
