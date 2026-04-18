@@ -38,12 +38,6 @@ bash scripts/e2e-local.sh
 bash scripts/e2e-local.sh --ui                             # UI mode
 bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts        # single spec
 ```
-```powershell
-# PowerShell
-.\scripts\e2e-local.ps1
-.\scripts\e2e-local.ps1 --ui
-.\scripts\e2e-local.ps1 tests/e2e/budgets.spec.ts
-```
 
 > Full prerequisites, token-flow internals, and troubleshooting: `docs/guides/dev-setup.md` (Mode E).
 

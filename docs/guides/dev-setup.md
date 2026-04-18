@@ -352,11 +352,6 @@ Use the script that matches your terminal:
 bash scripts/e2e-local.sh
 ```
 
-```powershell
-# PowerShell
-.\scripts\e2e-local.ps1
-```
-
 The script:
 1. Mints a short-lived JWT from the `fintrackpro-e2e` Keycloak client (direct access grant)
 2. Passes it as `E2E_TOKEN` to Playwright
@@ -376,11 +371,6 @@ Any extra arguments are forwarded to `playwright test`:
 bash scripts/e2e-local.sh --ui                          # Playwright UI mode
 bash scripts/e2e-local.sh --debug                       # step through with inspector
 bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts     # single spec
-```
-
-```powershell
-.\scripts\e2e-local.ps1 --ui
-.\scripts\e2e-local.ps1 tests/e2e/budgets.spec.ts
 ```
 
 ### Troubleshooting
