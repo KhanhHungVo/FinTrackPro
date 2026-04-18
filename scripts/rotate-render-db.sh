@@ -187,7 +187,8 @@ log "Step 1b — Fetching full details for old database..."
 OLD_DB_INFO=$(render_get "/postgres/${OLD_DB_ID}")
 OLD_DB_REGION=$(echo "$OLD_DB_INFO" | jq -r '.region')
 debug "  region: $OLD_DB_REGION"
-debug "  connectionInfo keys: $(echo "$OLD_DB_INFO" | jq -c '.connectionInfo | keys? // "none"')"
+debug "  top-level keys: $(echo "$OLD_DB_INFO" | jq -c 'keys')"
+debug "  connectionInfo: $(echo "$OLD_DB_INFO" | jq -c '.connectionInfo // "null"')"
 
 OLD_IP_RULES=$(echo "$OLD_DB_INFO" | jq '.ipAllowList // []')
 RULE_COUNT=$(echo "$OLD_IP_RULES" | jq 'length')
