@@ -74,17 +74,6 @@ render_get() {
   echo "$body"
 }
 
-# Non-fatal GET — returns the body and sets RENDER_GET_SOFT_CODE; caller decides what to do on error.
-render_get_soft() {
-  local path="$1"
-  local resp
-  resp=$(curl -s -w "\n%{http_code}" \
-    -H "Authorization: Bearer $RENDER_API_KEY" \
-    -H "Accept: application/json" \
-    "${RENDER_API}${path}")
-  RENDER_GET_SOFT_CODE=$(echo "$resp" | tail -n1)
-  echo "$resp" | head -n -1
-}
 
 render_post() {
   local path="$1" data="$2"
@@ -166,14 +155,20 @@ log "Step 1b — Reading IP allow-list from old database..."
 # This is used when the Render API endpoint is unavailable or returns an error.
 FALLBACK_IP_RULES='[{"cidrBlock":"0.0.0.0/0","description":"Allow all"}]'
 
-IP_RULES_BODY=$(render_get_soft "/postgres/${OLD_DB_ID}/allowed-ips")
-if [[ "$RENDER_GET_SOFT_CODE" -ge 200 && "$RENDER_GET_SOFT_CODE" -lt 300 ]]; then
-  OLD_IP_RULES="$IP_RULES_BODY"
+_ip_resp=$(curl -s -w "\n%{http_code}" \
+  -H "Authorization: Bearer $RENDER_API_KEY" \
+  -H "Accept: application/json" \
+  "${RENDER_API}/postgres/${OLD_DB_ID}/allowed-ips")
+_ip_code=$(echo "$_ip_resp" | tail -n1)
+_ip_body=$(echo "$_ip_resp" | head -n -1)
+
+if [[ "$_ip_code" -ge 200 && "$_ip_code" -lt 300 ]]; then
+  OLD_IP_RULES="$_ip_body"
   RULE_COUNT=$(echo "$OLD_IP_RULES" | jq 'length')
   log "  Fetched $RULE_COUNT IP rule(s) from old DB."
 else
   OLD_IP_RULES="$FALLBACK_IP_RULES"
-  log "  Warning: could not fetch IP rules (HTTP $RENDER_GET_SOFT_CODE) — using fallback: 0.0.0.0/0 Allow all."
+  log "  Warning: could not fetch IP rules (HTTP $_ip_code) — using fallback: 0.0.0.0/0 Allow all."
 fi
 
 # ── step 2: read active connection string from API service ─────────────────────
@@ -277,7 +272,6 @@ done
 
 log "Step 7b — Applying IP allow-list to new database..."
 
-IP_APPLY_BODY=$(render_get_soft "/postgres/${NEW_DB_ID}/allowed-ips" 2>/dev/null || true)
 # Use PUT to set the allow-list; ignore response body, only check status.
 IP_PUT_RESP=$(curl -s -w "\n%{http_code}" -X PUT \
   -H "Authorization: Bearer $RENDER_API_KEY" \
