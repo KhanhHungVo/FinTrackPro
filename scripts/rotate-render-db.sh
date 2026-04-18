@@ -38,8 +38,8 @@ DB_VERSION="18"
 DB_PLAN="free"
 PROVISION_TIMEOUT=300   # seconds to wait for new DB to become available
 PROVISION_INTERVAL=10   # polling interval (seconds)
-HEALTH_TIMEOUT=180      # seconds to wait for API to recover after env var update
-HEALTH_INTERVAL=15      # polling interval (seconds)
+HEALTH_TIMEOUT=300      # seconds to wait for API to recover after env var update
+HEALTH_INTERVAL=20      # polling interval (seconds)
 ENV_VAR_KEY="ConnectionStrings__DefaultConnection"
 DUMP_FILE="$(mktemp /tmp/fintrackpro-db-dump.XXXXXX)"
 
