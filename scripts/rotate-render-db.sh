@@ -147,43 +147,46 @@ OLD_DB_NAME=$(echo "$OLD_DB" | jq -r '.name')
 
 log "  Found: $OLD_DB_NAME (id=$OLD_DB_ID)"
 
-# ── step 1b: read IP allow-list from old DB ────────────────────────────────────
+# ── step 1b: fetch full DB details (IP rules + region) ────────────────────────
 
-log "Step 1b — Reading IP allow-list from old database..."
-
-# Fallback: mirror the current production config (0.0.0.0/0 — Allow all).
-# This is used when the Render API endpoint is unavailable or returns an error.
-FALLBACK_IP_RULES='[{"cidrBlock":"0.0.0.0/0","description":"Allow all"}]'
-
-_ip_resp=$(curl -s -w "\n%{http_code}" \
-  -H "Authorization: Bearer $RENDER_API_KEY" \
-  -H "Accept: application/json" \
-  "${RENDER_API}/postgres/${OLD_DB_ID}/allowed-ips")
-_ip_code=$(echo "$_ip_resp" | tail -n1)
-_ip_body=$(echo "$_ip_resp" | head -n -1)
-
-if [[ "$_ip_code" -ge 200 && "$_ip_code" -lt 300 ]]; then
-  OLD_IP_RULES="$_ip_body"
-  RULE_COUNT=$(echo "$OLD_IP_RULES" | jq 'length')
-  log "  Fetched $RULE_COUNT IP rule(s) from old DB."
-else
-  OLD_IP_RULES="$FALLBACK_IP_RULES"
-  log "  Warning: could not fetch IP rules (HTTP $_ip_code) — using fallback: 0.0.0.0/0 Allow all."
-fi
-
-# ── step 2: fetch external connection string for old DB ───────────────────────
-
-log "Step 2 — Fetching external connection string for old database..."
+log "Step 1b — Fetching full details for old database..."
 
 OLD_DB_INFO=$(render_get "/postgres/${OLD_DB_ID}")
-log "  DEBUG raw response: $(echo "$OLD_DB_INFO" | jq -c '.')"
-OLD_EXTERNAL_URL=$(echo "$OLD_DB_INFO" | jq -r \
-  '.connectionInfo.externalConnectionString // .postgres.connectionInfo.externalConnectionString')
+OLD_DB_REGION=$(echo "$OLD_DB_INFO" | jq -r '.region')
 
-[[ -n "$OLD_EXTERNAL_URL" && "$OLD_EXTERNAL_URL" != "null" ]] \
-  || err "Could not read externalConnectionString for old DB (id=$OLD_DB_ID). Check Render API response."
+# ipAllowList is returned directly in the GET /postgres/{id} response.
+OLD_IP_RULES=$(echo "$OLD_DB_INFO" | jq '.ipAllowList // []')
+RULE_COUNT=$(echo "$OLD_IP_RULES" | jq 'length')
+if [[ "$RULE_COUNT" -gt 0 ]]; then
+  log "  Fetched $RULE_COUNT IP rule(s) from old DB."
+else
+  OLD_IP_RULES='[{"cidrBlock":"0.0.0.0/0","description":"Allow all"}]'
+  log "  No IP rules found — using fallback: 0.0.0.0/0 Allow all."
+fi
 
-log "  External connection string found."
+# ── step 2: build external connection string ───────────────────────────────────
+
+log "Step 2 — Building external connection string..."
+
+# The API service stores the internal connection string (hostname = DB id only,
+# e.g. dpg-xxx). The external hostname is dpg-xxx.{region}-postgres.render.com.
+# We read the credentials from the service env var and patch the hostname.
+SERVICE_ENV_VARS=$(render_get "/services/${RENDER_SERVICE_ID}/env-vars")
+OLD_INTERNAL_URL=$(echo "$SERVICE_ENV_VARS" | jq -r \
+  --arg key "$ENV_VAR_KEY" \
+  '.[] | select(.envVar.key == $key) | .envVar.value')
+
+[[ -n "$OLD_INTERNAL_URL" && "$OLD_INTERNAL_URL" != "null" ]] \
+  || err "Could not read $ENV_VAR_KEY from API service env vars. Check RENDER_SERVICE_ID."
+
+# Replace internal host (bare DB id) with the external fully-qualified hostname.
+OLD_EXTERNAL_URL=$(echo "$OLD_INTERNAL_URL" | \
+  sed "s|@${OLD_DB_ID}[:/]|@${OLD_DB_ID}.${OLD_DB_REGION}-postgres.render.com:|")
+
+[[ "$OLD_EXTERNAL_URL" != "$OLD_INTERNAL_URL" ]] \
+  || err "Failed to patch internal hostname to external. Internal URL: $OLD_INTERNAL_URL"
+
+log "  External connection string built (region: $OLD_DB_REGION)."
 
 # ── step 3: dump old DB ────────────────────────────────────────────────────────
 
@@ -272,20 +275,21 @@ done
 
 log "Step 7b — Applying IP allow-list to new database..."
 
-# Use PUT to set the allow-list; ignore response body, only check status.
-IP_PUT_RESP=$(curl -s -w "\n%{http_code}" -X PUT \
+# ipAllowList is set via PATCH /postgres/{id} with the full update body.
+IP_PATCH_BODY=$(jq -n --argjson rules "$OLD_IP_RULES" '{ipAllowList: $rules}')
+IP_PATCH_RESP=$(curl -s -w "\n%{http_code}" -X PATCH \
   -H "Authorization: Bearer $RENDER_API_KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
-  -d "$OLD_IP_RULES" \
-  "${RENDER_API}/postgres/${NEW_DB_ID}/allowed-ips")
-IP_PUT_CODE=$(echo "$IP_PUT_RESP" | tail -n1)
+  -d "$IP_PATCH_BODY" \
+  "${RENDER_API}/postgres/${NEW_DB_ID}")
+IP_PATCH_CODE=$(echo "$IP_PATCH_RESP" | tail -n1)
 
-if [[ "$IP_PUT_CODE" -ge 200 && "$IP_PUT_CODE" -lt 300 ]]; then
+if [[ "$IP_PATCH_CODE" -ge 200 && "$IP_PATCH_CODE" -lt 300 ]]; then
   log "  IP allow-list applied successfully."
 else
-  IP_PUT_BODY=$(echo "$IP_PUT_RESP" | head -n -1)
-  log "  Warning: could not apply IP rules (HTTP $IP_PUT_CODE): $IP_PUT_BODY"
+  IP_PATCH_BODY_OUT=$(echo "$IP_PATCH_RESP" | head -n -1)
+  log "  Warning: could not apply IP rules (HTTP $IP_PATCH_CODE): $IP_PATCH_BODY_OUT"
   log "  Apply them manually in the Render dashboard under Networking → PostgreSQL Inbound Flows."
   log "  Rules to apply: $OLD_IP_RULES"
 fi
