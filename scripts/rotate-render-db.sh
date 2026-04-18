@@ -369,6 +369,25 @@ log "Step 8 — Restoring data into new database..."
 log "  Source: $DUMP_FILE ($DUMP_SIZE)"
 log "  Target: $NEW_DB_NAME  region: $DB_REGION  id: $NEW_DB_ID"
 
+# Extract host from external URL for TCP readiness check
+EXT_HOST=$(echo "$NEW_EXTERNAL_URL" | sed 's|postgresql://[^@]*@\([^/:]*\).*|\1|')
+debug "  pg_restore target host: $EXT_HOST"
+
+# Wait for the external port to be reachable before attempting restore.
+# Render marks the DB 'available' before the TCP port is fully open.
+log "  Waiting for external port to be reachable..."
+TCP_TIMEOUT=120
+TCP_ELAPSED=0
+until nc -z -w5 "$EXT_HOST" 5432 2>/dev/null; do
+  if (( TCP_ELAPSED >= TCP_TIMEOUT )); then
+    err "External port $EXT_HOST:5432 not reachable after ${TCP_TIMEOUT}s."
+  fi
+  log "  Port not yet open — retrying in 5s... (${TCP_ELAPSED}s elapsed)"
+  sleep 5
+  (( TCP_ELAPSED += 5 ))
+done
+log "  External port open after ${TCP_ELAPSED}s."
+
 RESTORE_START=$(date +%s)
 pg_restore --no-owner --no-acl --exit-on-error -d "$NEW_EXTERNAL_URL" "$DUMP_FILE"
 RESTORE_END=$(date +%s)
