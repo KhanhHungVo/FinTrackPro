@@ -187,8 +187,6 @@ log "Step 1b — Fetching full details for old database..."
 OLD_DB_INFO=$(render_get "/postgres/${OLD_DB_ID}")
 OLD_DB_REGION=$(echo "$OLD_DB_INFO" | jq -r '.region')
 debug "  region: $OLD_DB_REGION"
-debug "  top-level keys: $(echo "$OLD_DB_INFO" | jq -c 'keys')"
-debug "  connectionInfo: $(echo "$OLD_DB_INFO" | jq -c '.connectionInfo // "null"')"
 
 OLD_IP_RULES=$(echo "$OLD_DB_INFO" | jq '.ipAllowList // []')
 RULE_COUNT=$(echo "$OLD_IP_RULES" | jq 'length')
@@ -199,20 +197,39 @@ else
   warn "  No IP rules on old DB — using fallback: 0.0.0.0/0 Allow all."
 fi
 
+# ── step 1c: fetch connection credentials via dedicated endpoint ──────────────
+
+echo ""
+log "Step 1c — Fetching connection credentials..."
+
+OLD_CONN_INFO=$(render_get "/postgres/${OLD_DB_ID}/connection-info")
+debug "  connection-info keys: $(echo "$OLD_CONN_INFO" | jq -c 'keys? // "none"')"
+
 # ── step 2: build external connection string for pg_dump ──────────────────────
 
 echo ""
 log "Step 2 — Extracting credentials and building external connection string..."
 log "  DB: $OLD_DB_NAME  region: $OLD_DB_REGION"
 
-OLD_DB_USER=$(echo "$OLD_DB_INFO"     | jq -r '.connectionInfo.user     // .user     // empty')
-OLD_DB_PASS=$(echo "$OLD_DB_INFO"     | jq -r '.connectionInfo.password  // .password  // empty')
-OLD_DB_DATABASE=$(echo "$OLD_DB_INFO" | jq -r '.connectionInfo.database  // .databaseName // empty')
+OLD_DB_DATABASE=$(echo "$OLD_DB_INFO" | jq -r '.databaseName // empty')
+OLD_DB_USER=$(echo "$OLD_CONN_INFO"   | jq -r '.username // .user // empty')
+OLD_DB_PASS=$(echo "$OLD_CONN_INFO"   | jq -r '.password // empty')
+
+# fall back to externalConnectionString if individual fields are absent
+if [[ -z "$OLD_DB_USER" || -z "$OLD_DB_PASS" ]]; then
+  EXT_URL=$(echo "$OLD_CONN_INFO" | jq -r '.externalConnectionString // .postgresConnectionString // empty')
+  if [[ -n "$EXT_URL" ]]; then
+    OLD_DB_USER=$(echo "$EXT_URL" | sed 's|postgresql://\([^:]*\):.*|\1|')
+    OLD_DB_PASS=$(echo "$EXT_URL" | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
+    OLD_DB_DATABASE=$(echo "$EXT_URL" | sed 's|.*/||')
+    warn "  Used externalConnectionString to extract credentials."
+  fi
+fi
 
 debug "  credentials extracted: user=$([[ -n "$OLD_DB_USER" ]] && echo "yes" || echo "no")  pass=$([[ -n "$OLD_DB_PASS" ]] && echo "yes" || echo "no")  db=$([[ -n "$OLD_DB_DATABASE" ]] && echo "yes" || echo "no")"
 
 [[ -n "$OLD_DB_USER" && -n "$OLD_DB_PASS" && -n "$OLD_DB_DATABASE" ]] \
-  || err "Could not extract credentials from old DB. connectionInfo keys: $(echo "$OLD_DB_INFO" | jq -c '.connectionInfo | keys? // "none"')"
+  || err "Could not extract credentials. connection-info keys: $(echo "$OLD_CONN_INFO" | jq -c 'keys? // "none"')"
 
 OLD_EXTERNAL_URL="postgresql://${OLD_DB_USER}:${OLD_DB_PASS}@${OLD_DB_ID}.${OLD_DB_REGION}-postgres.render.com/${OLD_DB_DATABASE}"
 log "  External connection string built."
@@ -294,29 +311,40 @@ while true; do
   STATUS=$(echo "$DB_INFO" | jq -r '.status // .postgres.status')
 
   if [[ "$STATUS" == "available" ]]; then
-    debug "  connectionInfo keys: $(echo "$DB_INFO" | jq -c '.connectionInfo | keys? // []')"
+    # Fetch credentials via dedicated endpoint (GET /postgres/{id} does not expose password)
+    NEW_CONN_INFO=$(render_get "/postgres/${NEW_DB_ID}/connection-info")
+    debug "  connection-info keys: $(echo "$NEW_CONN_INFO" | jq -c 'keys? // "none"')"
 
-    DB_USER=$(echo "$DB_INFO"     | jq -r '.connectionInfo.user     // .user     // empty')
-    DB_PASS=$(echo "$DB_INFO"     | jq -r '.connectionInfo.password  // .password  // empty')
-    DB_DATABASE=$(echo "$DB_INFO" | jq -r '.connectionInfo.database  // .databaseName // empty')
+    DB_DATABASE=$(echo "$DB_INFO"      | jq -r '.databaseName // empty')
+    DB_USER=$(echo "$NEW_CONN_INFO"    | jq -r '.username // .user // empty')
+    DB_PASS=$(echo "$NEW_CONN_INFO"    | jq -r '.password // empty')
+
+    # fall back to externalConnectionString if individual fields are absent
+    if [[ -z "$DB_USER" || -z "$DB_PASS" ]]; then
+      EXT_URL=$(echo "$NEW_CONN_INFO" | jq -r '.externalConnectionString // .postgresConnectionString // empty')
+      if [[ -n "$EXT_URL" ]]; then
+        DB_USER=$(echo "$EXT_URL" | sed 's|postgresql://\([^:]*\):.*|\1|')
+        DB_PASS=$(echo "$EXT_URL" | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
+        DB_DATABASE=$(echo "$EXT_URL" | sed 's|.*/||')
+        warn "  Used externalConnectionString to extract new DB credentials."
+      fi
+    fi
 
     debug "  credentials extracted: user=$([[ -n "$DB_USER" ]] && echo "yes" || echo "no")  pass=$([[ -n "$DB_PASS" ]] && echo "yes" || echo "no")  db=$([[ -n "$DB_DATABASE" ]] && echo "yes" || echo "no")"
 
     [[ -n "$DB_USER" && -n "$DB_PASS" && -n "$DB_DATABASE" ]] \
-      || err "Could not extract new DB credentials. connectionInfo keys: $(echo "$DB_INFO" | jq -c '.connectionInfo | keys? // "none"')"
+      || err "Could not extract new DB credentials. connection-info keys: $(echo "$NEW_CONN_INFO" | jq -c 'keys? // "none"')"
 
     # postgresql:// URI for pg_restore (uses external hostname)
     NEW_EXTERNAL_URL="postgresql://${DB_USER}:${DB_PASS}@${NEW_DB_ID}.${DB_REGION}-postgres.render.com/${DB_DATABASE}"
 
     # .NET Npgsql connection string for ConnectionStrings__DefaultConnection
-    NEW_INTERNAL_CONN_STR=$(echo "$DB_INFO" | jq -r '.connectionInfo.internalConnectionString // empty')
-
-    if [[ -z "$NEW_INTERNAL_CONN_STR" || "$NEW_INTERNAL_CONN_STR" == "null" ]]; then
+    INT_URL=$(echo "$NEW_CONN_INFO" | jq -r '.internalConnectionString // empty')
+    if [[ -n "$INT_URL" && "$INT_URL" != postgresql://* ]]; then
+      NEW_INTERNAL_CONN_STR="$INT_URL"
+    else
       NEW_INTERNAL_CONN_STR="Host=${NEW_DB_ID};Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
-      warn "  internalConnectionString not in API response — constructed Npgsql string from parts."
-    elif [[ "$NEW_INTERNAL_CONN_STR" == postgresql://* ]]; then
-      warn "  API returned postgresql:// URI for internal — converting to Npgsql format."
-      NEW_INTERNAL_CONN_STR="Host=${NEW_DB_ID};Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
+      warn "  internalConnectionString absent or is a URI — constructed Npgsql string from parts."
     fi
 
     log "  New DB is available. name: $NEW_DB_NAME  region: $DB_REGION  id: $NEW_DB_ID  (${elapsed}s elapsed)"
