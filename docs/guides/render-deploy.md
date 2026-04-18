@@ -217,10 +217,32 @@ The external PostgreSQL URL is available via:
 
 | Constraint | Impact |
 |---|---|
-| DB expires after 90 days unless upgraded | Render emails a warning; upgrade or recreate before expiry |
+| DB expires after ~30 days unless upgraded | Automated rotation handles this — see below |
 | 256 MB RAM, 1 GB storage | Suitable for dev / low-traffic prod |
 | No high availability | Acceptable for free tier |
 | Internal URL only reachable within Render | Use external URL for local `dotnet ef` migrations |
+
+---
+
+## Automated DB Rotation
+
+The free PostgreSQL tier expires every ~30 days. A GitHub Actions workflow rotates it
+automatically before expiry. See **[docs/guides/db-rotation.md](db-rotation.md)** for
+the full guide including one-time setup, how the script works, and troubleshooting.
+
+**Quick summary:**
+- Workflow: `.github/workflows/db-rotation.yml` — runs on the 1st and 26th of each month
+- Script: `scripts/rotate-render-db.sh` — uses the Render API to create, migrate, and cut over
+- Old DB is kept after rotation; delete it manually after verifying data
+
+**One-time setup required** (GitHub → Settings → Secrets and Variables):
+
+| Type | Name | Value |
+|---|---|---|
+| Secret | `RENDER_API_KEY` | Same key used for Terraform Cloud |
+| Secret | `RENDER_OWNER_ID` | Render owner/team ID |
+| Variable | `RENDER_SERVICE_ID` | `srv-...` ID from the `fintrackpro-api` Render dashboard URL |
+| Variable | `API_HEALTH_URL` | `https://fintrackpro-api.onrender.com/health` |
 
 ---
 
