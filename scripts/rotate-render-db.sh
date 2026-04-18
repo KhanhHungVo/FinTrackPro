@@ -46,9 +46,9 @@ SCRIPT_START=$(date -u '+%H:%M:%S')
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
-log()    { echo "[$(date -u '+%H:%M:%S')] $*"; }
-debug()  { echo "[$(date -u '+%H:%M:%S')] [DEBUG] $*"; }
-warn()   { echo "[$(date -u '+%H:%M:%S')] [WARN]  $*"; }
+log()    { echo "[$(date -u '+%H:%M:%S')] $*" >&2; }
+debug()  { echo "[$(date -u '+%H:%M:%S')] [DEBUG] $*" >&2; }
+warn()   { echo "[$(date -u '+%H:%M:%S')] [WARN]  $*" >&2; }
 err()    { echo "[$(date -u '+%H:%M:%S')] [ERROR] $*" >&2; exit 1; }
 
 check_deps() {
@@ -163,7 +163,6 @@ echo ""
 log "Step 1 — Discovering current database..."
 
 DB_LIST=$(render_get "/postgres?ownerId=${RENDER_OWNER_ID}&limit=20")
-debug "  Raw DB list response (first 300 chars): ${DB_LIST:0:300}"
 DB_COUNT=$(echo "$DB_LIST" | jq 'length')
 debug "  Total postgres instances returned: $DB_COUNT"
 
