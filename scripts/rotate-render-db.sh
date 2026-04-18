@@ -314,27 +314,20 @@ while true; do
 
     [[ -n "$NEW_EXTERNAL_URL" ]] \
       || err "Could not extract externalConnectionString for new DB. connection-info keys: $(echo "$NEW_CONN_INFO" | jq -c 'keys? // "none"')"
+    [[ -n "$INT_URL" ]] \
+      || err "Could not extract internalConnectionString for new DB. connection-info keys: $(echo "$NEW_CONN_INFO" | jq -c 'keys? // "none"')"
 
-    # Convert postgresql:// URI → Npgsql key=value format for .NET
-    if [[ -n "$INT_URL" && "$INT_URL" == postgresql://* ]]; then
-      DB_USER=$(echo "$INT_URL"     | sed 's|postgresql://\([^:]*\):.*|\1|')
-      DB_PASS=$(echo "$INT_URL"     | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
-      DB_HOST=$(echo "$INT_URL"     | sed 's|postgresql://[^@]*@\([^/]*\)/.*|\1|')
-      DB_DATABASE=$(echo "$INT_URL" | sed 's|.*/||')
-      NEW_INTERNAL_CONN_STR="Host=${DB_HOST};Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
-      warn "  Converted internalConnectionString URI to Npgsql format."
-    elif [[ -n "$INT_URL" ]]; then
-      NEW_INTERNAL_CONN_STR="$INT_URL"
-    else
-      DB_USER=$(echo "$NEW_EXTERNAL_URL" | sed 's|postgresql://\([^:]*\):.*|\1|')
-      DB_PASS=$(echo "$NEW_EXTERNAL_URL" | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
-      DB_DATABASE=$(echo "$NEW_EXTERNAL_URL" | sed 's|.*/||')
-      DB_DATABASE=$(echo "$DB_INFO" | jq -r '.databaseName // empty')
-      NEW_INTERNAL_CONN_STR="Host=${NEW_DB_ID};Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
-      warn "  internalConnectionString absent — constructed Npgsql string from externalConnectionString."
-    fi
+    # Render always returns internalConnectionString as a postgresql:// URI.
+    # Convert it to Npgsql key=value format required by .NET / Npgsql.
+    # Example URI: postgresql://user:pass@dpg-xxx.oregon-postgres.render.com/dbname
+    DB_USER=$(echo "$INT_URL"     | sed 's|postgresql://\([^:]*\):.*|\1|')
+    DB_PASS=$(echo "$INT_URL"     | sed 's|postgresql://[^:]*:\([^@]*\)@.*|\1|')
+    DB_HOST=$(echo "$INT_URL"     | sed 's|postgresql://[^@]*@\([^/:]*\).*|\1|')
+    DB_DATABASE=$(echo "$INT_URL" | sed 's|.*/||')
+    NEW_INTERNAL_CONN_STR="Host=${DB_HOST};Port=5432;Database=${DB_DATABASE};Username=${DB_USER};Password=${DB_PASS};SSL Mode=Require;Trust Server Certificate=true"
 
-    debug "  externalConnectionString: obtained  internalConnStr: set"
+    debug "  externalConnectionString: obtained"
+    debug "  internalConnStr (Npgsql): Host=${DB_HOST};Port=5432;Database=${DB_DATABASE};Username=${DB_USER};Password=***"
 
     log "  New DB is available. name: $NEW_DB_NAME  region: $DB_REGION  id: $NEW_DB_ID  (${elapsed}s elapsed)"
     break
@@ -355,13 +348,12 @@ echo ""
 log "Step 7b — Applying IP allow-list ($RULE_COUNT rule(s)) to new database..."
 
 IP_PATCH_BODY=$(jq -n --argjson rules "$OLD_IP_RULES" '{ipAllowList: $rules}')
-IP_PATCH_RESP=$(curl -s -w "\n%{http_code}" -X PATCH \
+IP_PATCH_CODE=$(curl -s -o "$_RENDER_BODY_FILE" -w "%{http_code}" -X PATCH \
   -H "Authorization: Bearer $RENDER_API_KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d "$IP_PATCH_BODY" \
   "${RENDER_API}/postgres/${NEW_DB_ID}")
-IP_PATCH_CODE=$(echo "$IP_PATCH_RESP" | tail -n1)
 debug "  PATCH /postgres/${NEW_DB_ID} → HTTP $IP_PATCH_CODE"
 
 if [[ "$IP_PATCH_CODE" -ge 200 && "$IP_PATCH_CODE" -lt 300 ]]; then
