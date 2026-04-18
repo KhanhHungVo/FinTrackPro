@@ -234,6 +234,7 @@ CREATE_BODY=$(jq -n \
   '{name: $name, ownerId: $owner, plan: $plan, region: $region, version: $version}')
 
 NEW_DB_RESP=$(render_post "/postgres" "$CREATE_BODY")
+log "  DEBUG create response: $(echo "$NEW_DB_RESP" | jq -c '.')"
 NEW_DB_ID=$(echo "$NEW_DB_RESP" | jq -r '.id // .postgres.id')
 
 [[ -n "$NEW_DB_ID" && "$NEW_DB_ID" != "null" ]] \
