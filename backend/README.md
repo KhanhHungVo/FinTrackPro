@@ -82,11 +82,14 @@ dotnet user-secrets init --project src/FinTrackPro.API
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string>" --project src/FinTrackPro.API
 dotnet user-secrets set "IdentityProvider:AdminClientSecret" "<your-secret>" --project src/FinTrackPro.API
 dotnet user-secrets set "CoinGecko:ApiKey" "<your-api-key>" --project src/FinTrackPro.API
+dotnet user-secrets set "Telegram:BotToken" "<your-bot-token>" --project src/FinTrackPro.API
 
 # List / remove
 dotnet user-secrets list --project src/FinTrackPro.API
 dotnet user-secrets remove "ConnectionStrings:DefaultConnection" --project src/FinTrackPro.API
 ```
+
+`Telegram:BotToken` is optional. If it is not set, Telegram notifications are skipped and the API still starts.
 
 ## Developer Endpoints
 
