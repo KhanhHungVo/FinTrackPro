@@ -1,6 +1,6 @@
 # FinTrackPro
 
-Personal finance tracking application with budgeting, expense management, and Telegram notifications. Fully responsive across mobile, tablet, and desktop.
+Personal finance and trading tracker for managing budgets, expenses, portfolio watchlists, market signals, and notification workflows. It is built as a Clean Architecture monorepo with a .NET API, React SPA, PostgreSQL, Keycloak/Auth0 authentication, and Hangfire background jobs.
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)
@@ -8,135 +8,112 @@ Personal finance tracking application with budgeting, expense management, and Te
 ![Keycloak](https://img.shields.io/badge/Keycloak-24-4D9BFF?logo=keycloak)
 ![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram)
 
-## Architecture
+## Tech Stack
 
-Clean Architecture monorepo: React SPA → .NET 10 REST API → PostgreSQL (local + Render production; SQL Server optional), with Keycloak or Auth0 for authentication and Hangfire for background jobs. See [docs/architecture.md](docs/architecture.md) for the full diagram and layer descriptions.
+| Area | Stack |
+|---|---|
+| Backend | .NET 10, ASP.NET Core, MediatR, EF Core |
+| Frontend | React 19, Vite, TypeScript |
+| Database | PostgreSQL for local and production; SQL Server optional |
+| Authentication | Keycloak for local development; Auth0 supported |
+| Background jobs | Hangfire |
+| Deployment | Docker, Render, Terraform |
 
 ## Prerequisites
 
 | Tool | Version | Notes |
 |---|---|---|
-| Docker Desktop | Latest | Required for local PostgreSQL + Keycloak containers |
-| .NET SDK | 10.0 | |
-| Node.js | 22+ | |
+| Docker Desktop | Latest | Runs PostgreSQL and Keycloak for local development |
+| .NET SDK | 10.0 | Runs and debugs the API locally |
+| EF Core CLI | Latest | Required for `dotnet ef database update`; install with `dotnet tool install --global dotnet-ef` |
+| Node.js | 22+ | Runs the Vite frontend locally |
 
 ## Quick Start
 
-**Full Docker (no local .NET toolchain required):**
+This is the recommended local development setup. Docker runs PostgreSQL and Keycloak; the API and frontend run locally for debugging and hot reload.
 
-```bash
-git clone <repo-url> && cd FinTrackPro
-docker compose up --build
-
-cd frontend/fintrackpro-ui
-cp .env.example .env && npm install && npm run dev
-```
-
-**Hybrid (recommended — hot reload + debugger):**
+Start local dependencies:
 
 ```bash
 docker compose up -d postgres keycloak
+```
 
+Run the API:
+
+```bash
 cd backend
 dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
 dotnet run --project src/FinTrackPro.API
-
-cd frontend/fintrackpro-ui && npm install && npm run dev
 ```
 
-Open `http://localhost:5173`. Keycloak is provisioned automatically — log in with `admin@fintrackpro.dev` / `Admin1234!`.
+In a second terminal, run the frontend:
 
-See [docs/dev-setup.md](docs/dev-setup.md) for all modes including local PostgreSQL and Render deployment.
-
-## Repository Structure
-
-```
-FinTrackPro/
-├── backend/
-│   ├── src/
-│   │   ├── FinTrackPro.API/            # ASP.NET Core — controllers, middleware, DI
-│   │   ├── FinTrackPro.Application/    # CQRS via MediatR, DTOs, validators
-│   │   ├── FinTrackPro.Domain/         # Entities, value objects, domain events
-│   │   ├── FinTrackPro.Infrastructure/ # EF Core, repositories, external clients
-│   │   └── FinTrackPro.BackgroundJobs/ # Hangfire job definitions
-│   ├── tests/
-│   │   ├── FinTrackPro.Domain.UnitTests/
-│   │   ├── FinTrackPro.Application.UnitTests/
-│   │   ├── FinTrackPro.Api.IntegrationTests/
-│   │   └── Tests.Common/               # Shared infrastructure (Testcontainers, fakes, builders)
-│   ├── Dockerfile                      # Runtime image (aspnet — lean, no SDK tools)
-│   └── Dockerfile.migrator             # Init container — runs EF migrations then exits
-├── frontend/
-│   └── fintrackpro-ui/                 # React 19 + Vite SPA (Feature-Sliced Design)
-├── infra/
-│   ├── docker/
-│   │   └── keycloak-realm.json         # Auto-imported on first `docker compose up`
-│   └── terraform/                      # Terraform IaC — Render API + frontend (TF Cloud state)
-├── scripts/
-│   ├── e2e-local.sh                    # Mint E2E token + run Playwright (Git Bash / WSL)
-│   └── api-e2e-local.sh               # Newman API E2E suite (Git Bash / WSL)
-├── docs/                               # Reference documentation
-├── .github/workflows/ci.yml            # CI pipeline
-└── docker-compose.yml
+```bash
+cd frontend/fintrackpro-ui
+cp .env.example .env
+npm install
+npm run dev
 ```
 
-## Deployment — Render.com
+The copied `.env` is enough for the default Keycloak setup. No extra secrets are required to start locally.
 
-Both services (API + frontend) are deployed to Render via **Terraform** (`infra/terraform/`). The `render.yaml` Blueprint remains as a fallback for manual one-click deploys.
+Useful URLs:
 
-See [docs/render-terraform-deploy.md](docs/render-terraform-deploy.md) for the full deploy guide (Terraform + render.yaml fallback + migration strategies).
+| Service | URL |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| API | `http://localhost:5018` |
+| Keycloak | `http://localhost:8080` |
 
-> **Migrations** must be applied from your local machine before any schema-changing deploy — the production Docker image has no .NET SDK.
+Keycloak is provisioned automatically for local development. Use the seeded development-only login `admin@fintrackpro.dev` / `Admin1234!`.
+
+For full Docker, Auth0, optional integrations, Playwright, Newman, local PostgreSQL, and deployment-oriented workflows, see [docs/guides/dev-setup.md](docs/guides/dev-setup.md). For Keycloak/Auth0 setup details, see [docs/guides/auth-setup.md](docs/guides/auth-setup.md). Never commit secrets, tokens, credentials, or personally identifiable information.
+
+## Development Commands
+
+Backend:
+
+```bash
+cd backend
+dotnet restore
+dotnet build
+dotnet test --filter "Category!=Integration"
+dotnet run --project src/FinTrackPro.API
+```
+
+Frontend:
+
+```bash
+cd frontend/fintrackpro-ui
+npm install
+npm run dev
+npm run build
+npm run lint
+npm run test
+```
+
+Integration and E2E test setup is documented in [docs/guides/dev-setup.md](docs/guides/dev-setup.md) and [backend/tests/README.md](backend/tests/README.md).
+
+## Architecture
+
+FinTrackPro uses Clean Architecture with separate API, application, domain, infrastructure, background job, and frontend layers. The main request flow is:
+
+```text
+React SPA -> .NET REST API -> Application layer -> Domain model -> EF Core/PostgreSQL
+```
+
+See [docs/architecture/overview.md](docs/architecture/overview.md) for the full architecture guide.
+
+## Deployment
+
+Deployments are documented in [docs/guides/render-deploy.md](docs/guides/render-deploy.md). The current production path uses Render with Terraform, with `render.yaml` kept as a fallback.
 
 ## Documentation
 
-| Document | Description |
+| Category | Documents |
 |---|---|
-| [docs/dev-setup.md](docs/dev-setup.md) | End-to-end dev setup — Docker, hybrid, local PostgreSQL, Render |
-| [docs/render-terraform-deploy.md](docs/render-terraform-deploy.md) | Render deployment — Terraform (primary) + render.yaml (fallback) + migration strategies |
-| [docs/auth-setup.md](docs/auth-setup.md) | IAM provider setup — Keycloak and Auth0, switching providers |
-| [docs/architecture.md](docs/architecture.md) | System architecture, layers, data flow, infrastructure |
-| [docs/api-spec.md](docs/api-spec.md) | REST API endpoints and request/response schemas |
-| [docs/database.md](docs/database.md) | Database schema, tables, relationships, migration commands |
-| [docs/roadmap.md](docs/roadmap.md) | Feature phases and release milestones |
-| [backend/tests/README.md](backend/tests/README.md) | Backend test projects, integration test setup, CI filter strategy |
-| [docs/postman/api-e2e-test-cases.md](docs/postman/api-e2e-test-cases.md) | Newman API E2E test inventory — all 31 requests and 44 assertions |
-| [docs/postman/api-e2e-plan.md](docs/postman/api-e2e-plan.md) | Newman API E2E suite — collection structure, CI job, GitHub secrets |
-| [docs/security-hardening.md](docs/security-hardening.md) | Security hardening guide — rate limiting, headers, HTTPS, input validation, JWT storage, XSS, quotas |
-| [docs/auth0-config-as-code-plan.md](docs/auth0-config-as-code-plan.md) | Plan: Auth0 config-as-code via `auth0 deploy` CLI (not yet implemented) |
-| [backend/README.md](backend/README.md) | Backend developer reference |
-| [frontend/fintrackpro-ui/README.md](frontend/fintrackpro-ui/README.md) | Frontend developer reference |
-
-## Manual Setup
-
-**Telegram Bot** *(optional — notifications are silently skipped without it)*
-
-Create a bot via [@BotFather](https://t.me/BotFather), then set the token — do **not** commit it:
-```bash
-dotnet user-secrets set "Telegram:BotToken" "your-token" --project backend/src/FinTrackPro.API
-# or: export Telegram__BotToken="your-token"
-```
-
-**Keycloak** — zero-touch for dev. The `fintrackpro` realm auto-imports from `infra/docker/keycloak-realm.json` on first `docker compose up`. See [docs/auth-setup.md](docs/auth-setup.md) for custom config or production rotation.
-
-**Auth0** — requires one-time dashboard setup (API, SPA app, M2M app, roles, post-login Action). See [docs/auth-setup.md](docs/auth-setup.md#auth0-cloud-iam). Switch with `IdentityProvider:Provider = "auth0"` and `VITE_AUTH_PROVIDER=auth0`.
-
-**EF Core migrations** — Full Docker runs them automatically via the `migrator` init container. For all other modes, run manually:
-```bash
-cd backend
-dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
-```
-See [docs/database.md](docs/database.md) for adding new migrations.
-
-**Playwright E2E tests** — requires Docker (Keycloak + PostgreSQL for local dev), the API, and the frontend dev server running. Then:
-```bash
-bash scripts/e2e-local.sh      # Git Bash / WSL
-```
-See [docs/dev-setup.md — Mode E](docs/dev-setup.md#mode-e--running-playwright-e2e-tests-locally) for full steps and troubleshooting.
-
-**Newman API E2E tests** — hits a real running API with a real Keycloak-issued JWT. Requires Docker (`postgres` + `keycloak`) and the API on :5018:
-```bash
-npm install -g newman          # one-time
-bash scripts/api-e2e-local.sh
-```
-See [docs/postman/api-e2e-plan.md](docs/postman/api-e2e-plan.md) for collection structure, CI job, and required GitHub secrets.
+| Development | [Dev setup](docs/guides/dev-setup.md), [Auth setup](docs/guides/auth-setup.md), [Database rotation](docs/guides/db-rotation.md) |
+| Architecture | [Overview](docs/architecture/overview.md), [API spec](docs/architecture/api-spec.md), [Database](docs/architecture/database.md), [Auth](docs/architecture/auth.md), [Background jobs](docs/architecture/background-jobs.md), [UI flows](docs/architecture/ui-flows.md), [Configuration](docs/architecture/configuration.md) |
+| Deployment | [Render deploy](docs/guides/render-deploy.md) |
+| Testing | [Backend tests](backend/tests/README.md), [Newman API E2E plan](docs/postman/api-e2e-plan.md), [Newman API E2E test cases](docs/postman/api-e2e-test-cases.md) |
+| Product | [Features](docs/features.md), [Roadmap](docs/roadmap.md) |
