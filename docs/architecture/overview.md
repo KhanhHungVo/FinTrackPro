@@ -191,4 +191,5 @@ The `render.yaml` Blueprint at the repo root is retained as a **fallback** for m
 - [api-spec.md](api-spec.md) — REST endpoints and schemas
 - [database.md](database.md) — schema, tables, relationships
 - [background-jobs.md](background-jobs.md) — Hangfire job details and sequence diagrams
+- [configuration.md](configuration.md) — complete reference for every `appsettings.json` key
 - [ui-flows.md](ui-flows.md) — frontend user flows
