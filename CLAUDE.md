@@ -138,6 +138,15 @@ Roles (`User`, `Admin`) are stored only in the IAM provider — never in the dat
 | `VITE_BANK_ACCOUNT_NUMBER` | `frontend/fintrackpro-ui/.env` — account number for bank transfer |
 | `VITE_BANK_ACCOUNT_NAME` | `frontend/fintrackpro-ui/.env` — account holder name |
 | `VITE_BANK_TRANSFER_AMOUNT` | `frontend/fintrackpro-ui/.env` — monthly Pro price in VND (default `99000`) |
+| `VITE_FREE_TRANSACTIONS_LIMIT` | `frontend/fintrackpro-ui/.env` — Free plan transaction cap (default `50`); shown on landing page pricing section |
+| `VITE_FREE_HISTORY_DAYS` | `frontend/fintrackpro-ui/.env` — Free plan history window in days (default `60`) |
+| `VITE_FREE_BUDGETS_LIMIT` | `frontend/fintrackpro-ui/.env` — Free plan active-budget cap (default `3`) |
+| `VITE_FREE_TRADES_LIMIT` | `frontend/fintrackpro-ui/.env` — Free plan stored-trade cap (default `20`) |
+| `VITE_FREE_WATCHLIST_LIMIT` | `frontend/fintrackpro-ui/.env` — Free plan watchlist symbol cap (default `1`) |
+| `VITE_PRO_TRANSACTIONS_LIMIT` | `frontend/fintrackpro-ui/.env` — Pro plan transaction cap (default `500`) |
+| `VITE_PRO_BUDGETS_LIMIT` | `frontend/fintrackpro-ui/.env` — Pro plan active-budget cap (default `20`) |
+| `VITE_PRO_TRADES_LIMIT` | `frontend/fintrackpro-ui/.env` — Pro plan stored-trade cap (default `200`) |
+| `VITE_PRO_WATCHLIST_LIMIT` | `frontend/fintrackpro-ui/.env` — Pro plan watchlist symbol cap (default `20`) |
 
 Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
 
@@ -182,10 +191,12 @@ dotnet user-secrets set "Stripe:WebhookSecret" "<whsec_...>" --project backend/s
 - `docs/decisions/preventing-duplicate-calls-on-fast-clicks.md` — useGuardedMutation hook design rationale
 - `docs/decisions/transaction-category-system.md` — structured TransactionCategory entity (system-seeded defaults + user-custom, three-phase migration strategy)
 - `docs/decisions/open-positions-trade-status.md` — Open/Closed status model for trades; nullable exitPrice, ClosePositionCommand, realized vs. unrealized P&L split
+- `docs/decisions/monetisation-subscription-design.md` — Freemium subscription system with Stripe (backend + frontend)
+- `docs/decisions/landing-page-fsd-integration.md` — public landing page at `/`; check-sso auth init, `login()` adapter method, `RequireAuth` guard, pricing limit env vars
+- `docs/decisions/nav-avatar-dropdown-tabbed-settings.md` — avatar dropdown nav links; tabbed Settings with URL-persisted active tab; About page
 - `docs/planned/dashboard-command-center.md` — Dashboard redesign: personalized command center (expense allocation, budget health, trading intelligence, recent activity, contextual signals); market data moved to `/market`
 
 ### Planned (not yet implemented)
-- `docs/planned/monetisation-subscription-design.md` — Freemium subscription system with Stripe (fully implemented: backend + frontend)
 - `docs/planned/identity-linking-refactor.md` — multi-provider identity linking via UserContextMiddleware
 - `docs/planned/auth0-config-as-code.md` — Auth0 CLI deploy automation
 - `docs/planned/frontend-error-handling.md` — consistent error handling and form validation

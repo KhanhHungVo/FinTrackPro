@@ -59,8 +59,19 @@ Create a `.env` file in this directory (copy from `.env.example`):
 | `VITE_BANK_ACCOUNT_NUMBER` | Account number (text fallback below QR) | `your_account_number` |
 | `VITE_BANK_ACCOUNT_NAME` | Account holder name | `Your Full Name` |
 | `VITE_BANK_TRANSFER_AMOUNT` | Monthly Pro price in VND | `99000` |
+| `VITE_FREE_TRANSACTIONS_LIMIT` | Free plan transaction cap (default `50`) | `50` |
+| `VITE_FREE_HISTORY_DAYS` | Free plan history window in days (default `60`) | `60` |
+| `VITE_FREE_BUDGETS_LIMIT` | Free plan active-budget cap (default `3`) | `3` |
+| `VITE_FREE_TRADES_LIMIT` | Free plan stored-trade cap (default `20`) | `20` |
+| `VITE_FREE_WATCHLIST_LIMIT` | Free plan watchlist symbol cap (default `1`) | `1` |
+| `VITE_PRO_TRANSACTIONS_LIMIT` | Pro plan transaction cap (default `500`) | `500` |
+| `VITE_PRO_BUDGETS_LIMIT` | Pro plan active-budget cap (default `20`) | `20` |
+| `VITE_PRO_TRADES_LIMIT` | Pro plan stored-trade cap (default `200`) | `200` |
+| `VITE_PRO_WATCHLIST_LIMIT` | Pro plan watchlist symbol cap (default `20`) | `20` |
 
 > All variables must be prefixed with `VITE_` to be accessible in the browser bundle.
+>
+> **Pricing limit vars** are optional — all defaults match the values enforced by the backend. They exist so the public landing page pricing section can be updated without a code deploy.
 >
 > **Bank transfer QR image:** replace `src/shared/assets/bank-qr.png` with the QR exported from your Techcombank mobile app. Bank account details are public-safe — the same as printing them on an invoice.
 

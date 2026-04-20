@@ -177,7 +177,7 @@ Strongly-typed options: `SubscriptionPlanOptions` + `PlanLimits` (Application la
 ### POST /api/subscription/checkout — `[Authorize]`
 ```json
 // Request
-{ "successUrl": "https://app.fintrackpro.dev/settings?subscribed=1", "cancelUrl": "https://app.fintrackpro.dev/pricing" }
+{ "successUrl": "https://app.fintrackpro.dev/settings?tab=billing&subscribed=1", "cancelUrl": "https://app.fintrackpro.dev/pricing" }
 // Response
 { "sessionUrl": "https://checkout.stripe.com/pay/cs_test_..." }
 ```
@@ -185,7 +185,7 @@ Strongly-typed options: `SubscriptionPlanOptions` + `PlanLimits` (Application la
 ### POST /api/subscription/portal — `[Authorize]`
 ```json
 // Request
-{ "returnUrl": "https://app.fintrackpro.dev/settings" }
+{ "returnUrl": "https://app.fintrackpro.dev/settings?tab=billing" }
 // Response
 { "portalUrl": "https://billing.stripe.com/session/..." }
 ```
@@ -331,12 +331,12 @@ Mounted globally in `App.tsx`. The `feature` field from the 402 response drives 
 ┌─────────────────────────┐   ┌────────────────────────────────┐
 │          Free           │   │  ★ Popular   Pro      $9/mo    │  ← highlighted border
 │  ─────────────────────  │   │  ─────────────────────────     │
-│  50 transactions/mo     │   │  Unlimited transactions        │
-│  90-day history         │   │  Full history                  │
-│  3 active budgets       │   │  Unlimited budgets             │
-│  20 trades stored       │   │  Unlimited trades              │
-│  3 watchlist symbols    │   │  Unlimited watchlist           │
-│  7-day signal history   │   │  Full signal history           │
+│  50 transactions/mo     │   │  500 transactions/mo           │
+│  60-day history         │   │  1-year history                │
+│  3 active budgets       │   │  20 active budgets             │
+│  20 trades stored       │   │  200 trades stored             │
+│  1 watchlist symbol     │   │  20 watchlist symbols          │
+│  7-day signal history   │   │  90-day signal history         │
 │  ✗  Telegram alerts     │   │  ✓  Telegram alerts            │
 │  ✗  Ad-free dashboard   │   │  ✓  Ad-free dashboard          │
 │                         │   │                                │

@@ -1,6 +1,6 @@
 # FinTrackPro — UI Flows
 
-> Last updated: 2026-04-17
+> Last updated: 2026-04-20
 > Format: screen-by-screen reference for UI design and Figma workflow generation.
 
 ---
@@ -8,18 +8,59 @@
 ## Navigation Flow
 
 ```
-[Login (IAM provider)] ──────────────────────────► [Dashboard /]
-                                                          │
-                        [Persistent Navbar] ──────────────┤
-                          ├── /dashboard                  │
-                          ├── /transactions                │
-                          ├── /budgets                     │
-                          ├── /trades                      │
-                          ├── /market                      │
-                          └── /settings                    │
-                                                           ▼
+[Unauthenticated] ─────────────────────────────► [Landing Page /]
+                                                        │
+                  ┌─────────────────────────────────────┘
+                  │  CTA: "Log in" / "Start for Free"
+                  ▼
+[Login / Sign-up (IAM provider)] ──────────────► [Dashboard /dashboard]
+                                                        │
+                        [Persistent Navbar] ────────────┤
+                          ├── /dashboard                 │
+                          ├── /transactions               │
+                          ├── /budgets                    │
+                          ├── /trades                     │
+                          ├── /market                     │
+                          └── /settings                   │
+                                                          ▼
                           Dashboard → Transactions → Budgets → Trades → Market → Settings
+
+          [Avatar Dropdown] ── Settings → /settings
+                            ── Plan & Billing → /pricing
+                            ── About → /about
+                            ── Sign out
 ```
+
+Unauthenticated users who navigate directly to any protected route (e.g. `/dashboard`) are redirected to `/` by the `RequireAuth` guard. Authenticated users who visit `/` are immediately redirected to `/dashboard`.
+
+---
+
+## Screen: Landing Page
+
+**Route:** `/`
+**Auth:** public — no login redirect. Unauthenticated users see the full page; authenticated users are redirected to `/dashboard`.
+
+### Layout
+Full-viewport dark-themed marketing page composed of stacked sections:
+
+| Section | Purpose |
+|---------|---------|
+| `LandingNav` | Logo + "Log in" + "Start for Free" buttons |
+| `HeroSection` | Headline, sub-copy, primary CTA |
+| `PainPointsSection` | Problem framing cards |
+| `DashboardMockupSection` | Product UI preview |
+| `OutcomeSpotlightsSection` | Outcome highlights |
+| `FeaturesSection` | Feature grid |
+| `PricingSection` | Static Free / Pro pricing cards (limits read from `env.*`) |
+| `HowItWorksSection` | 3-step onboarding overview |
+| `LandingFooter` | Links and copyright |
+
+### User Actions
+| Action | Result |
+|---|---|
+| Click "Log in" | `authAdapter.login({ screen: 'login' })` → IAM provider login screen |
+| Click "Start for Free" / "Upgrade to Pro" | `authAdapter.login({ screen: 'signup' })` → IAM provider registration screen |
+| Click "View full pricing →" | Navigate to `/pricing` |
 
 ---
 
@@ -30,7 +71,15 @@
 ### Layout
 - Left: Logo ("FinTrackPro")
 - Centre: Nav links — Dashboard, Transactions, Budgets, Trades, Market, Settings
-- Right: User avatar (first initial of name), hover reveals name + email + Logout button
+- Right: User avatar (first initial of name); click opens dropdown
+
+### Avatar dropdown contents
+1. User display name + email + plan badge
+2. **Settings** button → `/settings`
+3. **Plan & Billing** button → `/pricing`
+4. **About** button → `/about`
+5. Divider
+6. **Sign out** button
 
 ### States
 | State | Description |
@@ -38,7 +87,7 @@
 | Active link | Blue background, white text |
 | Inactive link | Gray text, hover darkens |
 | User menu closed | Avatar circle only |
-| User menu open | Dropdown with name, email, plan badge, Logout button |
+| User menu open | Dropdown with name, email, plan badge, nav buttons, Sign out |
 | Locale dropdown closed | Globe icon button |
 | Locale dropdown open | Panel with language, currency, and theme sections |
 
@@ -46,8 +95,11 @@
 | Action | Result |
 |---|---|
 | Click nav link | Navigate to corresponding page |
-| Click avatar | Open user menu |
-| Click Logout | End session, redirect to IAM login |
+| Click avatar | Open user dropdown |
+| Click Settings in dropdown | Navigate to `/settings`; close dropdown |
+| Click Plan & Billing in dropdown | Navigate to `/pricing`; close dropdown |
+| Click About in dropdown | Navigate to `/about`; close dropdown |
+| Click Sign out | End session, redirect to IAM login |
 | Click globe icon | Open locale/currency/theme dropdown |
 | Click Light / Dark in theme section | Switch app theme; persisted across reloads |
 
@@ -138,7 +190,7 @@
 - Empty state: "No recent activity yet"
 
 **Contextual Signals** (`ContextualSignalsWidget`) — hidden when watchlist is empty
-- Wraps `SignalsList` (5 items) with section heading + "Manage watchlist" link to /settings
+- Wraps `SignalsList` (5 items) with section heading + "Manage watchlist" link to `/settings?tab=watchlist`
 - Full signals list available on the Market page
 
 ### States
@@ -159,7 +211,7 @@ None — Dashboard is read-only (all widgets are display-only).
 - `/transactions` via Expense Allocation empty state link
 - `/budgets` via Budget Health links
 - `/trades` via Trading Intelligence "View all" links
-- `/settings` via Contextual Signals "Manage watchlist" link
+- `/settings?tab=watchlist` via Contextual Signals "Manage watchlist" link
 
 ---
 
@@ -252,7 +304,7 @@ None — Market page is read-only.
 - Hidden by default; revealed by the "+ Add" button in the header
 - Type toggle: "Income" (green) / "Expense" (red) — one active at a time
 - Amount field (number, required, > 0)
-- Category field (dropdown selector, required) — groups system and custom categories; shows emoji icon + localized label (EN/VI); includes "Manage my categories" link to /settings
+- Category field (dropdown selector, required) — groups system and custom categories; shows emoji icon + localized label (EN/VI); includes "Manage my categories" link to `/settings?tab=categories`
 - Note field (text, optional)
 - Submit button: "Add" → "Saving..." while pending → clears form and collapses on success
 - Month taken from the current month filter selection
@@ -474,53 +526,62 @@ None — Market page is read-only.
 
 ## Screen: Settings
 
-**Route:** `/settings`
-**Purpose:** Configure Telegram notifications and manage the crypto symbol watchlist.
+**Route:** `/settings` (default tab: `account`)
+**Purpose:** Account management, billing, notification preferences, transaction categories, and watchlist — each in its own tab.
 
 ### Layout
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Settings                                            │
-├─────────────────────────────────────────────────────┤
-│  Notifications                                       │  ← Section heading
-│  ┌──────────────────────────────────────────────┐   │
-│  │  Telegram Notifications                       │   │
-│  │  [info box: how to get Chat ID]               │   │
-│  │  Telegram Chat ID  [________________]         │   │
-│  │  [✓] Enable notifications                     │   │
-│  │  [Save Preferences]                           │   │
-│  │  ✓ Preferences saved.  (on success)           │   │
-│  └──────────────────────────────────────────────┘   │
-├─────────────────────────────────────────────────────┤
-│  Signal Watchlist                                    │  ← Section heading
-│  ┌──────────────────────────────────────────────┐   │
-│  │  [SYMBOL______]  [Add]                        │   │
-│  │  Error message (if invalid symbol)            │   │
-│  │  BTCUSDT                         [Remove]     │   │
-│  │  ETHUSDT                         [Remove]     │   │
-│  └──────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────┘
+├──────────────┬──────────────────────────────────────┤
+│  Account     │                                       │  ← desktop: w-44 sidebar
+│  Plan &      │   [Active tab content]                │
+│  Billing     │                                       │
+│  Notifications│                                      │
+│  Categories  │                                       │
+│  Watchlist   │                                       │
+└──────────────┴──────────────────────────────────────┘
 ```
+
+Mobile: horizontal scrollable tab strip above the content panel (sidebar hidden).
+
+Active tab is stored in the URL query string (`?tab=<slug>`). Invalid slugs fall back to `account`. Deep links work (e.g. `/settings?tab=billing` loads the billing tab directly).
+
+### Tabs
+
+| Slug | Label | Content |
+|------|-------|---------|
+| `account` | Account | Placeholder card — profile editing coming soon |
+| `billing` | Plan & Billing | `SubscriptionSection` |
+| `notifications` | Notifications | `NotificationSettingsForm` |
+| `categories` | Categories | `ManageCategoriesSection` |
+| `watchlist` | Watchlist | `WatchlistManager` |
 
 ### Regions
 
-**My Categories Section**
+**Account tab**
+- Placeholder card: "Profile settings — Profile editing is coming soon."
+
+**Plan & Billing tab (`SubscriptionSection`)**
+- See Subscription UI Flows section below.
+
+**Categories tab (`ManageCategoriesSection`)**
 - Header row: "My Categories" label + description + "+ New category" button (blue, top-right)
 - Category list: each row shows emoji icon, EN name, VI name (gray subtext), type chip (red for Expense, green for Income), Edit and Delete buttons
 - Empty state: 🗂️ illustration + "No custom categories yet" + "Create first category" button
 - Edit button → opens Create/Edit Modal pre-filled with category data
-- Delete button → soft-deletes the category immediately (no confirmation)
+- Delete button → soft-deletes immediately (no confirmation)
 - System categories are never shown or manageable here
 
 **Create/Edit Category Modal**
-- Opened from the My Categories section (create or edit mode)
 - Type chips: "Expense" (red tint) / "Income" (green tint) — disabled in edit mode (type is immutable)
 - Emoji icon picker: scrollable 8-column grid of ~60 curated emojis; selected emoji highlighted with blue ring; live preview badge shows selected icon + current EN name
 - Side-by-side name fields: EN name (required) and VI name (required)
 - Slug preview (read-only monospace, auto-derived from EN name) — shown in create mode only
 - Footer: Cancel + "Create category" / "Save changes" (blue primary)
 
-**Notification Settings Form**
+**Notifications tab (`NotificationSettingsForm`)**
 - Info box: step-by-step instructions to find your Telegram Chat ID
 - Telegram Chat ID input (monospace, required)
 - Enable notifications checkbox
@@ -528,7 +589,7 @@ None — Market page is read-only.
 - Success message: green "✓ Preferences saved." shown after successful save
 - Pre-populated with current saved values on load
 
-**Watchlist Manager**
+**Watchlist tab (`WatchlistManager`)**
 - Symbol input (monospace, auto-uppercase) + Add button
 - Error message if symbol is invalid or already in watchlist
 - List of watched symbols, each with a Remove button
@@ -555,9 +616,48 @@ None — Market page is read-only.
 ### User Actions
 | Action | Result |
 |---|---|
+| Click tab | Switch active tab; URL updates to `?tab=<slug>` |
 | Enter Chat ID + toggle enable + save | Save notification preferences |
 | Enter symbol + click Add | Validate and add symbol to watchlist |
 | Click Remove on a symbol | Remove symbol from watchlist |
+
+---
+
+## Screen: About
+
+**Route:** `/about`
+**Purpose:** App identity, version, links, and author info.
+
+### Layout
+
+```
+← Back
+
+┌────────────────────────────────────────┐
+│  About FinTrackPro             (h1)    │
+│  Your personal finance & trading…      │
+│                                        │
+│  Description paragraph                 │
+│  ──────────────────────────            │
+│  Version v1.0.0                        │
+│  View pricing plans →                  │
+│  Buy me a coffee ☕                    │
+└────────────────────────────────────────┘
+
+┌────────────────────────────────────────┐
+│  Built by                 (label)      │
+│  Khanh Hung Vo                         │
+│  [GitHub icon]  [Email icon]           │
+└────────────────────────────────────────┘
+```
+
+### User Actions
+| Action | Result |
+|---|---|
+| Click "← Back" | `navigate(-1)` |
+| Click "View pricing plans →" | Navigate to `/pricing` |
+| Click "Buy me a coffee ☕" | Open donation modal |
+| Click GitHub / Email icons | Open external link (placeholders until filled) |
 
 ---
 
@@ -587,7 +687,7 @@ User action hits plan limit
   → User clicks "Upgrade to Pro"
   → POST /api/subscription/checkout → { sessionUrl }
   → window.location.href = sessionUrl  (Stripe Checkout)
-  → Stripe redirects back to /settings?subscribed=1
+  → Stripe redirects back to /settings?tab=billing&subscribed=1
   → SubscriptionSection detects query param → toast "You're now on Pro!"
 ```
 
@@ -596,16 +696,16 @@ User action hits plan limit
 - Two cards: Free (highlighted when current plan) and Pro (highlighted when current plan)
 - Free card has a disabled "Current plan" button
 - Pro card: "Upgrade to Pro" button for Free users; "Manage subscription" (→ Stripe portal) for Pro users
-- Accessed via `FreePlanAdBanner`, `PlanBadge` click, or direct URL
+- Accessed via `FreePlanAdBanner`, `PlanBadge` click, avatar dropdown "Plan & Billing", or direct URL
 
 ### Manage Subscription Flow (Pro users)
 
 ```
-Settings → Subscription section → "Manage subscription"
+Settings (billing tab) → "Manage subscription"
   → POST /api/subscription/portal → { portalUrl }
   → window.location.href = portalUrl  (Stripe Customer Portal)
   → User manages billing, cancels, or updates payment method
-  → Stripe redirects back to /settings
+  → Stripe redirects back to /settings?tab=billing
 ```
 
 ### Telegram Notifications Paywall (Free users)

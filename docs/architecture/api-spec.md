@@ -679,7 +679,7 @@ Creates a payment gateway Customer Portal session for self-serve management. Req
 
 **Body:**
 ```json
-{ "returnUrl": "https://app.fintrackpro.dev/settings" }
+{ "returnUrl": "https://app.fintrackpro.dev/settings?tab=billing" }
 ```
 
 **Response 200:**
