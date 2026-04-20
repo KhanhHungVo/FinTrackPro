@@ -10,7 +10,7 @@ export function OutcomeSpotlightsSection() {
           Real outcomes — not just features.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginTop: 52 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 20, marginTop: 52 }}>
 
           {/* Spending clarity */}
           <div className="lp-fade-up lp-fade-up-d1" style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.07)', padding: '32px 28px', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', background: 'rgba(16,185,129,0.04)' }}>

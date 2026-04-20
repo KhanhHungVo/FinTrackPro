@@ -29,7 +29,7 @@ export function PricingSection({ onSignup }: Props) {
 
         <div
           className="lp-fade-up"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginTop: 56, maxWidth: 800, marginLeft: 'auto', marginRight: 'auto' }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 20, marginTop: 56, maxWidth: 800, marginLeft: 'auto', marginRight: 'auto' }}
         >
           {/* Free plan */}
           <div style={{ borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', padding: 32, display: 'flex', flexDirection: 'column' }}>

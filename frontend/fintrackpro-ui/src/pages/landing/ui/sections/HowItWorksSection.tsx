@@ -30,7 +30,7 @@ export function HowItWorksSection({ onSignup }: Props) {
 
         <div
           className="lp-fade-up"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 32, marginTop: 56, position: 'relative' }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 32, marginTop: 56, position: 'relative' }}
         >
           {steps.map((step) => (
             <div key={step.num} style={{ textAlign: 'center' }}>

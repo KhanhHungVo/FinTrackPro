@@ -1,4 +1,15 @@
+import { useMobile } from '../../lib/useMobile'
+
+const KPI_CARDS = [
+  { label: 'Income · This Month', val: '+$4,280', color: '#10b981' },
+  { label: 'Expenses · This Month', val: '−$1,840', color: '#ef4444' },
+  { label: 'Trading P&L', val: '+$362', color: '#10b981' },
+  { label: 'Unrealized P&L', val: '+$987', color: '#10b981' },
+]
+
 export function DashboardMockupSection() {
+  const isMobile = useMobile()
+
   return (
     <section id="mockup" style={{ padding: '80px 0', textAlign: 'center' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
@@ -12,8 +23,30 @@ export function DashboardMockupSection() {
           Everything — expenses, budgets, trades — unified in one real-time dashboard.
         </p>
 
-        {/* Browser frame */}
-        <div
+        {/* Mobile KPI summary */}
+        {isMobile && (
+          <div className="lp-fade-up">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+              {KPI_CARDS.map((k) => (
+                <div key={k.label} style={{
+                  borderRadius: 12, background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderLeft: `3px solid ${k.color}`,
+                  padding: '16px 14px', textAlign: 'left',
+                }}>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{k.label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: k.color, letterSpacing: '-0.5px' }}>{k.val}</div>
+                </div>
+              ))}
+            </div>
+            <a href="#how" style={{ fontSize: 14, fontWeight: 600, color: '#3b82f6', textDecoration: 'none' }}>
+              See full dashboard →
+            </a>
+          </div>
+        )}
+
+        {/* Browser frame — desktop only */}
+        {!isMobile && <div
           className="lp-fade-up"
           style={{
             borderRadius: 14, border: '1px solid rgba(255,255,255,0.12)',
@@ -186,7 +219,7 @@ export function DashboardMockupSection() {
               </div>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </section>
   )
