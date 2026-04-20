@@ -1,4 +1,5 @@
 import { env } from '@/shared/config/env'
+import { useButtonState, primaryBtnStyle, outlineBtnStyle } from '../../lib/buttonStyles'
 
 interface Props {
   onSignup: () => void
@@ -19,6 +20,9 @@ export function PricingSection({ onSignup }: Props) {
     watchlist: env.PRO_WATCHLIST_LIMIT,
   }
   const amount = env.BANK_TRANSFER_AMOUNT
+
+  const freeBtn = useButtonState()
+  const proBtn = useButtonState()
 
   return (
     <section id="pricing" style={{ padding: '96px 0', background: '#111420' }}>
@@ -57,7 +61,14 @@ export function PricingSection({ onSignup }: Props) {
             </ul>
             <button
               onClick={onSignup}
-              style={{ width: '100%', padding: 13, borderRadius: 9, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}
+              {...freeBtn.handlers}
+              style={outlineBtnStyle(freeBtn.isHovered, freeBtn.isPressed, {
+                width: '100%',
+                padding: 13,
+                borderRadius: 9,
+                fontSize: 15,
+                fontWeight: 600,
+              })}
             >
               Get started free
             </button>
@@ -87,7 +98,14 @@ export function PricingSection({ onSignup }: Props) {
             </ul>
             <button
               onClick={onSignup}
-              style={{ width: '100%', padding: 13, borderRadius: 9, background: '#2563eb', color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+              {...proBtn.handlers}
+              style={primaryBtnStyle(proBtn.isHovered, proBtn.isPressed, {
+                width: '100%',
+                padding: 13,
+                borderRadius: 9,
+                fontSize: 15,
+                fontWeight: 700,
+              })}
             >
               Upgrade to Pro
             </button>

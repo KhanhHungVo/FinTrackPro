@@ -1,3 +1,5 @@
+import { useButtonState, primaryBtnStyle } from '../../lib/buttonStyles'
+
 interface Props {
   onSignup: () => void
 }
@@ -21,6 +23,8 @@ const steps = [
 ]
 
 export function HowItWorksSection({ onSignup }: Props) {
+  const ctaBtn = useButtonState()
+
   return (
     <section id="how" style={{ padding: '96px 0' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
@@ -53,7 +57,12 @@ export function HowItWorksSection({ onSignup }: Props) {
           </p>
           <button
             onClick={onSignup}
-            style={{ padding: '16px 40px', borderRadius: 10, background: '#2563eb', color: '#fff', fontSize: 17, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 4px 24px rgba(37,99,235,0.35)' }}
+            {...ctaBtn.handlers}
+            style={primaryBtnStyle(ctaBtn.isHovered, ctaBtn.isPressed, {
+              padding: '16px 40px',
+              fontSize: 17,
+              fontWeight: 700,
+            })}
           >
             Start for Free — It's $0
           </button>

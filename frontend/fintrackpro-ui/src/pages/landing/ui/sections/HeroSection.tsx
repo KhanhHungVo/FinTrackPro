@@ -1,8 +1,13 @@
+import { useButtonState, primaryBtnStyle, ghostLinkStyle } from '../../lib/buttonStyles'
+
 interface Props {
   onSignup: () => void
 }
 
 export function HeroSection({ onSignup }: Props) {
+  const startBtn = useButtonState()
+  const seeBtn = useButtonState()
+
   return (
     <section style={{
       padding: '112px 0 80px',
@@ -64,25 +69,25 @@ export function HeroSection({ onSignup }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
           <button
             onClick={onSignup}
-            style={{
-              padding: '14px 32px', borderRadius: 10,
-              background: '#2563eb', color: '#fff',
-              fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer',
-              boxShadow: '0 4px 24px rgba(37,99,235,0.35)',
-            }}
+            {...startBtn.handlers}
+            style={primaryBtnStyle(startBtn.isHovered, startBtn.isPressed, {
+              padding: '14px 32px',
+              fontSize: 16,
+            })}
           >
             Start for Free
           </button>
           <a
             href="#mockup"
-            style={{
-              padding: '14px 28px', borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: 'rgba(255,255,255,0.55)', fontSize: 16, fontWeight: 600,
-              textDecoration: 'none',
-            }}
+            {...seeBtn.handlers}
+            style={ghostLinkStyle(seeBtn.isHovered, seeBtn.isPressed)}
           >
-            See it in action →
+            See it in action{' '}
+            <span style={{
+              display: 'inline-block',
+              transition: `transform 0.2s ease-out`,
+              transform: seeBtn.isHovered ? 'translateX(4px)' : 'translateX(0)',
+            }}>→</span>
           </a>
         </div>
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMobile } from '../../lib/useMobile'
+import { useButtonState, primaryBtnStyle, outlineBtnStyle, hamburgerBtnStyle } from '../../lib/buttonStyles'
 
 interface Props {
   onLogin: () => void
@@ -15,6 +16,10 @@ const NAV_LINKS = [
 export function LandingNav({ onLogin, onSignup }: Props) {
   const isMobile = useMobile()
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const loginBtn = useButtonState()
+  const signupBtn = useButtonState()
+  const hamburgerBtn = useButtonState()
 
   return (
     <nav style={{
@@ -65,11 +70,14 @@ export function LandingNav({ onLogin, onSignup }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={onLogin}
-            style={{
-              padding: '7px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
-              background: 'transparent', color: 'rgba(255,255,255,0.7)',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-            }}
+            {...loginBtn.handlers}
+            style={outlineBtnStyle(loginBtn.isHovered, loginBtn.isPressed, {
+              padding: '7px 16px',
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            })}
           >
             Log in
           </button>
@@ -78,12 +86,14 @@ export function LandingNav({ onLogin, onSignup }: Props) {
           {!isMobile && (
             <button
               onClick={onSignup}
-              style={{
-                padding: '8px 18px', borderRadius: 8,
-                background: '#2563eb', color: '#fff',
-                fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none',
+              {...signupBtn.handlers}
+              style={primaryBtnStyle(signupBtn.isHovered, signupBtn.isPressed, {
+                padding: '8px 18px',
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
                 whiteSpace: 'nowrap',
-              }}
+              })}
             >
               Start for Free
             </button>
@@ -94,15 +104,8 @@ export function LandingNav({ onLogin, onSignup }: Props) {
             <button
               onClick={() => setDrawerOpen((o) => !o)}
               aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
-              style={{
-                width: 36, height: 36, borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.12)',
-                background: drawerOpen ? 'rgba(255,255,255,0.07)' : 'transparent',
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: 18, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}
+              {...hamburgerBtn.handlers}
+              style={hamburgerBtnStyle(hamburgerBtn.isHovered, hamburgerBtn.isPressed, drawerOpen)}
             >
               {drawerOpen ? '✕' : '☰'}
             </button>
