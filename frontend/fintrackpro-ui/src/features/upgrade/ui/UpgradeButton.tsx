@@ -16,7 +16,7 @@ export function UpgradeButton({ className }: Props) {
   function handleUpgrade() {
     mutate(
       {
-        successUrl: `${window.location.origin}/settings?subscribed=1`,
+        successUrl: `${window.location.origin}/settings?tab=billing&subscribed=1`,
         cancelUrl: `${window.location.origin}/pricing`,
       },
       {

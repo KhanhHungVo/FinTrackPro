@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router'
+import { NavLink, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/features/auth'
 import { PlanBadge } from '@/features/plan-badge'
@@ -20,6 +20,7 @@ function useNavLinks() {
 
 export function Navbar() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const displayName = useAuthStore((s) => s.displayName)
@@ -94,6 +95,27 @@ export function Navbar() {
                       <PlanBadge />
                     </div>
                   </div>
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setOpen(false); navigate('/settings') }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-white/5"
+                    >
+                      {t('nav.settings')}
+                    </button>
+                    <button
+                      onClick={() => { setOpen(false); navigate('/pricing') }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-white/5"
+                    >
+                      {t('nav.pricing')}
+                    </button>
+                    <button
+                      onClick={() => { setOpen(false); navigate('/about') }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-white/5"
+                    >
+                      {t('nav.about')}
+                    </button>
+                  </div>
+                  <div className="border-t dark:border-white/10" />
                   <button
                     onClick={() => { setOpen(false); logout() }}
                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-white/5"

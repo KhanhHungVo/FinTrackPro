@@ -11,22 +11,22 @@ interface Feature {
 
 const FREE_FEATURES: Feature[] = [
   { label: '50 transactions / month', included: true },
-  { label: '90-day history', included: true },
+  { label: '60-day history', included: true },
   { label: '3 active budgets', included: true },
   { label: '20 trades stored', included: true },
-  { label: '3 watchlist symbols', included: true },
+  { label: '1 watchlist symbol', included: true },
   { label: '7-day signal history', included: true },
   { label: 'Telegram alerts', included: false },
   { label: 'Ad-free dashboard', included: false },
 ]
 
 const PRO_FEATURES: Feature[] = [
-  { label: 'Unlimited transactions', included: true },
-  { label: 'Full history', included: true },
-  { label: 'Unlimited budgets', included: true },
-  { label: 'Unlimited trades', included: true },
-  { label: 'Unlimited watchlist', included: true },
-  { label: 'Full signal history', included: true },
+  { label: '500 transactions / month', included: true },
+  { label: '1-year history', included: true },
+  { label: '20 active budgets', included: true },
+  { label: '200 trades stored', included: true },
+  { label: '20 watchlist symbols', included: true },
+  { label: '90-day signal history', included: true },
   { label: 'Telegram alerts', included: true },
   { label: 'Ad-free dashboard', included: true },
 ]
@@ -93,7 +93,7 @@ export function PricingPage() {
 
   function handleManage() {
     createPortal(
-      { returnUrl: `${window.location.origin}/settings` },
+      { returnUrl: `${window.location.origin}/settings?tab=billing` },
       {
         onSuccess: ({ portalUrl }) => {
           window.location.href = portalUrl
@@ -116,13 +116,13 @@ export function PricingPage() {
       </div>
 
       {/* Launch campaign notice */}
-      <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:items-center dark:border-amber-500/20 dark:bg-amber-500/10">
+      {/* <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:items-center dark:border-amber-500/20 dark:bg-amber-500/10">
         <span className="text-lg leading-none">🎉</span>
         <p className="text-sm text-amber-900 dark:text-amber-300">
           <span className="font-semibold">{t('pricing.launchNotice')}</span>{' '}
           {t('pricing.launchDescription')}
         </p>
-      </div>
+      </div> */}
 
       {/* Plan cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">

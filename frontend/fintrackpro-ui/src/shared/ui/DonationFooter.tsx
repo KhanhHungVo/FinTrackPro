@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSubscriptionStatus } from '@/entities/subscription'
 import { DonationModal } from './DonationModal'
 
 const DISMISSED_KEY = 'ftpro-donation-dismissed'
 
 export function DonationFooter() {
   const { t } = useTranslation()
+  const { data: status } = useSubscriptionStatus()
+  const isPro = status?.plan === 'Pro'
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem(DISMISSED_KEY) === '1',
   )
@@ -33,20 +36,22 @@ export function DonationFooter() {
             >
               {t('donation.cta')}
             </button>
-            <button
-              onClick={handleDismiss}
-              className="rounded p-1 text-amber-500 transition-colors hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-500/20"
-              aria-label={t('donation.dismiss')}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path
-                  d="M1 1l12 12M13 1L1 13"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
+            {isPro && (
+              <button
+                onClick={handleDismiss}
+                className="rounded p-1 text-amber-500 transition-colors hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-500/20"
+                aria-label={t('donation.dismiss')}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path
+                    d="M1 1l12 12M13 1L1 13"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>

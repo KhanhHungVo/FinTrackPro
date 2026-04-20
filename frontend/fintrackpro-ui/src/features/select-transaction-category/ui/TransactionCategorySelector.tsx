@@ -79,7 +79,7 @@ export function TransactionCategorySelector({
         </svg>
         <button
           type="button"
-          onClick={() => navigate('/settings')}
+          onClick={() => navigate('/settings?tab=categories')}
           className="text-xs text-gray-400 hover:text-blue-600 transition-colors dark:text-slate-500 dark:hover:text-blue-400"
         >
           {t('transactionCategories.manageCategories')}

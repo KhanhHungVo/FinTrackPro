@@ -16,7 +16,7 @@ export function ContextualSignalsWidget() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">{t('dashboard.signalsForWatchlist')}</h2>
-        <Link to="/settings" className="text-xs text-blue-500 hover:underline">
+        <Link to="/settings?tab=watchlist" className="text-xs text-blue-500 hover:underline">
           {t('dashboard.manageWatchlist')} →
         </Link>
       </div>

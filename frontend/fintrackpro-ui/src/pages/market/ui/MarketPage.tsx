@@ -21,7 +21,7 @@ export function MarketPage() {
       </div>
 
       <div className="text-center">
-        <Link to="/settings" className="text-sm text-blue-500 hover:underline">
+        <Link to="/settings?tab=watchlist" className="text-sm text-blue-500 hover:underline">
           {t('dashboard.manageWatchlist')} →
         </Link>
       </div>

@@ -23,7 +23,7 @@ export function SubscriptionSection() {
 
   function handleManage() {
     createPortal(
-      { returnUrl: `${window.location.origin}/settings` },
+      { returnUrl: `${window.location.origin}/settings?tab=billing` },
       {
         onSuccess: ({ portalUrl }) => {
           window.location.href = portalUrl
