@@ -1,0 +1,65 @@
+/* Design tokens — scoped to landing page only */
+.root {
+  --lp-bg:        #0c0e14;
+  --lp-bg-2:      #111420;
+  --lp-bg-card:   rgba(255, 255, 255, 0.04);
+  --lp-border:    rgba(255, 255, 255, 0.07);
+  --lp-border-hi: rgba(255, 255, 255, 0.12);
+  --lp-blue:      #2563eb;
+  --lp-blue-hi:   #3b82f6;
+  --lp-blue-dim:  rgba(37, 99, 235, 0.15);
+  --lp-green:     #10b981;
+  --lp-red:       #ef4444;
+  --lp-purple:    #a855f7;
+  --lp-amber:     #f59e0b;
+  --lp-text:      rgba(255, 255, 255, 0.92);
+  --lp-text-2:    rgba(255, 255, 255, 0.55);
+  --lp-text-3:    rgba(255, 255, 255, 0.32);
+  --lp-radius:    14px;
+
+  font-family: 'Inter', system-ui, Helvetica, Arial, sans-serif;
+  background: var(--lp-bg);
+  color: var(--lp-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* Background mesh */
+.bgMesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 900px 600px at 20% 10%, rgba(37, 99, 235, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 700px 500px at 80% 30%, rgba(168, 85, 247, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 600px 400px at 50% 70%, rgba(37, 99, 235, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 500px 400px at 10% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 60%);
+}
+
+/* Fade-up animation */
+:global(.lp-fade-up) {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+:global(.lp-fade-up.lp-visible) {
+  opacity: 1;
+  transform: translateY(0);
+}
+:global(.lp-fade-up-d1) { transition-delay: 0.1s; }
+:global(.lp-fade-up-d2) { transition-delay: 0.2s; }
+:global(.lp-fade-up-d3) { transition-delay: 0.3s; }
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.section    { padding: 96px 0; }
+.sectionSm  { padding: 72px 0; }

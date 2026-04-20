@@ -6,6 +6,8 @@ const en = {
     trades: 'Trades',
     market: 'Market',
     settings: 'Settings',
+    pricing: 'Plan & Billing',
+    about: 'About',
   },
   common: {
     save: 'Save',
@@ -142,6 +144,13 @@ const en = {
     notifications: 'Notifications',
     watchlist: 'Signal Watchlist',
     preferences: 'Preferences',
+    account: 'Account',
+    billing: 'Plan & Billing',
+    notifications_tab: 'Notifications',
+    categories_tab: 'Categories',
+    watchlist_tab: 'Watchlist',
+    accountPlaceholderTitle: 'Profile settings',
+    accountPlaceholderBody: 'Profile editing is coming soon.',
   },
   notifications: {
     title: 'Notification Settings',
@@ -262,6 +271,19 @@ const en = {
     tryAgain: 'Try again',
     goToDashboard: 'Go to Dashboard',
     notFoundMessage: "The page you're looking for doesn't exist.",
+  },
+  about: {
+    title: 'About FinTrackPro',
+    tagline: 'Your personal finance & trading companion',
+    description: 'FinTrackPro helps you track income and expenses, manage budgets, trade and analyze portfolio performance, and monitor market signals — all in one place.',
+    version: 'Version',
+    links: 'Links',
+    viewPricing: 'View pricing plans',
+    back: '← Back',
+    builtBy: 'Built by',
+    contact: 'Contact',
+    support: 'Support this project',
+    supportCta: 'Buy me a coffee ☕',
   },
 } as const
 

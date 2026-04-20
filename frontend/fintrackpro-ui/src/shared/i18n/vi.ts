@@ -6,6 +6,8 @@ const vi = {
     trades: 'Giao dịch đầu tư',
     market: 'Thị trường',
     settings: 'Cài đặt',
+    pricing: 'Gói & Thanh toán',
+    about: 'Giới thiệu',
   },
   common: {
     save: 'Lưu',
@@ -142,6 +144,13 @@ const vi = {
     notifications: 'Thông báo',
     watchlist: 'Danh sách theo dõi',
     preferences: 'Tuỳ chọn',
+    account: 'Tài khoản',
+    billing: 'Gói & Thanh toán',
+    notifications_tab: 'Thông báo',
+    categories_tab: 'Danh mục',
+    watchlist_tab: 'Theo dõi',
+    accountPlaceholderTitle: 'Thông tin tài khoản',
+    accountPlaceholderBody: 'Chức năng chỉnh sửa hồ sơ sẽ sớm ra mắt.',
   },
   notifications: {
     title: 'Cài đặt thông báo',
@@ -262,6 +271,19 @@ const vi = {
     tryAgain: 'Thử lại',
     goToDashboard: 'Về trang chủ',
     notFoundMessage: 'Trang bạn tìm kiếm không tồn tại.',
+  },
+  about: {
+    title: 'Giới thiệu FinTrackPro',
+    tagline: 'Trợ lý tài chính cá nhân & đầu tư của bạn',
+    description: 'FinTrackPro giúp bạn theo dõi thu chi, quản lý ngân sách, giao dịch và phân tích hiệu suất danh mục, và theo dõi tín hiệu thị trường — tất cả trong một nơi.',
+    version: 'Phiên bản',
+    links: 'Liên kết',
+    viewPricing: 'Xem các gói dịch vụ',
+    back: '← Quay lại',
+    builtBy: 'Được tạo bởi',
+    contact: 'Liên hệ',
+    support: 'Ủng hộ dự án',
+    supportCta: 'Mua cho tôi một ly cà phê ☕',
   },
 } as const
 
