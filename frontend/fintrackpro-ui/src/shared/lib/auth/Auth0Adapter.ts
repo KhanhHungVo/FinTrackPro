@@ -1,11 +1,12 @@
 import { createAuth0Client, type Auth0Client } from '@auth0/auth0-spa-js'
 import { env } from '@/shared/config/env'
-import type { AuthProfile, IAuthAdapter } from './IAuthAdapter'
+import type { AuthProfile, IAuthAdapter, InitOptions, LoginOptions } from './IAuthAdapter'
+
 
 class Auth0Adapter implements IAuthAdapter {
   private client: Auth0Client | null = null
 
-  async init(): Promise<AuthProfile> {
+  async init(options?: InitOptions): Promise<AuthProfile | null> {
     this.client = await createAuth0Client({
       domain: env.AUTH0_DOMAIN,
       clientId: env.AUTH0_CLIENT_ID,
@@ -32,6 +33,10 @@ class Auth0Adapter implements IAuthAdapter {
 
     const isAuthenticated = await this.client.isAuthenticated()
     if (!isAuthenticated) {
+      if (options?.publicRoute) {
+        // On a public route, do not force redirect — let the page render
+        return null
+      }
       await this.client.loginWithRedirect()
       // loginWithRedirect triggers a full page redirect — execution stops here
       return new Promise(() => {}) as Promise<AuthProfile>
@@ -42,6 +47,14 @@ class Auth0Adapter implements IAuthAdapter {
       displayName: user?.name ?? user?.email ?? '',
       email: user?.email ?? '',
     }
+  }
+
+  login(options?: LoginOptions): void {
+    this.client?.loginWithRedirect({
+      authorizationParams: {
+        screen_hint: options?.screen === 'signup' ? 'signup' : undefined,
+      },
+    })
   }
 
   async getToken(): Promise<string> {

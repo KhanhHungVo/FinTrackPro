@@ -65,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setProfile = useAuthStore((s) => s.setProfile)
 
   function runInit() {
+    const publicRoute = window.location.pathname === '/'
+
     // E2E bypass: Playwright injects localStorage['e2e_bypass'] = '1' alongside
     // a pre-issued JWT. This skips the provider SDK init (which would redirect
     // to the login page) and goes straight to degraded mode using the cached
@@ -88,8 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     authAdapter
-      .init()
+      .init({ publicRoute })
       .then((profile) => {
+        if (profile === null) {
+          // Unauthenticated on a public route — render the page without a token
+          setInitialized(true)
+          return
+        }
         authAdapter.getToken().then((token) => {
           setToken(token)
           setProfile(profile.displayName, profile.email)
@@ -110,6 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             (payload.email as string) ?? '',
           )
           setDegraded({ expiresAt: cached.expiresAt })
+        } else if (publicRoute) {
+          // Provider unreachable on a public route — still render the landing page
         } else {
           // No usable token — must show error screen
           setAuthError({ type: classifyAuthError(err), timestamp: new Date() })
