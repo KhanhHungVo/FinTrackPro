@@ -192,7 +192,7 @@ export function TradesPage() {
                   const displayFees = convertAmount(trade.fees, trade.rateToUsd, preferredRate)
 
                   return (
-                    <tr key={trade.id} className="group hover:bg-gray-50/70 dark:hover:bg-white/3 transition-colors">
+                    <tr key={trade.id} className="hover:bg-gray-50/70 dark:hover:bg-white/3 transition-colors">
                       <td className="px-4 py-3">
                         <span className="font-mono font-semibold text-gray-900 dark:text-slate-100">{trade.symbol}</span>
                       </td>
@@ -250,7 +250,7 @@ export function TradesPage() {
                         {new Date(trade.createdAt).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1">
                           {isOpen && (
                             <button
                               onClick={() => setClosingTrade(trade)}
@@ -263,7 +263,7 @@ export function TradesPage() {
                           <button
                             onClick={() => setEditingTrade(trade)}
                             title={t('common.edit')}
-                            className="rounded px-1.5 py-1 text-xs text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                            className="rounded px-1.5 py-1 text-xs text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:text-slate-600 dark:hover:text-blue-400 dark:hover:bg-blue-500/10 transition-colors"
                           >
                             ✎
                           </button>
@@ -271,7 +271,7 @@ export function TradesPage() {
                             onClick={() => setPendingDeleteId(trade.id)}
                             disabled={isDeleting(trade.id)}
                             title={t('common.delete')}
-                            className="rounded px-1.5 py-1 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50 transition-colors"
+                            className="rounded px-1.5 py-1 text-xs text-gray-300 hover:text-red-500 hover:bg-red-50 dark:text-slate-600 dark:hover:text-red-400 dark:hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           >
                             ✕
                           </button>
