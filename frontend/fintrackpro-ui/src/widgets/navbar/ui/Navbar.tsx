@@ -33,7 +33,7 @@ export function Navbar() {
   return (
     <nav className="border-b bg-white dark:bg-[#0c0e14] dark:border-white/6">
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
-        <span className="font-bold text-lg tracking-tight dark:text-white">FinTrackPro</span>
+        <NavLink to="/dashboard" className="font-bold text-lg tracking-tight dark:text-white hover:opacity-80 transition-opacity">FinTrackPro</NavLink>
 
         <ul className="hidden md:flex gap-1">
           {links.map(({ to, label }) => (
