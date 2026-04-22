@@ -60,29 +60,22 @@ public class IdentityService(
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            // The AppUser row was stale in the change tracker (e.g. Keycloak volume was wiped and
-            // the same email got a new sub — the Users row may have been truncated and re-provisioned
-            // between our read and save). Clear the tracker and retry once with a fresh load.
+
             var failedEntries = ex.Entries
                 .Select(e => $"{e.Entity.GetType().Name}={e.State}")
                 .ToList();
             logger.LogWarning(ex, "SaveChanges#1 failed entries=[{Failed}] externalId={ExternalId} provider={Provider} — retrying",
                 string.Join(", ", failedEntries), ctx.ExternalId, ctx.Provider);
 
+            // Do NOT call userIdentityRepository.GetAsync here before ResolveUserAsync.
+            // GetAsync includes the User navigation, which loads both UserIdentity and AppUser
+            // into the tracker as Unchanged. ResolveUserAsync then calls AddIdentity, which
+            // adds a new UserIdentity to _identities. EF relationship fixup sees the already-
+            // tracked UserIdentity and marks it Modified, causing SaveChanges#2 to emit an
+            // UPDATE that affects 0 rows → another DbUpdateConcurrencyException.
             db.ChangeTracker.Clear();
 
-            var existing = await userIdentityRepository.GetAsync(ctx.ExternalId, ctx.Provider, cancellationToken);
-            if (existing is not null)
-                return CurrentUser.From(existing.User);
-
             var retryUser = await ResolveUserAsync(ctx, cancellationToken);
-
-            var retryTracked = db.ChangeTracker.Entries()
-                .Select(e => $"{e.Entity.GetType().Name}={e.State}")
-                .ToList();
-            logger.LogWarning("SaveChanges#2 tracked=[{Tracked}] externalId={ExternalId} provider={Provider}",
-                string.Join(", ", retryTracked), ctx.ExternalId, ctx.Provider);
-
             await db.SaveChangesAsync(cancellationToken);
             return CurrentUser.From(retryUser);
         }
