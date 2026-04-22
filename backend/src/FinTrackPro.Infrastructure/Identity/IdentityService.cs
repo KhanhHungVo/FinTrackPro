@@ -9,6 +9,13 @@ using Microsoft.Extensions.Logging;
 
 namespace FinTrackPro.Infrastructure.Identity;
 
+internal record LoginContext(
+    string ExternalId,
+    string Provider,
+    string? Email,
+    bool EmailVerified,
+    string DisplayName);
+
 public class IdentityService(
     IUserIdentityRepository userIdentityRepository,
     IUserRepository userRepository,
@@ -17,37 +24,27 @@ public class IdentityService(
 {
     public async Task<CurrentUser> ResolveAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
     {
-        var externalId  = principal.GetExternalId();
-        var provider    = principal.GetProvider();
-        var email       = principal.GetEmail();
-        var emailVerified = principal.IsEmailVerified();
-        var displayName = principal.FindFirstValue("name")
-                       ?? principal.FindFirstValue(ClaimTypes.Name)
-                       ?? externalId;
+        var ctx = new LoginContext(
+            ExternalId:    principal.GetExternalId(),
+            Provider:      principal.GetProvider(),
+            Email:         principal.GetEmail(),
+            EmailVerified: principal.IsEmailVerified(),
+            DisplayName:   principal.FindFirstValue("name")
+                        ?? principal.FindFirstValue(ClaimTypes.Name)
+                        ?? principal.GetExternalId());
 
         // Fast path — returning user (UserIdentity row exists)
-        var identity = await userIdentityRepository.GetAsync(externalId, provider, cancellationToken);
+        var identity = await userIdentityRepository.GetAsync(ctx.ExternalId, ctx.Provider, cancellationToken);
         if (identity is not null)
         {
-            if (identity.User.UpdateProfile(email, displayName))
+            if (identity.User.UpdateProfile(ctx.Email, ctx.DisplayName))
                 await db.SaveChangesAsync(cancellationToken);
 
             return CurrentUser.From(identity.User);
         }
 
         // Slow path — new user or new provider link
-        AppUser? user = null;
-
-        if (email is not null && emailVerified)
-            user = await userRepository.GetByEmailAsync(email, cancellationToken);
-
-        if (user is null)
-        {
-            user = AppUser.Create(email, displayName);
-            userRepository.Add(user);
-        }
-
-        user.AddIdentity(externalId, provider);
+        var user = await ResolveUserAsync(ctx, cancellationToken);
 
         try
         {
@@ -58,41 +55,54 @@ public class IdentityService(
             // The AppUser row was stale in the change tracker (e.g. Keycloak volume was wiped and
             // the same email got a new sub — the Users row may have been truncated and re-provisioned
             // between our read and save). Clear the tracker and retry once with a fresh load.
-            logger.LogWarning(ex, "Concurrency conflict linking externalId={ExternalId}, provider={Provider} — retrying with fresh state", externalId, provider);
+            logger.LogWarning(ex, "Concurrency conflict linking externalId={ExternalId}, provider={Provider} — retrying with fresh state", ctx.ExternalId, ctx.Provider);
 
             db.ChangeTracker.Clear();
 
-            var existing = await userIdentityRepository.GetAsync(externalId, provider, cancellationToken);
+            var existing = await userIdentityRepository.GetAsync(ctx.ExternalId, ctx.Provider, cancellationToken);
             if (existing is not null)
                 return CurrentUser.From(existing.User);
 
-            // Re-resolve user by email and re-link, or create new
-            AppUser? retryUser = null;
-            if (email is not null && emailVerified)
-                retryUser = await userRepository.GetByEmailAsync(email, cancellationToken);
-
-            if (retryUser is null)
-            {
-                retryUser = AppUser.Create(email, displayName);
-                userRepository.Add(retryUser);
-            }
-
-            retryUser.AddIdentity(externalId, provider);
+            var retryUser = await ResolveUserAsync(ctx, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             return CurrentUser.From(retryUser);
         }
         catch (DbUpdateException ex)
         {
-            logger.LogWarning(ex, "Concurrent first-login race for externalId={ExternalId}, provider={Provider} — re-querying winner", externalId, provider);
+            logger.LogWarning(ex, "Concurrent first-login race for externalId={ExternalId}, provider={Provider} — re-querying winner", ctx.ExternalId, ctx.Provider);
 
             db.ChangeTracker.Clear();
 
-            var winner = await userIdentityRepository.GetAsync(externalId, provider, cancellationToken);
+            var winner = await userIdentityRepository.GetAsync(ctx.ExternalId, ctx.Provider, cancellationToken);
             if (winner is null) throw;
 
             return CurrentUser.From(winner.User);
         }
 
         return CurrentUser.From(user);
+    }
+
+    private async Task<AppUser> ResolveUserAsync(LoginContext ctx, CancellationToken cancellationToken)
+    {
+        AppUser? user = null;
+
+        if (ctx.Email is not null && ctx.EmailVerified)
+            user = await userRepository.GetByEmailAsync(ctx.Email, cancellationToken);
+
+        if (user is null)
+        {
+            user = AppUser.Create(ctx.Email, ctx.DisplayName);
+            userRepository.Add(user);
+        }
+        else
+        {
+            // Reset state so EF relationship fixup from AddIdentity below does not mark
+            // AppUser as Modified and emit a spurious UPDATE "Users" that races under
+            // concurrent logins with the same provider.
+            db.Entry(user).State = EntityState.Unchanged;
+        }
+
+        user.AddIdentity(ctx.ExternalId, ctx.Provider);
+        return user;
     }
 }

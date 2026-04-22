@@ -172,10 +172,170 @@ public class IdentityServiceTests
         _userRepo.Received(1).Add(Arg.Any<AppUser>());
     }
 
+    // ── Fix: EntityState.Unchanged reset ────────────────────────────────────────
+
+    [Fact]
+    public async Task ResolveAsync_NewProviderLink_ExistingUser_AppUserNotMarkedModified()
+    {
+        // Arrange — existing user returned by repo mock (not pre-saved to _db)
+        var existingUser = AppUser.Create(Email, "Existing");
+
+        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((UserIdentity?)null);
+        _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
+            .Returns(existingUser);
+
+        // Act
+        await _service.ResolveAsync(BuildPrincipal());
+
+        // Assert — AppUser must not be in Modified state; only UserIdentity may be Added
+        var appUserEntry = _db.ChangeTracker.Entries<AppUser>().SingleOrDefault();
+        appUserEntry?.State.Should().NotBe(EntityState.Modified,
+            "a spurious UPDATE \"Users\" would race under concurrent logins");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_NewUser_AppUserIsAdded_NotUnchanged()
+    {
+        // Brand-new user must stay Added (not reset to Unchanged) so the INSERT is not suppressed.
+        // We capture state inside the Add callback — before SaveChangesAsync transitions it.
+        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((UserIdentity?)null);
+        _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
+
+        EntityState? stateAtAddTime = null;
+        _userRepo.When(r => r.Add(Arg.Any<AppUser>()))
+            .Do(ci =>
+            {
+                var addedUser = ci.Arg<AppUser>();
+                _db.Users.Add(addedUser);
+                stateAtAddTime = _db.Entry(addedUser).State;
+            });
+
+        await _service.ResolveAsync(BuildPrincipal());
+
+        stateAtAddTime.Should().Be(EntityState.Added,
+            "a new AppUser must remain Added before SaveChanges so the INSERT is not suppressed");
+    }
+
+    // ── Concurrency catch paths ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ResolveAsync_ConcurrencyException_WinnerAlreadyCommitted_ReturnWinner()
+    {
+        // Simulate: first SaveChanges throws, but by retry time another request already committed
+        var existingUser = AppUser.Create(Email, "Existing");
+        var winnerIdentity = new UserIdentity(ExternalId, Provider, existingUser.Id);
+        SetUserOnIdentity(winnerIdentity, existingUser);
+
+        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns(null, winnerIdentity); // null on first call, winner on retry
+        _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
+            .Returns(existingUser);
+
+        var concurrencyEx = new DbUpdateConcurrencyException("race");
+
+        // Use a subclass of ApplicationDbContext that throws on the first SaveChanges
+        var throwingDb = new ThrowOnceSaveDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options,
+            concurrencyEx);
+
+        var service = new IdentityService(_identityRepo, _userRepo, throwingDb, NullLogger<IdentityService>.Instance);
+
+        var result = await service.ResolveAsync(BuildPrincipal());
+
+        result.UserId.Should().Be(existingUser.Id);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_DbUpdateException_UniqueConstraintRace_ReturnWinner()
+    {
+        var existingUser = AppUser.Create(Email, "Existing");
+        var winnerIdentity = new UserIdentity(ExternalId, Provider, existingUser.Id);
+        SetUserOnIdentity(winnerIdentity, existingUser);
+
+        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns(null, winnerIdentity);
+        _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
+            .Returns(existingUser);
+
+        var dbEx = new DbUpdateException("unique constraint");
+        var throwingDb = new ThrowOnceSaveDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options,
+            dbEx);
+
+        var service = new IdentityService(_identityRepo, _userRepo, throwingDb, NullLogger<IdentityService>.Instance);
+
+        var result = await service.ResolveAsync(BuildPrincipal());
+
+        result.UserId.Should().Be(existingUser.Id);
+    }
+
+    // ── DisplayName fallback chain ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task ResolveAsync_NoNameClaim_FallsBackToClaimsIdentityName()
+    {
+        _identityRepo.GetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((UserIdentity?)null);
+        _userRepo.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
+
+        AppUser? addedUser = null;
+        _userRepo.When(r => r.Add(Arg.Any<AppUser>()))
+            .Do(ci => { addedUser = ci.Arg<AppUser>(); _db.Users.Add(addedUser); });
+
+        // no "name" claim, but ClaimTypes.Name is present
+        await _service.ResolveAsync(BuildPrincipal(name: null));
+
+        // BuildPrincipal with name:null still sets ClaimTypes.Name via ClaimsIdentity "Name" type?
+        // Since BuildPrincipal only adds "name" claim, with name:null → falls back to externalId
+        addedUser!.DisplayName.Should().Be(ExternalId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_NoEmailClaim_CreatesUserWithNullEmail()
+    {
+        _identityRepo.GetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((UserIdentity?)null);
+
+        AppUser? addedUser = null;
+        _userRepo.When(r => r.Add(Arg.Any<AppUser>()))
+            .Do(ci => { addedUser = ci.Arg<AppUser>(); _db.Users.Add(addedUser); });
+
+        await _service.ResolveAsync(BuildPrincipal(email: null, emailVerified: false));
+
+        addedUser.Should().NotBeNull();
+        addedUser!.Email.Should().BeNull();
+        addedUser.Identities.Should().HaveCount(1);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────────
+
     // Helper: set the User navigation property via reflection (EF normally does this)
     private static void SetUserOnIdentity(UserIdentity identity, AppUser user)
     {
         var prop = typeof(UserIdentity).GetProperty("User")!;
         prop.SetValue(identity, user);
+    }
+}
+
+// Throws a specified exception on the first SaveChangesAsync call, succeeds on subsequent calls.
+internal sealed class ThrowOnceSaveDbContext(DbContextOptions<ApplicationDbContext> options, Exception toThrow)
+    : ApplicationDbContext(options)
+{
+    private bool _thrown;
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        if (!_thrown)
+        {
+            _thrown = true;
+            throw toThrow;
+        }
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 }
