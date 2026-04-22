@@ -48,6 +48,12 @@ public class IdentityService(
 
         try
         {
+            var tracked = db.ChangeTracker.Entries()
+                .Select(e => $"{e.Entity.GetType().Name}={e.State}")
+                .ToList();
+            logger.LogWarning("SaveChanges#1 tracked=[{Tracked}] externalId={ExternalId} provider={Provider}",
+                string.Join(", ", tracked), ctx.ExternalId, ctx.Provider);
+
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException ex)
@@ -55,7 +61,11 @@ public class IdentityService(
             // The AppUser row was stale in the change tracker (e.g. Keycloak volume was wiped and
             // the same email got a new sub — the Users row may have been truncated and re-provisioned
             // between our read and save). Clear the tracker and retry once with a fresh load.
-            logger.LogWarning(ex, "Concurrency conflict linking externalId={ExternalId}, provider={Provider} — retrying with fresh state", ctx.ExternalId, ctx.Provider);
+            var failedEntries = ex.Entries
+                .Select(e => $"{e.Entity.GetType().Name}={e.State}")
+                .ToList();
+            logger.LogWarning(ex, "SaveChanges#1 failed entries=[{Failed}] externalId={ExternalId} provider={Provider} — retrying",
+                string.Join(", ", failedEntries), ctx.ExternalId, ctx.Provider);
 
             db.ChangeTracker.Clear();
 
@@ -64,6 +74,13 @@ public class IdentityService(
                 return CurrentUser.From(existing.User);
 
             var retryUser = await ResolveUserAsync(ctx, cancellationToken);
+
+            var retryTracked = db.ChangeTracker.Entries()
+                .Select(e => $"{e.Entity.GetType().Name}={e.State}")
+                .ToList();
+            logger.LogWarning("SaveChanges#2 tracked=[{Tracked}] externalId={ExternalId} provider={Provider}",
+                string.Join(", ", retryTracked), ctx.ExternalId, ctx.Provider);
+
             await db.SaveChangesAsync(cancellationToken);
             return CurrentUser.From(retryUser);
         }
