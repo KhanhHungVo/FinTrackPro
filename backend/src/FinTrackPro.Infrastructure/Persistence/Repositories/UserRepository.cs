@@ -12,7 +12,6 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
 
     public Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
         context.Users
-            .Include(u => u.Identities)
             .FirstOrDefaultAsync(
                 u => u.Email == email.Trim().ToLowerInvariant(),
                 cancellationToken);
