@@ -15,8 +15,8 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.Property(u => u.PreferredLanguage).HasMaxLength(10).IsRequired().HasDefaultValue("en");
         builder.Property(u => u.PreferredCurrency).HasMaxLength(3).IsRequired().HasDefaultValue("USD");
         builder.Property(u => u.IsActive).IsRequired().HasDefaultValue(true);
-        builder.Property(u => u.CreatedAt).IsRequired().HasDefaultValueSql("NOW()");
-        builder.Property(u => u.UpdatedAt).IsRequired().HasDefaultValueSql("NOW()");
+        builder.Property(u => u.CreatedAt).IsRequired().HasDefaultValueSql("NOW()").ValueGeneratedNever();
+        builder.Property(u => u.UpdatedAt).IsRequired().HasDefaultValueSql("NOW()").ValueGeneratedNever();
         builder.HasIndex(u => u.Email);
 
         // Subscription
