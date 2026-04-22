@@ -54,11 +54,13 @@ public class IdentityServiceTests
     public async Task ResolveAsync_ReturningUser_ProfileUnchanged_NoSave()
     {
         var user = AppUser.Create(Email, "Test User");
-        var identity = new UserIdentity(ExternalId, Provider, user.Id);
-        SetUserOnIdentity(identity, user);
 
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns(identity);
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns(user);
+
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync(CancellationToken.None);
+        _db.ChangeTracker.Clear();
 
         var result = await _service.ResolveAsync(BuildPrincipal());
 
@@ -71,14 +73,13 @@ public class IdentityServiceTests
     public async Task ResolveAsync_ReturningUser_ProfileChanged_Saves()
     {
         var user = AppUser.Create("old@example.com", "Old Name");
-        var identity = new UserIdentity(ExternalId, Provider, user.Id);
-        SetUserOnIdentity(identity, user);
 
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns(identity);
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns(user);
 
         _db.Users.Add(user);
         await _db.SaveChangesAsync(CancellationToken.None);
+        _db.ChangeTracker.Clear();
 
         var result = await _service.ResolveAsync(BuildPrincipal(email: Email, name: "New Name"));
 
@@ -92,14 +93,13 @@ public class IdentityServiceTests
     {
         var user = AppUser.Create(Email, "Test User");
         user.Deactivate();
-        var identity = new UserIdentity(ExternalId, Provider, user.Id);
-        SetUserOnIdentity(identity, user);
 
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns(identity);
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns(user);
 
         _db.Users.Add(user);
         await _db.SaveChangesAsync(CancellationToken.None);
+        _db.ChangeTracker.Clear();
 
         await _service.ResolveAsync(BuildPrincipal());
 
@@ -109,8 +109,8 @@ public class IdentityServiceTests
     [Fact]
     public async Task ResolveAsync_NewUser_CreatesAppUserAndIdentity()
     {
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns((UserIdentity?)null);
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
         _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
@@ -139,8 +139,8 @@ public class IdentityServiceTests
         // DB persistence of UserIdentity is validated in integration tests.
         var existingUser = AppUser.Create(Email, "Existing");
 
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns((UserIdentity?)null);
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
         _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
             .Returns(existingUser);
 
@@ -154,8 +154,8 @@ public class IdentityServiceTests
     [Fact]
     public async Task ResolveAsync_NewProviderLink_EmailNotVerified_CreatesNewUser()
     {
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns((UserIdentity?)null);
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
 
         AppUser? addedUser = null;
         _userRepo.When(r => r.Add(Arg.Any<AppUser>()))
@@ -180,8 +180,8 @@ public class IdentityServiceTests
         // Arrange — existing user returned by repo mock (not pre-saved to _db)
         var existingUser = AppUser.Create(Email, "Existing");
 
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns((UserIdentity?)null);
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
         _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
             .Returns(existingUser);
 
@@ -199,8 +199,8 @@ public class IdentityServiceTests
     {
         // Brand-new user must stay Added (not reset to Unchanged) so the INSERT is not suppressed.
         // We capture state inside the Add callback — before SaveChangesAsync transitions it.
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns((UserIdentity?)null);
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
         _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
@@ -229,14 +229,14 @@ public class IdentityServiceTests
         var winnerIdentity = new UserIdentity(ExternalId, Provider, existingUser.Id);
         SetUserOnIdentity(winnerIdentity, existingUser);
 
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null); // not yet committed — triggers slow path
         _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns(null, winnerIdentity); // null on first call, winner on retry
+            .Returns(winnerIdentity); // catch block retry finds winner
         _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
             .Returns(existingUser);
 
         var concurrencyEx = new DbUpdateConcurrencyException("race");
-
-        // Use a subclass of ApplicationDbContext that throws on the first SaveChanges
         var throwingDb = new ThrowOnceSaveDbContext(
             new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options,
@@ -256,8 +256,10 @@ public class IdentityServiceTests
         var winnerIdentity = new UserIdentity(ExternalId, Provider, existingUser.Id);
         SetUserOnIdentity(winnerIdentity, existingUser);
 
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null); // not yet committed — triggers slow path
         _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns(null, winnerIdentity);
+            .Returns(winnerIdentity); // catch block finds winner
         _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
             .Returns(existingUser);
 
@@ -279,8 +281,8 @@ public class IdentityServiceTests
     [Fact]
     public async Task ResolveAsync_NoNameClaim_FallsBackToClaimsIdentityName()
     {
-        _identityRepo.GetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((UserIdentity?)null);
+        _userRepo.GetByExternalIdAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
         _userRepo.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((AppUser?)null);
 
@@ -299,8 +301,8 @@ public class IdentityServiceTests
     [Fact]
     public async Task ResolveAsync_NoEmailClaim_CreatesUserWithNullEmail()
     {
-        _identityRepo.GetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((UserIdentity?)null);
+        _userRepo.GetByExternalIdAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
 
         AppUser? addedUser = null;
         _userRepo.When(r => r.Add(Arg.Any<AppUser>()))

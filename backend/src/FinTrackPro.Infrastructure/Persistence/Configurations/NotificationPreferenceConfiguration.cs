@@ -12,8 +12,8 @@ public class NotificationPreferenceConfiguration : IEntityTypeConfiguration<Noti
         builder.Property(n => n.Channel).IsRequired();
         builder.Property(n => n.TelegramChatId).HasMaxLength(100);
         builder.Property(n => n.Email).HasMaxLength(200);
-        builder.Property(n => n.CreatedAt).IsRequired().HasDefaultValueSql("NOW()");
-        builder.Property(n => n.UpdatedAt).IsRequired().HasDefaultValueSql("NOW()");
+        builder.Property(n => n.CreatedAt).IsRequired().HasDefaultValueSql("NOW()").ValueGeneratedNever();
+        builder.Property(n => n.UpdatedAt).IsRequired().HasDefaultValueSql("NOW()").ValueGeneratedNever();
         builder.HasIndex(n => n.UserId).IsUnique();
 
         builder.HasOne<AppUser>()

@@ -16,6 +16,12 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
                 u => u.Email == email.Trim().ToLowerInvariant(),
                 cancellationToken);
 
+    public Task<AppUser?> GetByExternalIdAsync(string externalId, string provider, CancellationToken cancellationToken = default) =>
+        context.Users
+            .FirstOrDefaultAsync(
+                u => u.Identities.Any(i => i.ExternalUserId == externalId && i.Provider == provider),
+                cancellationToken);
+
     public Task<AppUser?> GetByPaymentCustomerIdAsync(string customerId, CancellationToken cancellationToken = default) =>
         context.Users.FirstOrDefaultAsync(u => u.PaymentCustomerId == customerId, cancellationToken);
 

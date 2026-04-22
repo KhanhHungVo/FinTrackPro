@@ -34,13 +34,15 @@ public class IdentityService(
                         ?? principal.GetExternalId());
 
         // Fast path — returning user (UserIdentity row exists)
-        var identity = await userIdentityRepository.GetAsync(ctx.ExternalId, ctx.Provider, cancellationToken);
-        if (identity is not null)
+        // Query AppUser directly to avoid loading UserIdentity into the tracker,
+        // which would cause EF relationship fixup to mark it as Modified on save.
+        var returning = await userRepository.GetByExternalIdAsync(ctx.ExternalId, ctx.Provider, cancellationToken);
+        if (returning is not null)
         {
-            if (identity.User.UpdateProfile(ctx.Email, ctx.DisplayName))
+            if (returning.UpdateProfile(ctx.Email, ctx.DisplayName))
                 await db.SaveChangesAsync(cancellationToken);
 
-            return CurrentUser.From(identity.User);
+            return CurrentUser.From(returning);
         }
 
         // Slow path — new user or new provider link
@@ -113,10 +115,9 @@ public class IdentityService(
         }
         else
         {
-            // Reset state so EF relationship fixup from AddIdentity below does not mark
-            // AppUser as Modified and emit a spurious UPDATE "Users" that races under
-            // concurrent logins with the same provider.
-            db.Entry(user).State = EntityState.Unchanged;
+            // Attach the untracked AppUser as Unchanged so only the new UserIdentity
+            // (Added via AddIdentity below) is written — no spurious UPDATE on AppUser.
+            db.Attach(user);
         }
 
         user.AddIdentity(ctx.ExternalId, ctx.Provider);
