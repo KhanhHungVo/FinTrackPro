@@ -195,6 +195,36 @@ public class IdentityServiceTests
     }
 
     [Fact]
+    public async Task ResolveAsync_NewProviderLink_ExistingUser_SavesUserIdentityWithoutException()
+    {
+        // Regression test: before the ValueGeneratedNever fix on UserIdentity.Id, EF would mark
+        // the new UserIdentity as Modified (not Added) after db.Attach(user) + AddIdentity,
+        // causing SaveChanges to emit an UPDATE against a non-existent row →
+        // DbUpdateConcurrencyException on every concurrent request.
+        var existingUser = AppUser.Create(Email, "Existing");
+
+        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
+            .Returns((AppUser?)null);
+        _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
+            .Returns(existingUser);
+
+        // Pre-save the user so Attach succeeds in the in-memory provider
+        _db.Users.Add(existingUser);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        // Must not throw DbUpdateConcurrencyException
+        var act = async () => await _service.ResolveAsync(BuildPrincipal());
+        await act.Should().NotThrowAsync();
+
+        // The UserIdentity row must have been inserted
+        var saved = await _db.UserIdentities
+            .FirstOrDefaultAsync(i => i.ExternalUserId == ExternalId && i.Provider == Provider);
+        saved.Should().NotBeNull("the UserIdentity row must have been INSERTed, not UPDATEd");
+        saved!.UserId.Should().Be(existingUser.Id);
+    }
+
+    [Fact]
     public async Task ResolveAsync_NewUser_AppUserIsAdded_NotUnchanged()
     {
         // Brand-new user must stay Added (not reset to Unchanged) so the INSERT is not suppressed.
@@ -220,34 +250,6 @@ public class IdentityServiceTests
     }
 
     // ── Concurrency catch paths ──────────────────────────────────────────────────
-
-    [Fact]
-    public async Task ResolveAsync_ConcurrencyException_WinnerAlreadyCommitted_ReturnWinner()
-    {
-        // Simulate: first SaveChanges throws, but by retry time another request already committed
-        var existingUser = AppUser.Create(Email, "Existing");
-        var winnerIdentity = new UserIdentity(ExternalId, Provider, existingUser.Id);
-        SetUserOnIdentity(winnerIdentity, existingUser);
-
-        _userRepo.GetByExternalIdAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns((AppUser?)null); // not yet committed — triggers slow path
-        _identityRepo.GetAsync(ExternalId, Provider, Arg.Any<CancellationToken>())
-            .Returns(winnerIdentity); // catch block retry finds winner
-        _userRepo.GetByEmailAsync(Email, Arg.Any<CancellationToken>())
-            .Returns(existingUser);
-
-        var concurrencyEx = new DbUpdateConcurrencyException("race");
-        var throwingDb = new ThrowOnceSaveDbContext(
-            new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options,
-            concurrencyEx);
-
-        var service = new IdentityService(_identityRepo, _userRepo, throwingDb, NullLogger<IdentityService>.Instance);
-
-        var result = await service.ResolveAsync(BuildPrincipal());
-
-        result.UserId.Should().Be(existingUser.Id);
-    }
 
     [Fact]
     public async Task ResolveAsync_DbUpdateException_UniqueConstraintRace_ReturnWinner()

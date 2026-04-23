@@ -9,6 +9,7 @@ public class UserIdentityConfiguration : IEntityTypeConfiguration<UserIdentity>
     public void Configure(EntityTypeBuilder<UserIdentity> builder)
     {
         builder.HasKey(i => i.Id);
+        builder.Property(i => i.Id).ValueGeneratedNever();
         builder.Property(i => i.ExternalUserId).HasMaxLength(200).IsRequired();
         builder.Property(i => i.Provider).HasMaxLength(200).IsRequired();
         builder.Property(i => i.CreatedAt).IsRequired().HasDefaultValueSql("NOW()").ValueGeneratedNever();

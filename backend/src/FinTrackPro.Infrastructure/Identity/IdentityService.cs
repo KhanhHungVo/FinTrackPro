@@ -33,102 +33,30 @@ public class IdentityService(
                         ?? principal.FindFirstValue(ClaimTypes.Name)
                         ?? principal.GetExternalId());
 
-        logger.LogWarning(
-            "[Resolve:Start] externalId={ExternalId} provider={Provider} email={Email} emailVerified={EmailVerified} displayName={DisplayName}",
-            ctx.ExternalId, ctx.Provider, ctx.Email, ctx.EmailVerified, ctx.DisplayName);
-
         // Fast path — returning user (UserIdentity row exists)
         // Query AppUser directly to avoid loading UserIdentity into the tracker,
         // which would cause EF relationship fixup to mark it as Modified on save.
         var returning = await userRepository.GetByExternalIdAsync(ctx.ExternalId, ctx.Provider, cancellationToken);
 
-        logger.LogWarning(
-            "[Resolve:FastPath] externalId={ExternalId} found={Found} userId={UserId} email={UserEmail} isActive={IsActive}",
-            ctx.ExternalId,
-            returning is not null,
-            returning?.Id,
-            returning?.Email,
-            returning?.IsActive);
-
         if (returning is not null)
         {
-            var profileChanged = returning.UpdateProfile(ctx.Email, ctx.DisplayName);
-
-            logger.LogWarning(
-                "[Resolve:FastPath:UpdateProfile] externalId={ExternalId} profileChanged={Changed} newEmail={Email} newName={DisplayName}",
-                ctx.ExternalId, profileChanged, ctx.Email, ctx.DisplayName);
-
-            if (profileChanged)
-            {
-                var fastTracked = db.ChangeTracker.Entries()
-                    .Select(e => $"{e.Entity.GetType().Name}(Id={((dynamic)e.Entity).Id}, State={e.State})")
-                    .ToList();
-                logger.LogWarning(
-                    "[Resolve:FastPath:SaveChanges] tracked=[{Tracked}] externalId={ExternalId}",
-                    string.Join(", ", fastTracked), ctx.ExternalId);
-
+            if (returning.UpdateProfile(ctx.Email, ctx.DisplayName))
                 await db.SaveChangesAsync(cancellationToken);
-
-                logger.LogWarning("[Resolve:FastPath:SaveChanges:Done] externalId={ExternalId}", ctx.ExternalId);
-            }
 
             return CurrentUser.From(returning);
         }
 
         // Slow path — new user or new provider link
-        logger.LogWarning("[Resolve:SlowPath:Start] externalId={ExternalId}", ctx.ExternalId);
-
         var user = await ResolveUserAsync(ctx, cancellationToken);
 
         try
         {
-            var tracked = db.ChangeTracker.Entries()
-                .Select(e => $"{e.Entity.GetType().Name}(Id={((dynamic)e.Entity).Id}, State={e.State})")
-                .ToList();
-            logger.LogWarning(
-                "[Resolve:SaveChanges#1] tracked=[{Tracked}] externalId={ExternalId} provider={Provider}",
-                string.Join(", ", tracked), ctx.ExternalId, ctx.Provider);
-
             await db.SaveChangesAsync(cancellationToken);
-
-            logger.LogWarning("[Resolve:SaveChanges#1:Done] externalId={ExternalId}", ctx.ExternalId);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            var failedEntries = ex.Entries
-                .Select(e => $"{e.Entity.GetType().Name}(Id={((dynamic)e.Entity).Id}, State={e.State}, OriginalValues={string.Join(";", e.OriginalValues.Properties.Select(p => $"{p.Name}={e.OriginalValues[p]}"))})")
-                .ToList();
-            logger.LogWarning(ex,
-                "[Resolve:SaveChanges#1:ConcurrencyEx] failed=[{Failed}] externalId={ExternalId} provider={Provider} — retrying",
-                string.Join(", ", failedEntries), ctx.ExternalId, ctx.Provider);
-
-            // Do NOT call userIdentityRepository.GetAsync here before ResolveUserAsync.
-            // GetAsync includes the User navigation, which loads both UserIdentity and AppUser
-            // into the tracker as Unchanged. ResolveUserAsync then calls AddIdentity, which
-            // adds a new UserIdentity to _identities. EF relationship fixup sees the already-
-            // tracked UserIdentity and marks it Modified, causing SaveChanges#2 to emit an
-            // UPDATE that affects 0 rows → another DbUpdateConcurrencyException.
-            db.ChangeTracker.Clear();
-
-            var retryUser = await ResolveUserAsync(ctx, cancellationToken);
-
-            var retryTracked = db.ChangeTracker.Entries()
-                .Select(e => $"{e.Entity.GetType().Name}(Id={((dynamic)e.Entity).Id}, State={e.State})")
-                .ToList();
-            logger.LogWarning(
-                "[Resolve:SaveChanges#2] tracked=[{Tracked}] externalId={ExternalId} provider={Provider}",
-                string.Join(", ", retryTracked), ctx.ExternalId, ctx.Provider);
-
-            await db.SaveChangesAsync(cancellationToken);
-
-            logger.LogWarning("[Resolve:SaveChanges#2:Done] externalId={ExternalId}", ctx.ExternalId);
-
-            return CurrentUser.From(retryUser);
         }
         catch (DbUpdateException ex)
         {
             logger.LogWarning(ex,
-                "[Resolve:SaveChanges#1:DbUpdateEx] Concurrent first-login race externalId={ExternalId} provider={Provider} — re-querying winner",
+                "Concurrent first-login race externalId={ExternalId} provider={Provider} — re-querying winner",
                 ctx.ExternalId, ctx.Provider);
 
             db.ChangeTracker.Clear();
@@ -149,32 +77,19 @@ public class IdentityService(
         if (ctx.Email is not null && ctx.EmailVerified)
             user = await userRepository.GetByEmailAsync(ctx.Email, cancellationToken);
 
-        logger.LogWarning(
-            "[ResolveUser] externalId={ExternalId} emailLookupFound={Found} foundUserId={UserId}",
-            ctx.ExternalId, user is not null, user?.Id);
-
         if (user is null)
         {
             user = AppUser.Create(ctx.Email, ctx.DisplayName);
             userRepository.Add(user);
-            logger.LogWarning("[ResolveUser:Created] externalId={ExternalId} newUserId={UserId}", ctx.ExternalId, user.Id);
         }
         else
         {
             // Attach the untracked AppUser as Unchanged so only the new UserIdentity
             // (Added via AddIdentity below) is written — no spurious UPDATE on AppUser.
             db.Attach(user);
-            logger.LogWarning("[ResolveUser:Attached] externalId={ExternalId} userId={UserId} state={State}",
-                ctx.ExternalId, user.Id, db.Entry(user).State);
         }
 
         user.AddIdentity(ctx.ExternalId, ctx.Provider);
-
-        var identityEntry = db.ChangeTracker.Entries<UserIdentity>()
-            .FirstOrDefault(e => e.Entity.ExternalUserId == ctx.ExternalId);
-        logger.LogWarning(
-            "[ResolveUser:AddIdentity] externalId={ExternalId} userId={UserId} identityState={IdentityState}",
-            ctx.ExternalId, user.Id, identityEntry?.State);
 
         return user;
     }
