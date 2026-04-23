@@ -9,6 +9,7 @@ public class TradeConfiguration : IEntityTypeConfiguration<Trade>
     public void Configure(EntityTypeBuilder<Trade> builder)
     {
         builder.HasKey(t => t.Id);
+        builder.Property(t => t.Id).ValueGeneratedNever();
         builder.Property(t => t.Symbol).HasMaxLength(20).IsRequired();
         builder.Property(t => t.Direction).IsRequired();
         builder.Property(t => t.Status).IsRequired();

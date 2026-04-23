@@ -9,6 +9,7 @@ public class NotificationPreferenceConfiguration : IEntityTypeConfiguration<Noti
     public void Configure(EntityTypeBuilder<NotificationPreference> builder)
     {
         builder.HasKey(n => n.Id);
+        builder.Property(n => n.Id).ValueGeneratedNever();
         builder.Property(n => n.Channel).IsRequired();
         builder.Property(n => n.TelegramChatId).HasMaxLength(100);
         builder.Property(n => n.Email).HasMaxLength(200);

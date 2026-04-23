@@ -9,6 +9,7 @@ public class BudgetConfiguration : IEntityTypeConfiguration<Budget>
     public void Configure(EntityTypeBuilder<Budget> builder)
     {
         builder.HasKey(b => b.Id);
+        builder.Property(b => b.Id).ValueGeneratedNever();
         builder.Property(b => b.Category).HasMaxLength(100).IsRequired();
         builder.Property(b => b.LimitAmount).HasPrecision(18, 2).IsRequired();
         builder.Property(b => b.Currency).HasMaxLength(3).IsRequired().HasDefaultValue("USD");

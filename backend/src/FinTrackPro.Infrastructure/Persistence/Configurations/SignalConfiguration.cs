@@ -9,6 +9,7 @@ public class SignalConfiguration : IEntityTypeConfiguration<Signal>
     public void Configure(EntityTypeBuilder<Signal> builder)
     {
         builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
         builder.Property(s => s.Symbol).HasMaxLength(20).IsRequired();
         builder.Property(s => s.SignalType).IsRequired();
         builder.Property(s => s.Message).HasMaxLength(500).IsRequired();

@@ -10,6 +10,7 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
     public void Configure(EntityTypeBuilder<AppUser> builder)
     {
         builder.HasKey(u => u.Id);
+        builder.Property(u => u.Id).ValueGeneratedNever();
         builder.Property(u => u.Email).HasMaxLength(200);
         builder.Property(u => u.DisplayName).HasMaxLength(100).IsRequired();
         builder.Property(u => u.PreferredLanguage).HasMaxLength(10).IsRequired().HasDefaultValue("en");

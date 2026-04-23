@@ -9,6 +9,7 @@ public class WatchedSymbolConfiguration : IEntityTypeConfiguration<WatchedSymbol
     public void Configure(EntityTypeBuilder<WatchedSymbol> builder)
     {
         builder.HasKey(w => w.Id);
+        builder.Property(w => w.Id).ValueGeneratedNever();
         builder.Property(w => w.Symbol).HasMaxLength(20).IsRequired();
         builder.Property(w => w.CreatedAt).IsRequired().HasDefaultValueSql("NOW()").ValueGeneratedNever();
         builder.HasIndex(w => new { w.UserId, w.Symbol }).IsUnique();

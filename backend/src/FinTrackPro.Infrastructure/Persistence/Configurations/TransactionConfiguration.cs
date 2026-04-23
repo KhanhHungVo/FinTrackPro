@@ -9,6 +9,7 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
         builder.HasKey(t => t.Id);
+        builder.Property(t => t.Id).ValueGeneratedNever();
         builder.Property(t => t.Amount).HasPrecision(18, 2).IsRequired();
         builder.Property(t => t.Currency).HasMaxLength(3).IsRequired().HasDefaultValue("USD");
         builder.Property(t => t.RateToUsd).HasPrecision(18, 8).IsRequired().HasDefaultValue(1.0m);
