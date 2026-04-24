@@ -5,12 +5,14 @@ using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Common.Models;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FinTrackPro.Infrastructure.ExternalServices;
 
 public class CoinGeckoService(
     HttpClient httpClient,
     HybridCache cache,
+    IOptions<CoinGeckoOptions> options,
     ILogger<CoinGeckoService> logger) : ICoinGeckoService
 {
     public async Task<IEnumerable<TrendingCoinDto>> GetTrendingCoinsAsync(CancellationToken cancellationToken = default)
@@ -89,7 +91,7 @@ public class CoinGeckoService(
                     return [];
                 }
             },
-            new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(2) },
+            new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(options.Value.TrendingCacheTtlSeconds) },
             tags: ["market"],
             cancellationToken: cancellationToken);
     }
@@ -126,7 +128,7 @@ public class CoinGeckoService(
                     return [];
                 }
             },
-            new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(2) },
+            new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(options.Value.MarketCapCacheTtlSeconds) },
             tags: ["market"],
             cancellationToken: cancellationToken);
     }

@@ -21,4 +21,8 @@ public class FakeBinanceService : IBinanceService
 
     public Task<TickerDto?> Get24HrTickerAsync(string symbol, CancellationToken cancellationToken = default)
         => Task.FromResult<TickerDto?>(null);
+
+    public Task<HashSet<string>> GetValidSymbolsAsync(CancellationToken cancellationToken)
+        => Task.FromResult(new HashSet<string>());
+
 }

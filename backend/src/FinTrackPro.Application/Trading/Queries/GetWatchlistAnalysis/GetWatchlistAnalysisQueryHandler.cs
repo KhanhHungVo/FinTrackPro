@@ -16,6 +16,7 @@ public class GetWatchlistAnalysisQueryHandler(
     ILogger<GetWatchlistAnalysisQueryHandler> logger)
     : IRequestHandler<GetWatchlistAnalysisQuery, IEnumerable<WatchlistAnalysisItemDto>>
 {
+    private const int CacheTtlSeconds = 60;
     public async Task<IEnumerable<WatchlistAnalysisItemDto>> Handle(
         GetWatchlistAnalysisQuery request, CancellationToken cancellationToken)
     {
@@ -68,7 +69,7 @@ public class GetWatchlistAnalysisQueryHandler(
                         RsiDaily: ComputeRsi(dailyKlines),
                         RsiWeekly: ComputeRsi(weeklyKlines));
                 },
-                new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(5) },
+                new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(CacheTtlSeconds) },
                 cancellationToken: cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

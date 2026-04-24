@@ -5,12 +5,14 @@ using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Common.Models;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FinTrackPro.Infrastructure.ExternalServices;
 
 public class BinanceService(
     HttpClient httpClient,
     HybridCache cache,
+    IOptions<BinanceOptions> options,
     ILogger<BinanceService> logger) : IBinanceService
 {
     private const string ExchangeInfoCacheKey = "binance:exchange_info";
@@ -94,9 +96,7 @@ public class BinanceService(
         }
     }
 
-    /// <summary>
-    /// Fetches and caches the full Binance symbol list for 24 hours.
-    /// </summary>
+    /// <inheritdoc/>
     public async Task<HashSet<string>> GetValidSymbolsAsync(CancellationToken cancellationToken)
     {
         return await cache.GetOrCreateAsync(
@@ -115,7 +115,7 @@ public class BinanceService(
                     .Select(s => s.GetProperty("symbol").GetString()!)
                     .ToHashSet();
             },
-            new HybridCacheEntryOptions { Expiration = TimeSpan.FromHours(24) },
+            new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(options.Value.ExchangeInfoCacheTtlSeconds) },
             cancellationToken: cancellationToken);
     }
 }

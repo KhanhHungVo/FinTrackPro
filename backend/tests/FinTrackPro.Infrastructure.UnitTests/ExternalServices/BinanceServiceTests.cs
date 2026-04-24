@@ -3,6 +3,7 @@ using FinTrackPro.Infrastructure.ExternalServices;
 using FinTrackPro.Infrastructure.UnitTests.Helpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace FinTrackPro.Infrastructure.UnitTests.ExternalServices;
 
@@ -12,7 +13,7 @@ public class BinanceServiceTests
     {
         var handler = new MockHttpMessageHandler(status, json);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.binance.com") };
-        return new BinanceService(httpClient, HybridCacheFactory.Create(), NullLogger<BinanceService>.Instance);
+        return new BinanceService(httpClient, HybridCacheFactory.Create(), Options.Create(new BinanceOptions()), NullLogger<BinanceService>.Instance);
     }
 
     // ── GetKlinesAsync ──────────────────────────────────────────────────────
