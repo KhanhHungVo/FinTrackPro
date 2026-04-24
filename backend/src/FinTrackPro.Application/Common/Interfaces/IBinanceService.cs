@@ -4,6 +4,8 @@ namespace FinTrackPro.Application.Common.Interfaces;
 
 public interface IBinanceService
 {
+    Task<HashSet<string>> GetValidSymbolsAsync(CancellationToken cancellationToken);
+
     /// <summary>
     /// Validates whether <paramref name="symbol"/> exists in Binance's exchange info.
     /// NOTE: Not used in the trade-creation flow (removed to avoid geo-blocking on Render).

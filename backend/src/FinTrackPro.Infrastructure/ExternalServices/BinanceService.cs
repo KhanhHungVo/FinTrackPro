@@ -97,7 +97,7 @@ public class BinanceService(
     /// <summary>
     /// Fetches and caches the full Binance symbol list for 24 hours.
     /// </summary>
-    private async Task<HashSet<string>> GetValidSymbolsAsync(CancellationToken cancellationToken)
+    public async Task<HashSet<string>> GetValidSymbolsAsync(CancellationToken cancellationToken)
     {
         return await cache.GetOrCreateAsync(
             ExchangeInfoCacheKey,

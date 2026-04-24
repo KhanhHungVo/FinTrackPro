@@ -1,46 +1,65 @@
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Common.Models;
-using FinTrackPro.Domain.Entities;
-using FinTrackPro.Domain.Exceptions;
 using FinTrackPro.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 using Skender.Stock.Indicators;
 
 namespace FinTrackPro.Application.Trading.Queries.GetWatchlistAnalysis;
 
 public class GetWatchlistAnalysisQueryHandler(
     IWatchedSymbolRepository watchedSymbolRepository,
-    IUserRepository userRepository,
     ICurrentUser currentUser,
     IBinanceService binanceService,
-    HybridCache cache)
+    HybridCache cache,
+    ILogger<GetWatchlistAnalysisQueryHandler> logger)
     : IRequestHandler<GetWatchlistAnalysisQuery, IEnumerable<WatchlistAnalysisItemDto>>
 {
     public async Task<IEnumerable<WatchlistAnalysisItemDto>> Handle(
         GetWatchlistAnalysisQuery request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
-            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
-
-        var watchedSymbols = await watchedSymbolRepository.GetByUserAsync(user.Id, cancellationToken);
+        var watchedSymbols = await watchedSymbolRepository.GetByUserAsync(currentUser.UserId, cancellationToken);
         var symbols = watchedSymbols.Select(s => s.Symbol).ToList();
 
         if (symbols.Count == 0)
             return [];
 
-        var tasks = symbols.Select(symbol =>
-            cache.GetOrCreateAsync(
+        var validSymbols = await binanceService.GetValidSymbolsAsync(cancellationToken);
+
+        symbols = [.. symbols.Intersect(validSymbols)];
+
+        using var semaphore = new SemaphoreSlim(5);
+        var tasks = symbols.Select(async symbol =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
+            try   { return await GetAnalysisSafe(symbol, cancellationToken); }
+            finally { semaphore.Release(); }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        return results.OfType<WatchlistAnalysisItemDto>().OrderBy(r => r.Symbol);
+    }
+
+    private async Task<WatchlistAnalysisItemDto?> GetAnalysisSafe(
+        string symbol,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await cache.GetOrCreateAsync(
                 $"watchlist:analysis:{symbol}",
                 async ct =>
                 {
-                    var tickerTask = binanceService.Get24HrTickerAsync(symbol, ct);
-                    var dailyTask = binanceService.GetKlinesAsync(symbol, "1d", 100, ct);
-                    var weeklyTask = binanceService.GetKlinesAsync(symbol, "1w", 100, ct);
+                    var tickerTask   = binanceService.Get24HrTickerAsync(symbol, ct);
+                    var dailyTask    = binanceService.GetKlinesAsync(symbol, "1d", 100, ct);
+                    var weeklyTask   = binanceService.GetKlinesAsync(symbol, "1w", 100, ct);
+
                     await Task.WhenAll(tickerTask, dailyTask, weeklyTask);
-                    var ticker = tickerTask.Result;
-                    var dailyKlines = dailyTask.Result;
-                    var weeklyKlines = weeklyTask.Result;
+
+                    var ticker       = await tickerTask;
+                    var dailyKlines  = await dailyTask;
+                    var weeklyKlines = await weeklyTask;
 
                     return new WatchlistAnalysisItemDto(
                         Symbol: symbol,
@@ -50,11 +69,13 @@ public class GetWatchlistAnalysisQueryHandler(
                         RsiWeekly: ComputeRsi(weeklyKlines));
                 },
                 new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(5) },
-                cancellationToken: cancellationToken)
-            .AsTask());
-
-        var results = await Task.WhenAll(tasks);
-        return results.OrderBy(r => r.Symbol);
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to fetch analysis for symbol {Symbol}", symbol);
+            return null;
+        }
     }
 
     private static double? ComputeRsi(IEnumerable<KlineDto> klines)

@@ -2,11 +2,11 @@ using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Common.Models;
 using FinTrackPro.Application.Trading.Queries.GetWatchlistAnalysis;
 using FinTrackPro.Domain.Entities;
-using FinTrackPro.Domain.Exceptions;
 using FinTrackPro.Domain.Repositories;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace FinTrackPro.Application.UnitTests.Trading;
@@ -14,7 +14,6 @@ namespace FinTrackPro.Application.UnitTests.Trading;
 public class GetWatchlistAnalysisQueryHandlerTests
 {
     private readonly IWatchedSymbolRepository _watchedSymbolRepository = Substitute.For<IWatchedSymbolRepository>();
-    private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
     private readonly IBinanceService _binanceService = Substitute.For<IBinanceService>();
     private readonly HybridCache _cache;
@@ -31,14 +30,16 @@ public class GetWatchlistAnalysisQueryHandlerTests
 
         _handler = new GetWatchlistAnalysisQueryHandler(
             _watchedSymbolRepository,
-            _userRepository,
             _currentUser,
             _binanceService,
-            _cache);
+            _cache,
+            Substitute.For<ILogger<GetWatchlistAnalysisQueryHandler>>());
 
         _currentUser.UserId.Returns(TestUser.Id);
-        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
-            .Returns(TestUser);
+
+        // Default: all symbols are valid on Binance
+        _binanceService.GetValidSymbolsAsync(Arg.Any<CancellationToken>())
+            .Returns(new HashSet<string> { "BTCUSDT", "ETHUSDT", "SOLUSDT" });
     }
 
     private static IEnumerable<KlineDto> MakeKlines(int count, decimal close = 100m)
@@ -174,17 +175,6 @@ public class GetWatchlistAnalysisQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UserNotFound_ThrowsNotFoundException()
-    {
-        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
-            .Returns((AppUser?)null);
-
-        var act = async () => await _handler.Handle(new GetWatchlistAnalysisQuery(), CancellationToken.None);
-
-        await act.Should().ThrowAsync<NotFoundException>();
-    }
-
-    [Fact]
     public async Task Handle_ResultsOrderedBySymbolAscending()
     {
         var symbols = new[]
@@ -214,5 +204,33 @@ public class GetWatchlistAnalysisQueryHandlerTests
         result[0].Should().Be("BTCUSDT");
         result[1].Should().Be("ETHUSDT");
         result[2].Should().Be("SOLUSDT");
+    }
+
+    [Fact]
+    public async Task Handle_SymbolNotOnBinance_IsExcludedFromResults()
+    {
+        var symbols = new[]
+        {
+            WatchedSymbol.Create(TestUser.Id, "BTCUSDT"),
+            WatchedSymbol.Create(TestUser.Id, "FAKECOIN"),
+        };
+        _watchedSymbolRepository.GetByUserAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(symbols);
+
+        // Only BTCUSDT is a valid Binance symbol
+        _binanceService.GetValidSymbolsAsync(Arg.Any<CancellationToken>())
+            .Returns(new HashSet<string> { "BTCUSDT" });
+
+        _binanceService.Get24HrTickerAsync("BTCUSDT", Arg.Any<CancellationToken>())
+            .Returns(new TickerDto("BTCUSDT", 64000m, 2m, 50000m, 999m));
+        _binanceService.GetKlinesAsync("BTCUSDT", "1d", 100, Arg.Any<CancellationToken>())
+            .Returns(MakeIncreasingKlines(100));
+        _binanceService.GetKlinesAsync("BTCUSDT", "1w", 100, Arg.Any<CancellationToken>())
+            .Returns(MakeIncreasingKlines(100));
+
+        var result = (await _handler.Handle(new GetWatchlistAnalysisQuery(), CancellationToken.None)).ToList();
+
+        result.Should().HaveCount(1);
+        result[0].Symbol.Should().Be("BTCUSDT");
     }
 }
