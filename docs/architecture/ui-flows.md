@@ -1,6 +1,6 @@
 # FinTrackPro — UI Flows
 
-> Last updated: 2026-04-20
+> Last updated: 2026-04-24
 > Format: screen-by-screen reference for UI design and Figma workflow generation.
 
 ---
@@ -240,19 +240,21 @@ None — Dashboard is read-only (all widgets are display-only).
 - Table: Rank | Name/Symbol | Price | 1h% | 24h% | 7d%
 - Positive % values rendered in green with `+` prefix; negative in red
 - Null price/% renders as `—`; horizontal scroll on mobile
-- Powered by CoinGecko; refreshed every 2 minutes
+- Powered by CoinGecko; backend cache TTL 60 s; frontend polls every 2 minutes
+- **DataFreshnessBadge** in the card header: shows "Updated Xs ago", spinning refresh icon while fetching, manual refresh button (disabled within the 60 s cache TTL)
 
 **Top Market Cap**
 - Table: Rank | Name/Symbol | Price | Market Cap | 1h% | 24h% | 7d%
 - Market cap formatted as `$1.2T` / `$1.2B` / `$1.2M`
 - Error state: "Data temporarily unavailable" banner (no crash)
-- Horizontal scroll on mobile; refreshed every 2 minutes
+- Horizontal scroll on mobile; backend cache TTL 60 s; frontend polls every 2 minutes
+- **DataFreshnessBadge** in the card header (same behaviour as Trending Coins)
 
 **Fear & Greed Widget (compact)**
 - SVG semicircle gauge with animated needle, compact variant
 - 5 colour zones: Extreme Fear (0–20, red) / Fear (20–40, orange) / Neutral (40–60, yellow) / Greed (60–80, green) / Extreme Greed (80–100, dark green)
 - Numeric value and label displayed below gauge
-- Occupies 25% of the row alongside Watchlist Analysis; stretches to match its height
+- Occupies 25% of the row alongside Watchlist Analysis; row uses `items-start` so heights are independent
 - Data refreshed every hour
 
 **My Watchlist — Analysis**
@@ -262,7 +264,9 @@ None — Dashboard is read-only (all widgets are display-only).
 - **Footer:** "via Binance" attribution link, right-aligned, same style as CoinGecko footer on other market widgets.
 - Null fields render as `—`
 - Empty state: "No symbols yet — add some in Settings → Watchlist." + link
-- Refreshed every 3 minutes
+- Scrollable list body capped at 360 px height (overflow-y: auto) when many symbols are present
+- Backend cache TTL 60 s; frontend polls every 2 minutes
+- **DataFreshnessBadge** in the card header (same behaviour as Trending Coins)
 
 **Recent Signals (full list)**
 - Up to 20 latest market signals across all watched symbols
@@ -281,13 +285,19 @@ None — Dashboard is read-only (all widgets are display-only).
 ### Component States
 | Widget | Loading | Loaded | Empty | Error |
 |---|---|---|---|---|
-| `TrendingCoinsWidget` | Skeleton rows | 10 rows with price/% | — | — |
-| `TopMarketCapWidget` | Skeleton rows | 10 rows | — | "Data temporarily unavailable" banner |
+| `TrendingCoinsWidget` | Skeleton rows | 10 rows with price/%; `DataFreshnessBadge` in header | — | — |
+| `TopMarketCapWidget` | Skeleton rows | 10 rows; `DataFreshnessBadge` in header | — | "Data temporarily unavailable" banner |
 | `FearGreedWidget` (compact) | Skeleton block | Gauge + value | — | — |
-| `WatchlistAnalysisWidget` | Skeleton rows (6 cols) | Rows with RSI + Trade badge | "No symbols yet" + link | — |
+| `WatchlistAnalysisWidget` | Skeleton rows (6 cols) | Rows with RSI + Trade badge; `DataFreshnessBadge` in header; list scrollable up to 360 px | "No symbols yet" + link | — |
 
 ### User Actions
-None — Market page is read-only.
+| Action | Result |
+|---|---|
+| Click refresh icon on `TrendingCoinsWidget` | Manually triggers a refetch; disabled within the 60 s cache TTL |
+| Click refresh icon on `TopMarketCapWidget` | Manually triggers a refetch; disabled within the 60 s cache TTL |
+| Click refresh icon on `WatchlistAnalysisWidget` | Manually triggers a refetch; disabled within the 60 s cache TTL |
+
+All other interactions (navigation, links) are read-only.
 
 ---
 

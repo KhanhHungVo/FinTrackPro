@@ -130,7 +130,7 @@ NuGet `Microsoft.Extensions.Caching.Hybrid` added to both `FinTrackPro.Infrastru
 | CoinGeckoService — market cap | `"market:marketcap"` | 2 min | `"market"` |
 | BinanceService — exchange info | `"binance:exchange_info"` | 24 h | — |
 | ExchangeRateService — rates | `"rates_usd"` | 8 h | — |
-| WatchlistAnalysis handler — per symbol | `$"watchlist:analysis:{symbol}"` | 5 min | — |
+| WatchlistAnalysis handler — per symbol | `$"watchlist:analysis:{symbol}"` | 60 s | — |
 
 **ExchangeRateService special case:** The current implementation has a three-tier pattern
 (memory → HTTP → config fallback). With HybridCache, the fallback lives inside the factory lambda
@@ -203,7 +203,7 @@ Requires `[Authorize]`. Empty watchlist → `[]` (HTTP 200).
   }
 ]
 ```
-All numeric fields are `number | null`. Results ordered by symbol ascending. Per-symbol cache 5 min.
+All numeric fields are `number | null`. Results ordered by symbol ascending. Per-symbol cache 60 s.
 
 ---
 
@@ -283,33 +283,52 @@ Reuses the identical Skender pattern proven in `MarketSignalJob`.
 | File | Purpose |
 |---|---|
 | `widgets/top-market-cap-widget/ui/TopMarketCapWidget.tsx` | NEW — table with Rank, Name/Symbol, Price, Market Cap, 1h/24h/7d %; 10 skeleton rows; "Data temporarily unavailable" error state |
-| `widgets/watchlist-analysis-widget/ui/WatchlistAnalysisWidget.tsx` | NEW — table with Symbol, Price, 24h%, RSI Daily, RSI Weekly; empty state with Settings link; RSI badges |
+| `widgets/watchlist-analysis-widget/ui/WatchlistAnalysisWidget.tsx` | NEW — table with Symbol, Price, 24h%, RSI Daily, RSI Weekly; empty state with Settings link; RSI badges; scrollable list body (max 360 px) |
+| `shared/ui/DataFreshnessBadge.tsx` | NEW — live "Updated Xs ago" counter + spinning refresh icon + manual refetch button (disabled within cache TTL) + "live" label |
+| `shared/lib/useDataAge.ts` | NEW — returns elapsed seconds since `dataUpdatedAt`; ticked by 1 s `setInterval` |
 
 ### Modified files
 
 | File | Change |
 |---|---|
 | `entities/signal/model/types.ts` | `TrendingCoin`: add `price?`, `change1h?`, `change24h?`, `change7d?`. Add `MarketCapCoin` interface |
-| `entities/signal/api/signalApi.ts` | `useTrendingCoins`: `staleTime` → `60_000`, add `refetchInterval: 90_000`. Add `useMarketCapCoins()` |
+| `entities/signal/api/signalApi.ts` | `useTrendingCoins`: `staleTime` + `refetchInterval` → `MARKET_POLL_MS` (120 s). Add `useMarketCapCoins()` with same interval. |
 | `entities/signal/index.ts` | Export `MarketCapCoin`, `useMarketCapCoins` |
 | `entities/watched-symbol/model/types.ts` | Add `WatchlistAnalysisItem` interface |
-| `entities/watched-symbol/api/watchedSymbolApi.ts` | Add `useWatchlistAnalysis()`: `staleTime: 120_000`, `refetchInterval: 180_000` |
+| `entities/watched-symbol/api/watchedSymbolApi.ts` | Add `useWatchlistAnalysis()`: `staleTime` + `refetchInterval` → `WATCHLIST_POLL_MS` (120 s) |
 | `entities/watched-symbol/index.ts` | Export `WatchlistAnalysisItem`, `useWatchlistAnalysis` |
-| `widgets/trending-coins-widget/ui/TrendingCoinsWidget.tsx` | Grid `[40px_1fr_100px_64px_64px_64px]`; Price, 1h%, 24h%, 7d% columns; green/red % coloring; null → `—`; `overflow-x-auto`; `SkeletonRow` extended to 6 columns |
-| `pages/market/ui/MarketPage.tsx` | `<TopMarketCapWidget />` inserted after the two-column row; `<WatchlistAnalysisWidget />` inserted after it |
+| `widgets/trending-coins-widget/ui/TrendingCoinsWidget.tsx` | Grid `[40px_1fr_100px_64px_64px_64px]`; Price, 1h%, 24h%, 7d% columns; green/red % coloring; null → `—`; `overflow-x-auto`; `SkeletonRow` extended to 6 columns; static "live" pill replaced with `DataFreshnessBadge` |
+| `widgets/top-market-cap-widget/ui/TopMarketCapWidget.tsx` | Static "live" pill replaced with `DataFreshnessBadge`; column header `#` renamed to `Rank` |
+| `widgets/watchlist-analysis-widget/ui/WatchlistAnalysisWidget.tsx` | Static "live" pill replaced with `DataFreshnessBadge`; list body capped at `max-h-[360px] overflow-y-auto` |
+| `pages/market/ui/MarketPage.tsx` | `<TopMarketCapWidget />` inserted after the two-column row; `<WatchlistAnalysisWidget />` inserted after it; Fear & Greed row changed from `items-stretch` to `items-start` so widget heights are independent |
+| `shared/ui/DataFreshnessBadge.tsx` | NEW shared component — live age counter + manual refresh button + "live" label |
+| `shared/lib/useDataAge.ts` | NEW hook — returns seconds since `dataUpdatedAt`, ticked by 1 s interval |
+| `shared/ui/index.ts` | Export `DataFreshnessBadge` |
 
 ### Polling strategy
 
 | Section | Backend TTL | `refetchInterval` | `staleTime` |
 |---|---|---|---|
 | Fear & Greed | 1 h | 5 min | 4 min |
-| Trending Coins | 2 min | 90 s | 60 s |
-| Top Market Cap | 2 min | 90 s | 60 s |
-| Watchlist Analysis | 5 min per symbol | 3 min | 2 min |
+| Trending Coins | 60 s | 120 s | 120 s |
+| Top Market Cap | 60 s | 120 s | 120 s |
+| Watchlist Analysis | 60 s per symbol | 120 s | 120 s |
 | Signals | 4 min | 4 min | 3 min |
 
-React Query refetches silently in the background — no loading spinner on subsequent fetches, only
-on initial load.
+`staleTime` equals `refetchInterval` for Trending Coins, Top Market Cap, and Watchlist Analysis — this aligns frontend polling with the backend cache TTL so the UI never fetches more often than the backend can produce fresh data.
+
+React Query refetches silently in the background — no loading spinner on subsequent fetches, only on initial load.
+
+### DataFreshnessBadge
+
+A shared `DataFreshnessBadge` component (`shared/ui/DataFreshnessBadge.tsx`) replaces the static "live" pill on `TrendingCoinsWidget`, `TopMarketCapWidget`, and `WatchlistAnalysisWidget`. It:
+
+- Shows a live "Updated Xs ago" counter (ticked by `useDataAge`, a 1 s `setInterval`)
+- Displays a rotating refresh icon while `isFetching` is true
+- Offers a manual refresh button that is disabled within `cacheTtlSeconds` (default 60 s) to prevent hammering the backend
+- Accepts an optional `label` prop (defaults to `"live"`) for the existing green "live" pill
+
+This makes data staleness visible without removing the live indicator.
 
 ---
 
@@ -496,6 +515,7 @@ verification is sufficient. If a market spec is added in future it belongs at
 - [ ] Delisted symbol row returns all-null fields; other rows unaffected
 - [ ] Empty watchlist returns `[]` HTTP 200
 - [ ] Cache-warm p95: trending ≤ 300 ms, marketcap ≤ 300 ms
+- [ ] Watchlist analysis cache TTL is 60 s (not 5 min)
 
 ### Frontend
 - [ ] Trending widget shows 10 rows; price and all three % columns populated
@@ -507,6 +527,10 @@ verification is sufficient. If a market spec is added in future it belongs at
 - [ ] RSI < 30 → blue `OS` badge; RSI > 70 → red `OB` badge; 30–70 → muted number
 - [ ] Watchlist Analysis empty state: message + working link to `/settings?tab=watchlist`
 - [ ] All three tables scroll horizontally at 375 px viewport
+- [ ] `DataFreshnessBadge` shows "Updated Xs ago" counter; counter increments each second
+- [ ] Refresh button spins while fetching; disabled within 60 s of last fetch
+- [ ] Fear & Greed and Watchlist Analysis row heights are independent (no stretch alignment)
+- [ ] Watchlist list body scrolls when > ~5 symbols; capped at 360 px
 - [ ] `npm run build` passes with no TypeScript errors
 
 ---
