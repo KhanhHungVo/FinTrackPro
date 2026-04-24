@@ -9,6 +9,7 @@ public class CreateTransactionCategoryCommandValidator : AbstractValidator<Creat
         RuleFor(v => v.Type).IsInEnum().WithMessage("Type must be a valid transaction type.");
         RuleFor(v => v.Slug)
             .NotEmpty()
+            .MaximumLength(100).WithMessage("Slug must not exceed 100 characters.")
             .Matches(@"^[a-z][a-z0-9_]{1,98}$")
             .WithMessage("Slug must start with a lowercase letter and contain only lowercase letters, digits, and underscores (2–99 characters).");
         RuleFor(v => v.LabelEn).NotEmpty().MaximumLength(100).WithMessage("English label is required and must be at most 100 characters.");

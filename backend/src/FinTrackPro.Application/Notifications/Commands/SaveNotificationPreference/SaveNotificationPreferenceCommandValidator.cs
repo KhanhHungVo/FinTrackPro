@@ -6,6 +6,8 @@ public class SaveNotificationPreferenceCommandValidator : AbstractValidator<Save
 {
     public SaveNotificationPreferenceCommandValidator()
     {
-        RuleFor(v => v.TelegramChatId).NotEmpty().WithMessage("Telegram chat ID is required.");
+        RuleFor(v => v.TelegramChatId)
+            .NotEmpty().WithMessage("Telegram chat ID is required.")
+            .MaximumLength(100).WithMessage("Telegram chat ID must not exceed 100 characters.");
     }
 }

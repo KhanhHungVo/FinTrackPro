@@ -34,5 +34,10 @@ public class CreateTradeCommandValidator : AbstractValidator<CreateTradeCommand>
         RuleFor(v => v.PositionSize).GreaterThan(0).WithMessage("Position size must be greater than zero.");
         RuleFor(v => v.Fees).GreaterThanOrEqualTo(0).WithMessage("Fees cannot be negative.");
         RuleFor(v => v.Currency).NotEmpty().MaximumLength(3).WithMessage("Currency is required and must be at most 3 characters.");
+
+        RuleFor(v => v.Notes)
+            .MaximumLength(1000).WithMessage("Notes must not exceed 1000 characters.")
+            .Matches(@"^[^<>]*$").WithMessage("Notes must not contain angle brackets (< >).")
+            .When(v => !string.IsNullOrEmpty(v.Notes));
     }
 }
