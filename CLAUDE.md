@@ -194,6 +194,7 @@ dotnet user-secrets set "Stripe:WebhookSecret" "<whsec_...>" --project backend/s
 - `docs/decisions/monetisation-subscription-design.md` — Freemium subscription system with Stripe (backend + frontend)
 - `docs/decisions/landing-page-fsd-integration.md` — public landing page at `/`; check-sso auth init, `login()` adapter method, `RequireAuth` guard, pricing limit env vars
 - `docs/decisions/nav-avatar-dropdown-tabbed-settings.md` — avatar dropdown nav links; tabbed Settings with URL-persisted active tab; About page
+- `docs/decisions/market-dashboard-phase1.md` — Market page upgrade: HybridCache migration, Trending Coins enrichment (top 10 + price/%), Top Market Cap widget, Watchlist RSI Analysis widget
 - `docs/planned/dashboard-command-center.md` — Dashboard redesign: personalized command center (expense allocation, budget health, trading intelligence, recent activity, contextual signals); market data moved to `/market`
 
 ### Planned (not yet implemented)

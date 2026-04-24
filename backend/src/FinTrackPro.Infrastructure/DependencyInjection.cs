@@ -46,7 +46,14 @@ public static class DependencyInjection
         AddDatabase(services, db);
         AddHttpInfrastructure(services, configuration);
         AddIamServices(services, configuration, iam, ro);
-        services.AddMemoryCache();
+        services.AddHybridCache(options =>
+        {
+            options.DefaultEntryOptions = new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(5),
+                LocalCacheExpiration = TimeSpan.FromMinutes(5)
+            };
+        });
         AddExternalHttpClients(services, configuration, binance, fearGreed, cg, er, ro);
         AddTelegramBot(services, botToken);
         AddPaymentGateway(services, configuration, pg);

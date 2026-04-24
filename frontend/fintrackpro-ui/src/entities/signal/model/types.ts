@@ -28,4 +28,20 @@ export interface TrendingCoin {
   name: string
   symbol: string
   marketCapRank: number
+  price?: number | null
+  change1h?: number | null
+  change24h?: number | null
+  change7d?: number | null
+}
+
+export interface MarketCapCoin {
+  rank: number
+  id: string
+  name: string
+  symbol: string
+  price?: number | null
+  marketCap?: number | null
+  change1h?: number | null
+  change24h?: number | null
+  change7d?: number | null
 }

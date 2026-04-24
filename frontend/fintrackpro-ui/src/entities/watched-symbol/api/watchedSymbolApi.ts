@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
-import type { WatchedSymbol } from '../model/types'
+import type { WatchedSymbol, WatchlistAnalysisItem } from '../model/types'
 
 export function useWatchedSymbols() {
   return useQuery({
@@ -26,5 +26,17 @@ export function useRemoveWatchedSymbol() {
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/api/watchedsymbols/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['watched-symbols'] }),
+  })
+}
+
+export function useWatchlistAnalysis() {
+  return useQuery({
+    queryKey: ['watchlist-analysis'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<WatchlistAnalysisItem[]>('/api/watchedsymbols/analysis')
+      return data
+    },
+    staleTime: 120_000,
+    refetchInterval: 180_000,
   })
 }

@@ -2,9 +2,7 @@ using System.Net;
 using FinTrackPro.Infrastructure.ExternalServices;
 using FinTrackPro.Infrastructure.UnitTests.Helpers;
 using FluentAssertions;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
-using NSubstitute;
 
 namespace FinTrackPro.Infrastructure.UnitTests.ExternalServices;
 
@@ -14,8 +12,7 @@ public class BinanceServiceTests
     {
         var handler = new MockHttpMessageHandler(status, json);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.binance.com") };
-        var cache = Substitute.For<IMemoryCache>();
-        return new BinanceService(httpClient, cache, NullLogger<BinanceService>.Instance);
+        return new BinanceService(httpClient, HybridCacheFactory.Create(), NullLogger<BinanceService>.Instance);
     }
 
     // ── GetKlinesAsync ──────────────────────────────────────────────────────
@@ -57,7 +54,6 @@ public class BinanceServiceTests
 
         result.Should().HaveCount(1);
         result[0].Open.Should().Be(100.50m);
-        result.Should().NotContain(k => k.Open == 0m);
     }
 
     [Fact]
@@ -82,6 +78,43 @@ public class BinanceServiceTests
 
         result.Should().NotBeNull();
         result!.Symbol.Should().Be("BTCUSDT");
+        result.Volume.Should().Be(12345.67m);
+        result.QuoteVolume.Should().Be(99999999.00m);
+    }
+
+    [Fact]
+    public async Task Get24HrTickerAsync_ValidPayloadWithPriceFields_MapsLastPriceAndPriceChangePercent()
+    {
+        const string json = """
+            {
+              "symbol": "BTCUSDT",
+              "lastPrice": "64230.50",
+              "priceChangePercent": "2.45",
+              "volume": "12345.67",
+              "quoteVolume": "99999999.00"
+            }
+            """;
+        var service = BuildService(json);
+
+        var result = await service.Get24HrTickerAsync("BTCUSDT");
+
+        result.Should().NotBeNull();
+        result!.LastPrice.Should().Be(64230.50m);
+        result.PriceChangePercent.Should().Be(2.45m);
+    }
+
+    [Fact]
+    public async Task Get24HrTickerAsync_MissingPriceFields_ReturnsNullableFieldsAsNull()
+    {
+        const string json = """{"symbol":"BTCUSDT","volume":"12345.67","quoteVolume":"99999999.00"}""";
+        var service = BuildService(json);
+
+        var result = await service.Get24HrTickerAsync("BTCUSDT");
+
+        result.Should().NotBeNull();
+        result!.LastPrice.Should().BeNull();
+        result.PriceChangePercent.Should().BeNull();
+        result.Symbol.Should().Be("BTCUSDT");
         result.Volume.Should().Be(12345.67m);
         result.QuoteVolume.Should().Be(99999999.00m);
     }

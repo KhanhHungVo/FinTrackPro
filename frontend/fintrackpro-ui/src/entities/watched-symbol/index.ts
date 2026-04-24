@@ -1,2 +1,2 @@
-export type { WatchedSymbol } from './model/types'
-export { useWatchedSymbols, useAddWatchedSymbol, useRemoveWatchedSymbol } from './api/watchedSymbolApi'
+export type { WatchedSymbol, WatchlistAnalysisItem } from './model/types'
+export { useWatchedSymbols, useAddWatchedSymbol, useRemoveWatchedSymbol, useWatchlistAnalysis } from './api/watchedSymbolApi'

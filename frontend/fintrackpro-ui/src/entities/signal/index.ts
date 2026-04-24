@@ -1,2 +1,2 @@
-export type { Signal, SignalType, FearGreed, TrendingCoin } from './model/types'
-export { useSignals, useFearGreed, useTrendingCoins } from './api/signalApi'
+export type { Signal, SignalType, FearGreed, TrendingCoin, MarketCapCoin } from './model/types'
+export { useSignals, useFearGreed, useTrendingCoins, useMarketCapCoins } from './api/signalApi'

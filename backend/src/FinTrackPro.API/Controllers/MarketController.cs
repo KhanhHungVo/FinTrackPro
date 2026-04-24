@@ -1,5 +1,7 @@
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Market.Queries.GetExchangeRates;
+using FinTrackPro.Application.Market.Queries.GetMarketCapCoins;
+using FinTrackPro.Application.Market.Queries.GetTrendingCoins;
 using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +11,7 @@ namespace FinTrackPro.API.Controllers;
 [Authorize(Roles = UserRole.User)]
 [ApiController]
 [Route("api/[controller]")]
-public class MarketController(
-    IFearGreedService fearGreedService,
-    ICoinGeckoService coinGeckoService) : BaseApiController
+public class MarketController(IFearGreedService fearGreedService) : BaseApiController
 {
     [HttpGet("fear-greed")]
     public async Task<IActionResult> GetFearGreed(CancellationToken cancellationToken)
@@ -19,7 +19,11 @@ public class MarketController(
 
     [HttpGet("trending")]
     public async Task<IActionResult> GetTrending(CancellationToken cancellationToken)
-        => Ok(await coinGeckoService.GetTrendingCoinsAsync(cancellationToken));
+        => Ok(await Mediator.Send(new GetTrendingCoinsQuery(), cancellationToken));
+
+    [HttpGet("marketcap")]
+    public async Task<IActionResult> GetMarketCap(CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new GetMarketCapCoinsQuery(), cancellationToken));
 
     [HttpGet("rates")]
     public async Task<ActionResult<Dictionary<string, decimal>>> GetRates(

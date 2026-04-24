@@ -87,7 +87,7 @@ graph TD
   - `StripePaymentGatewayService` (`IPaymentGatewayService`) — Stripe.net v51 wrapper for customer, checkout, portal
   - `StripeWebhookHandler` (`IPaymentWebhookHandler`) — Stripe-specific signature verification + event dispatch; all Stripe header names isolated here
   - `SubscriptionLimitService` (`ISubscriptionLimitService`) — admin bypass + `-1` sentinel; reads `SubscriptionPlanOptions` from config
-- `IMemoryCache` for external API responses
+- `HybridCache` (`Microsoft.Extensions.Caching.Hybrid`) for external API responses — stampede-safe, Redis-ready (L2 via `AddStackExchangeRedisCache` with zero service-code changes)
 - **Cancellation semantics** — all infrastructure services let `OperationCanceledException` propagate
   (via `catch (Exception ex) when (ex is not OperationCanceledException)`). This ensures Hangfire
   shutdown tokens held by background jobs (e.g., `MarketSignalJob`) can cancel in-flight work cleanly.
@@ -104,7 +104,7 @@ graph TD
 ### BackgroundJobs (`FinTrackPro.BackgroundJobs`)
 - `MarketSignalJob` — every 4h: RSI + volume spike signals via Skender + Binance
 - `BudgetOverrunJob` — daily: checks category spending vs budget limits; all comparisons normalised to USD via stored `RateToUsd`
-- `ExchangeRateSyncJob` — every 8h (Hangfire): fetches fiat rates from ExchangeRate-API v6 (`latest/USD`) and populates `IMemoryCache`
+- `ExchangeRateSyncJob` — every 8h (Hangfire): fetches fiat rates from ExchangeRate-API v6 (`latest/USD`) and populates `HybridCache`
 - `IamUserSyncJob` — daily: diffs active IAM provider users against `AppUser` table; deactivates rows for deleted or disabled accounts
 
 See [background-jobs.md](background-jobs.md) for detailed sequence diagrams of each job.
@@ -121,7 +121,7 @@ app → pages → widgets → features → entities → shared
 |---|---|
 | `app/` | QueryProvider, AuthProvider, LocaleProvider, BrowserRouter + Outlet layout, global CSS, i18n initialization; mounts `<PlanLimitModal />` globally |
 | `pages/` | DashboardPage, TransactionsPage, BudgetsPage, TradesPage, SettingsPage, PricingPage, MarketPage — all translated via `useTranslation()`, amounts converted via `convertAmount()` + `formatCurrency()` |
-| `widgets/` | Navbar (translated links + LocaleSettingsDropdown + PlanBadge in user dropdown), KpiSummaryWidget (4-card: income/expenses/trading P&L/unrealized P&L), ExpenseAllocationWidget (donut), BudgetHealthWidget, TradingIntelligenceWidget (open positions + closed trades panels), RecentActivityWidget, ContextualSignalsWidget, FearGreedWidget, SignalsList, TrendingCoinsWidget |
+| `widgets/` | Navbar (translated links + LocaleSettingsDropdown + PlanBadge in user dropdown), KpiSummaryWidget (4-card: income/expenses/trading P&L/unrealized P&L), ExpenseAllocationWidget (donut), BudgetHealthWidget, TradingIntelligenceWidget (open positions + closed trades panels), RecentActivityWidget, ContextualSignalsWidget, FearGreedWidget, SignalsList, TrendingCoinsWidget (top 10 with price + 1h/24h/7d%), TopMarketCapWidget (top 10 by market cap), WatchlistAnalysisWidget (live price + RSI Daily/Weekly per symbol) |
 | `features/` | AddTransactionForm, AddTradeForm, EditTradeModal, AddBudgetForm (all include currency selector), NotificationSettingsForm (disabled overlay for Free users), WatchlistManager, authStore (Zustand), localeStore (Zustand + persist — `language`, `currency`), `upgrade/` (planLimitStore, PlanLimitModal, UpgradeButton, SubscriptionSection), `plan-badge/` (PlanBadge pill) |
 | `entities/` | transaction, trade, signal, budget, watched-symbol, notification-preference, exchange-rate, user-preferences, subscription — types + React Query hooks |
 | `shared/` | Axios client (Bearer injection + 402 interceptor → planLimitStore + redirect on 401), `auth/` adapter (Keycloak or Auth0), env config, `cn()`, `formatCurrency()`, `convertAmount()`, `FreePlanAdBanner`, i18n resources (en/vi) |
@@ -149,7 +149,7 @@ All pages (Dashboard, Transactions, Budgets, Trades, Settings) follow the same r
 | Background jobs | Hangfire + provider-matched storage (PostgreSQL in prod, SQL Server locally) | Persistent job history, retry policy |
 | Indicators | Skender.Stock.Indicators | Free, NuGet, covers RSI/EMA/BB |
 | Notifications | Telegram Bot | No cost, no email infra |
-| Caching | IMemoryCache (in-process) | Single instance — swap to Redis when scaling |
+| Caching | HybridCache (in-process L1, Redis-ready L2) | Stampede protection built-in; swap to Redis by registering `AddStackExchangeRedisCache` |
 | API docs | Scalar + .NET 10 built-in OpenAPI | Swashbuckle incompatible with .NET 10 |
 | Frontend state | React Query (server) + Zustand (client) | Clear separation of concerns |
 | Responsive design | TailwindCSS v4 breakpoints — mobile-first (`sm`/`md`/`lg`) | Progressive enhancement; `md` (768px) is the primary nav and layout threshold |

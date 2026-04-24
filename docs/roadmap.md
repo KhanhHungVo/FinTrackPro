@@ -82,12 +82,20 @@
 | 24h deduplication (IsNotified + CreatedAt) | `ISignalRepository.ExistsRecentAsync` | ✅ |
 | `IBinanceService` + implementation | `Application/Common/Interfaces/` + `Infrastructure/ExternalServices/` | ✅ |
 | `IFearGreedService` + implementation | Alternative.me API, 1h cache | ✅ |
-| `ICoinGeckoService` + implementation | CoinGecko trending API, 15min cache | ✅ |
+| `ICoinGeckoService` + implementation | CoinGecko trending + market cap API | ✅ |
 | `GetSignalsQuery` + Handler + DTO | `Application/Signals/Queries/GetSignals/` | ✅ |
 | `SignalsController` | `API/Controllers/SignalsController.cs` | ✅ |
-| `MarketController` (fear-greed + trending) | `API/Controllers/MarketController.cs` | ✅ |
-| IMemoryCache on all external APIs | Binance 24h, FearGreed 1h, CoinGecko 15min | ✅ |
+| `MarketController` (fear-greed + trending + marketcap) | `API/Controllers/MarketController.cs` | ✅ |
+| HybridCache on all external APIs | FearGreed 1h, CoinGecko trending 2min, market cap 2min, Binance exchange info 24h, ExchangeRate 8h | ✅ |
+| `GetTrendingCoinsQuery` + handler | Trending enriched with price + 1h/24h/7d% (top 10) | ✅ |
+| `GetMarketCapCoinsQuery` + handler + `/api/market/marketcap` | Top 10 by market cap descending | ✅ |
+| `GetWatchlistAnalysisQuery` + handler + `/api/watchedsymbols/analysis` | RSI Daily + Weekly per watched symbol | ✅ |
+| `TrendingCoinsWidget` upgrade | Top 10, price + 1h/24h/7d% columns, overflow-x-auto | ✅ |
+| `TopMarketCapWidget` (new) | Market cap table with `$1.2T`/`$1.2B` formatting, error state | ✅ |
+| `WatchlistAnalysisWidget` (new) | RSI OS/OB badges, empty state with Settings link | ✅ |
+| Trade badge column in `WatchlistAnalysisWidget` | Binance pill link per row, "via Binance" footer, client-side URL derivation, mobile icon-only | ✅ |
 | EMA Golden/Death Cross | — | 🔲 Tier 2 (future) |
+| Multi-exchange trade badge (Bybit, TradingView, OANDA) | Extend to per-exchange router keyed by symbol type; requires `exchange` field on `WatchedSymbol` entity | 🔲 Future |
 | Bollinger Band Squeeze | — | 🔲 Tier 2 (future) |
 | Funding Rate Sentiment | — | 🔲 Tier 2 (future) |
 
@@ -188,7 +196,7 @@
 
 | Item | Reason |
 |---|---|
-| Redis caching | Single-instance deployment — `IMemoryCache` sufficient; swap to `IDistributedCache` when scaling horizontally |
+| Redis L2 cache | HybridCache (Phase 1) is in-memory L1 only — L2 Redis enabled by registering `AddStackExchangeRedisCache` with zero service-code changes |
 | Tier 2 market signals (EMA, BB Squeeze, Funding Rate) | Bollinger Band threshold and Funding Rate threshold TBD before building |
 | Multi-provider account linking | Out of scope for v1 — Keycloak supports it but not wired |
 | Test implementations | Test projects scaffolded and wired; test bodies pending |

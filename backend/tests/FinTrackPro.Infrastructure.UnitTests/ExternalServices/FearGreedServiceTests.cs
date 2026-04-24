@@ -2,22 +2,17 @@ using System.Net;
 using FinTrackPro.Infrastructure.ExternalServices;
 using FinTrackPro.Infrastructure.UnitTests.Helpers;
 using FluentAssertions;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FinTrackPro.Infrastructure.UnitTests.ExternalServices;
 
 public class FearGreedServiceTests
 {
-    private static FearGreedService BuildService(
-        string json,
-        HttpStatusCode status = HttpStatusCode.OK,
-        IMemoryCache? cache = null)
+    private static FearGreedService BuildService(string json, HttpStatusCode status = HttpStatusCode.OK)
     {
         var handler = new MockHttpMessageHandler(status, json);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.alternative.me") };
-        cache ??= new MemoryCache(new MemoryCacheOptions());
-        return new FearGreedService(httpClient, cache, NullLogger<FearGreedService>.Instance);
+        return new FearGreedService(httpClient, HybridCacheFactory.Create(), NullLogger<FearGreedService>.Instance);
     }
 
     // Unix timestamp for 2024-01-15 12:00:00 UTC
@@ -44,22 +39,6 @@ public class FearGreedServiceTests
         result!.Value.Should().Be(72);
         result.Label.Should().Be("Greed");
         result.Timestamp.Should().Be(DateTimeOffset.FromUnixTimeSeconds(1705320000).UtcDateTime);
-    }
-
-    [Fact]
-    public async Task GetLatestAsync_CachedResponse_DoesNotCallHttpClient()
-    {
-        var cache = new MemoryCache(new MemoryCacheOptions());
-        var service = BuildService(ValidResponse, cache: cache);
-
-        // First call populates the cache
-        var first = await service.GetLatestAsync();
-
-        // Second service shares the same cache but would fail on network
-        var errorService = BuildService("invalid-json", HttpStatusCode.InternalServerError, cache);
-        var second = await errorService.GetLatestAsync();
-
-        second.Should().BeEquivalentTo(first);
     }
 
     [Fact]

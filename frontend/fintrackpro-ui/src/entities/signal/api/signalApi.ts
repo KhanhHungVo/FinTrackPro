@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
-import type { FearGreed, Signal, TrendingCoin } from '../model/types'
+import type { FearGreed, MarketCapCoin, Signal, TrendingCoin } from '../model/types'
 
 export function useSignals(count = 20) {
   return useQuery({
@@ -31,6 +31,19 @@ export function useTrendingCoins() {
       const { data } = await apiClient.get<TrendingCoin[]>('/api/market/trending')
       return data
     },
-    staleTime: 1000 * 60 * 15, // 15 minutes
+    staleTime: 60_000,
+    refetchInterval: 90_000,
+  })
+}
+
+export function useMarketCapCoins() {
+  return useQuery({
+    queryKey: ['market-cap-coins'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<MarketCapCoin[]>('/api/market/marketcap')
+      return data
+    },
+    staleTime: 60_000,
+    refetchInterval: 90_000,
   })
 }

@@ -3,17 +3,17 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Common.Models;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
 namespace FinTrackPro.Infrastructure.ExternalServices;
 
 public class BinanceService(
     HttpClient httpClient,
-    IMemoryCache cache,
+    HybridCache cache,
     ILogger<BinanceService> logger) : IBinanceService
 {
-    private const string ExchangeInfoCacheKey = "binance_exchange_info";
+    private const string ExchangeInfoCacheKey = "binance:exchange_info";
 
     /// <inheritdoc/>
     public async Task<bool> IsValidSymbolAsync(string symbol, CancellationToken cancellationToken = default)
@@ -69,8 +69,21 @@ public class BinanceService(
                 return null;
             }
 
+            decimal? lastPrice = null;
+            decimal? priceChangePercent = null;
+
+            if (raw.TryGetProperty("lastPrice", out var lpProp) &&
+                decimal.TryParse(lpProp.GetString(), CultureInfo.InvariantCulture, out var lp))
+                lastPrice = lp;
+
+            if (raw.TryGetProperty("priceChangePercent", out var pcpProp) &&
+                decimal.TryParse(pcpProp.GetString(), CultureInfo.InvariantCulture, out var pcp))
+                priceChangePercent = pcp;
+
             return new TickerDto(
                 Symbol: raw.GetProperty("symbol").GetString()!,
+                LastPrice: lastPrice,
+                PriceChangePercent: priceChangePercent,
                 Volume: vol,
                 QuoteVolume: qvol);
         }
@@ -83,28 +96,26 @@ public class BinanceService(
 
     /// <summary>
     /// Fetches and caches the full Binance symbol list for 24 hours.
-    /// Cache key: <c>binance_exchange_info</c>. Falls back to an empty set on parse failure.
-    /// Used internally by <see cref="IsValidSymbolAsync"/> — reserved for future features
-    /// that need to filter or validate against Binance-listed trading pairs.
     /// </summary>
     private async Task<HashSet<string>> GetValidSymbolsAsync(CancellationToken cancellationToken)
     {
-        if (cache.TryGetValue(ExchangeInfoCacheKey, out HashSet<string>? cached) && cached is not null)
-            return cached;
+        return await cache.GetOrCreateAsync(
+            ExchangeInfoCacheKey,
+            async ct =>
+            {
+                var raw = await httpClient.GetFromJsonAsync<JsonElement>("/api/v3/exchangeInfo", ct);
+                if (raw.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+                {
+                    logger.LogWarning("Unexpected empty response from Binance exchangeInfo");
+                    return new HashSet<string>();
+                }
 
-        var raw = await httpClient.GetFromJsonAsync<JsonElement>("/api/v3/exchangeInfo", cancellationToken);
-        if (raw.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
-        {
-            logger.LogWarning("Unexpected empty response from Binance exchangeInfo");
-            return [];
-        }
-
-        var symbols = raw.GetProperty("symbols")
-            .EnumerateArray()
-            .Select(s => s.GetProperty("symbol").GetString()!)
-            .ToHashSet();
-
-        cache.Set(ExchangeInfoCacheKey, symbols, TimeSpan.FromHours(24));
-        return symbols;
+                return raw.GetProperty("symbols")
+                    .EnumerateArray()
+                    .Select(s => s.GetProperty("symbol").GetString()!)
+                    .ToHashSet();
+            },
+            new HybridCacheEntryOptions { Expiration = TimeSpan.FromHours(24) },
+            cancellationToken: cancellationToken);
     }
 }

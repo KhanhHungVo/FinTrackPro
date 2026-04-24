@@ -218,14 +218,17 @@ None — Dashboard is read-only (all widgets are display-only).
 ## Screen: Market
 
 **Route:** `/market`
-**Purpose:** Dedicated page for generic market data — Fear & Greed Index, trending coins, and the full signals list. Previously embedded in Dashboard; moved to reduce dashboard noise for users without active trading.
+**Purpose:** Actionable market dashboard — Fear & Greed Index, trending coins (top 10), top market cap table, watchlist RSI analysis, and the full signals list.
 
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Market                                              │  ← Page title
 ├──────────────────────────┬──────────────────────────┤
-│  Fear & Greed Index      │  Trending Coins           │  ← Market widgets (2-col)
+│  Trending Coins (top 10) │  Top Market Cap (top 10) │  ← 2-col row (50/50)
+├──────────────────┬────────────────────────────────── ┤
+│  Fear & Greed    │  My Watchlist — Analysis          │  ← 2-col row (25/75)
+│  (compact)       │  (RSI Daily + Weekly)             │
 ├─────────────────────────────────────────────────────┤
 │  Recent Signals (up to 20, full width)               │  ← Signals list
 └─────────────────────────────────────────────────────┘
@@ -233,15 +236,33 @@ None — Dashboard is read-only (all widgets are display-only).
 
 ### Regions
 
-**Fear & Greed Widget**
-- SVG semicircle gauge with animated needle
+**Trending Coins (top 10)**
+- Table: Rank | Name/Symbol | Price | 1h% | 24h% | 7d%
+- Positive % values rendered in green with `+` prefix; negative in red
+- Null price/% renders as `—`; horizontal scroll on mobile
+- Powered by CoinGecko; refreshed every 2 minutes
+
+**Top Market Cap**
+- Table: Rank | Name/Symbol | Price | Market Cap | 1h% | 24h% | 7d%
+- Market cap formatted as `$1.2T` / `$1.2B` / `$1.2M`
+- Error state: "Data temporarily unavailable" banner (no crash)
+- Horizontal scroll on mobile; refreshed every 2 minutes
+
+**Fear & Greed Widget (compact)**
+- SVG semicircle gauge with animated needle, compact variant
 - 5 colour zones: Extreme Fear (0–20, red) / Fear (20–40, orange) / Neutral (40–60, yellow) / Greed (60–80, green) / Extreme Greed (80–100, dark green)
 - Numeric value and label displayed below gauge
+- Occupies 25% of the row alongside Watchlist Analysis; stretches to match its height
 - Data refreshed every hour
 
-**Trending Coins**
-- List of top 7 trending coins: coin name, symbol, market cap rank
-- Powered by CoinGecko; data refreshed every 15 minutes
+**My Watchlist — Analysis**
+- Table: Symbol | Price | 24h% | RSI Daily | RSI Weekly | Trade
+- RSI < 30 → blue `OS` badge (oversold); RSI > 70 → red `OB` badge (overbought); 30–70 → muted number
+- **Trade column:** amber pill badge (Binance logo + "Trade {BASE}" on `lg+`, icon-only on mobile) linking to `https://www.binance.com/en/trade/{BASE}_{QUOTE}`. URL derived client-side from the symbol string; badge hidden for non-Binance symbols (stocks, forex).
+- **Footer:** "via Binance" attribution link, right-aligned, same style as CoinGecko footer on other market widgets.
+- Null fields render as `—`
+- Empty state: "No symbols yet — add some in Settings → Watchlist." + link
+- Refreshed every 3 minutes
 
 **Recent Signals (full list)**
 - Up to 20 latest market signals across all watched symbols
@@ -251,9 +272,19 @@ None — Dashboard is read-only (all widgets are display-only).
 ### States
 | State | Description |
 |---|---|
-| Loading | Animated skeleton placeholders |
-| Loaded | All three regions displayed |
+| Loading | Animated skeleton placeholders in each region |
+| Loaded | All regions displayed |
+| No watchlist symbols | Watchlist Analysis shows empty state + Settings link |
+| Top Market Cap unavailable | "Data temporarily unavailable" banner; other regions unaffected |
 | No signals | "No signals yet — add symbols to your watchlist." |
+
+### Component States
+| Widget | Loading | Loaded | Empty | Error |
+|---|---|---|---|---|
+| `TrendingCoinsWidget` | Skeleton rows | 10 rows with price/% | — | — |
+| `TopMarketCapWidget` | Skeleton rows | 10 rows | — | "Data temporarily unavailable" banner |
+| `FearGreedWidget` (compact) | Skeleton block | Gauge + value | — | — |
+| `WatchlistAnalysisWidget` | Skeleton rows (6 cols) | Rows with RSI + Trade badge | "No symbols yet" + link | — |
 
 ### User Actions
 None — Market page is read-only.

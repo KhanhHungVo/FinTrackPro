@@ -470,6 +470,29 @@ Remove a symbol from the watchlist (owner only).
 
 ---
 
+### `GET /api/watchedsymbols/analysis`
+Returns live price, 24h % change, and RSI-14 on daily and weekly timeframes for each symbol in the user's watchlist. Per-symbol results are cached 5 minutes. Empty watchlist returns `[]` (HTTP 200, not 404).
+
+RSI is computed using Welles Wilder smoothing (Skender.Stock.Indicators, 100 candles per timeframe) — matches TradingView within ±0.1 point.
+
+**Response 200:**
+```json
+[
+  {
+    "symbol": "BTCUSDT",
+    "price": 64230.5,
+    "change24h": 2.45,
+    "rsiDaily": 58.3,
+    "rsiWeekly": 45.1
+  }
+]
+```
+All numeric fields are `number | null`. A null field indicates Binance returned no data for that symbol.
+
+The response does **not** include a `tradeUrl` field. Trade links are derived client-side in `WatchlistAnalysisWidget` by parsing the symbol string against known Binance quote assets (`USDT`, `BUSD`, `USDC`, `USDS`, `DAI`, `BTC`, `ETH`, `BNB`). Non-Binance symbols (stocks, forex) produce no badge. All price and RSI data is sourced from `IBinanceService`.
+
+---
+
 ## Signals
 
 ### `GET /api/signals`
@@ -513,14 +536,47 @@ Returns latest Fear & Greed Index (cached 1 hour).
 ---
 
 ### `GET /api/market/trending`
-Returns top 7 trending coins from CoinGecko (cached 15 minutes).
+Returns top 10 trending coins from CoinGecko enriched with live price and % change data (cached 2 minutes).
 
 **Response 200:**
 ```json
 [
-  { "id": "bitcoin", "name": "Bitcoin", "symbol": "BTC", "marketCapRank": 1 }
+  {
+    "id": "bitcoin",
+    "name": "Bitcoin",
+    "symbol": "BTC",
+    "marketCapRank": 1,
+    "price": 64230.5,
+    "change1h": 0.12,
+    "change24h": 2.45,
+    "change7d": 5.30
+  }
 ]
 ```
+All numeric fields (`price`, `change1h`, `change24h`, `change7d`) are `number | null`.
+
+---
+
+### `GET /api/market/marketcap`
+Returns the top 10 cryptocurrencies by market cap descending (CoinGecko, cached 2 minutes).
+
+**Response 200:**
+```json
+[
+  {
+    "rank": 1,
+    "id": "bitcoin",
+    "name": "Bitcoin",
+    "symbol": "btc",
+    "price": 64230.5,
+    "marketCap": 1250000000000,
+    "change1h": 0.12,
+    "change24h": 2.45,
+    "change7d": 5.30
+  }
+]
+```
+All numeric fields are `number | null`. Empty list returned if CoinGecko is unavailable (never throws).
 
 ---
 

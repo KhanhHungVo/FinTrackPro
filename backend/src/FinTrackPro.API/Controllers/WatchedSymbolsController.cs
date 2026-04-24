@@ -1,6 +1,7 @@
 using FinTrackPro.Application.Trading.Commands.AddWatchedSymbol;
 using FinTrackPro.Application.Trading.Commands.RemoveWatchedSymbol;
 using FinTrackPro.Application.Trading.Queries.GetWatchedSymbols;
+using FinTrackPro.Application.Trading.Queries.GetWatchlistAnalysis;
 using FinTrackPro.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,4 +28,8 @@ public class WatchedSymbolsController : BaseApiController
         await Mediator.Send(new RemoveWatchedSymbolCommand(id));
         return NoContent();
     }
+
+    [HttpGet("analysis")]
+    public async Task<ActionResult<IEnumerable<WatchlistAnalysisItemDto>>> GetAnalysis(CancellationToken ct)
+        => Ok(await Mediator.Send(new GetWatchlistAnalysisQuery(), ct));
 }

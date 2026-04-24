@@ -62,15 +62,60 @@ function getActiveZone(value: number): number {
   return zones.length - 1
 }
 
-export function FearGreedWidget() {
+interface FearGreedWidgetProps {
+  compact?: boolean
+}
+
+export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
   const { t } = useTranslation()
   const { data, isLoading } = useFearGreed()
 
-  if (isLoading) return <div className="animate-pulse h-44 rounded-lg bg-gray-100 dark:bg-white/5" />
+  if (isLoading) return <div className={`animate-pulse rounded-lg bg-gray-100 dark:bg-white/5 ${compact ? 'h-32' : 'h-44'}`} />
   if (!data) return null
 
   const activeIdx = getActiveZone(data.value)
   const needleAngle = 180 + (data.value / 100) * 180
+
+  if (compact) {
+    const activeZone = zones[activeIdx]
+    return (
+      <div className="glass-card flex flex-col items-center justify-center h-full py-4 text-center">
+        <p className="text-[10px] text-gray-500 dark:text-slate-400 tracking-[0.1em] uppercase mb-1 px-4">
+          {t('market.fearGreedIndex')}
+        </p>
+        <svg viewBox="20 30 260 185" className="w-full max-w-[200px] mx-auto">
+          {zones.map((zone, i) => {
+            const isActive = i === activeIdx
+            const inset = GAP / 2
+            return (
+              <path
+                key={zone.label}
+                d={describeArc(CX, CY, R, zone.startDeg + inset, zone.endDeg - inset)}
+                fill="none"
+                stroke={zone.color}
+                strokeWidth={ARC_STROKE}
+                strokeLinecap="butt"
+                opacity={isActive ? 1 : 0.22}
+              />
+            )
+          })}
+          <line
+            x1={CX} y1={CY} x2={CX + NEEDLE_LEN} y2={CY}
+            className="stroke-gray-800 dark:stroke-slate-200"
+            strokeWidth={3.5} strokeLinecap="round"
+            style={{ transform: `rotate(${needleAngle}deg)`, transformOrigin: `${CX}px ${CY}px`, transition: 'transform 0.8s cubic-bezier(0.4,0,0.2,1)' }}
+          />
+          <circle cx={CX} cy={CY} r={5} className="fill-gray-800 dark:fill-slate-200" />
+          <text x={CX} y={CY + 30} textAnchor="middle" fontWeight="800" fontSize="36" className="fill-gray-800 dark:fill-slate-100">
+            {data.value}
+          </text>
+          <text x={CX} y={CY + 58} textAnchor="middle" fontWeight="700" fontSize="13" letterSpacing="3" fill={activeZone.color}>
+            {activeZone.label.replace('\n', ' ')}
+          </text>
+        </svg>
+      </div>
+    )
+  }
 
   // Generate dot markers between boundary labels
   const dots: { x: number; y: number }[] = []
