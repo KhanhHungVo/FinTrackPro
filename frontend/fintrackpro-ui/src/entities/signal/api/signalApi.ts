@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
 import type { FearGreed, MarketCapCoin, Signal, TrendingCoin } from '../model/types'
 
+const MARKET_POLL_MS = 120_000 // aligns with backend CoinGecko cache TTL (60s) + buffer
+
 export function useSignals(count = 20) {
   return useQuery({
     queryKey: ['signals', count],
@@ -31,8 +33,8 @@ export function useTrendingCoins() {
       const { data } = await apiClient.get<TrendingCoin[]>('/api/market/trending')
       return data
     },
-    staleTime: 60_000,
-    refetchInterval: 90_000,
+    staleTime: MARKET_POLL_MS,
+    refetchInterval: MARKET_POLL_MS,
   })
 }
 
@@ -43,7 +45,7 @@ export function useMarketCapCoins() {
       const { data } = await apiClient.get<MarketCapCoin[]>('/api/market/marketcap')
       return data
     },
-    staleTime: 60_000,
-    refetchInterval: 90_000,
+    staleTime: MARKET_POLL_MS,
+    refetchInterval: MARKET_POLL_MS,
   })
 }

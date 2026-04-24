@@ -1,4 +1,5 @@
 export { AuthDegradedBanner } from './AuthDegradedBanner'
+export { DataFreshnessBadge } from './DataFreshnessBadge'
 export { AuthErrorScreen } from './AuthErrorScreen'
 export { BankTransferDetails } from './BankTransferDetails'
 export { ConfirmDeleteDialog } from './ConfirmDeleteDialog'

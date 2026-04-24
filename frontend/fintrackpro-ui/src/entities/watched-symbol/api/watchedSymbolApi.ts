@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
 import type { WatchedSymbol, WatchlistAnalysisItem } from '../model/types'
 
+const WATCHLIST_POLL_MS = 120_000 // aligns with backend Binance cache TTL (60s) + buffer
+
 export function useWatchedSymbols() {
   return useQuery({
     queryKey: ['watched-symbols'],
@@ -36,7 +38,7 @@ export function useWatchlistAnalysis() {
       const { data } = await apiClient.get<WatchlistAnalysisItem[]>('/api/watchedsymbols/analysis')
       return data
     },
-    staleTime: 120_000,
-    refetchInterval: 180_000,
+    staleTime: WATCHLIST_POLL_MS,
+    refetchInterval: WATCHLIST_POLL_MS,
   })
 }

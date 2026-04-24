@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useTrendingCoins } from '@/entities/signal'
+import { DataFreshnessBadge } from '@/shared/ui'
 
 const COINGECKO_BASE = 'https://www.coingecko.com/en/coins'
 
@@ -40,15 +41,18 @@ function SkeletonRow() {
 
 export function TrendingCoinsWidget() {
   const { t } = useTranslation()
-  const { data: coins, isLoading } = useTrendingCoins()
+  const { data: coins, isLoading, isFetching, dataUpdatedAt, refetch } = useTrendingCoins()
 
   return (
     <div className="glass-card overflow-hidden">
       <div className="flex items-baseline justify-between px-4 pt-3.5 pb-2.5 border-b border-gray-100 dark:border-white/5">
         <h2 className="text-sm font-medium text-gray-700 dark:text-slate-200 m-0">{t('market.trendingCoins')}</h2>
-        <span className="font-mono text-[9px] text-gray-500 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 tracking-[0.08em] uppercase dark:bg-green-500/10 dark:border-green-500/20 dark:text-green-400">
-          {t('market.live')}
-        </span>
+        <DataFreshnessBadge
+          dataUpdatedAt={dataUpdatedAt}
+          isFetching={isFetching}
+          onRefetch={refetch}
+          label={t('market.live')}
+        />
       </div>
 
       <div className="overflow-x-auto">

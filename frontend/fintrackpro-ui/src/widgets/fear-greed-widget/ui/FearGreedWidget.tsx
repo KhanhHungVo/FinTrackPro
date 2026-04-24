@@ -79,7 +79,7 @@ export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
   if (compact) {
     const activeZone = zones[activeIdx]
     return (
-      <div className="glass-card flex flex-col items-center justify-center h-full py-4 text-center">
+      <div className="glass-card flex flex-col items-center justify-center py-4 text-center mx-auto w-full max-w-xs lg:max-w-none">
         <p className="text-[10px] text-gray-500 dark:text-slate-400 tracking-[0.1em] uppercase mb-1 px-4">
           {t('market.fearGreedIndex')}
         </p>

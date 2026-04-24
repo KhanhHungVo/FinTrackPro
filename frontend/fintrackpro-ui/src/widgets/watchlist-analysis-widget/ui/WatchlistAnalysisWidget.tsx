@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { useWatchlistAnalysis } from '@/entities/watched-symbol'
+import { DataFreshnessBadge } from '@/shared/ui'
 
 function formatPrice(value: number | null): string {
   if (value == null) return '—'
@@ -84,7 +85,7 @@ function SkeletonRow() {
 }
 
 export function WatchlistAnalysisWidget() {
-  const { data: items, isLoading } = useWatchlistAnalysis()
+  const { data: items, isLoading, isFetching, dataUpdatedAt, refetch } = useWatchlistAnalysis()
 
   const isEmpty = !isLoading && (items?.length === 0)
 
@@ -92,9 +93,11 @@ export function WatchlistAnalysisWidget() {
     <div className="glass-card overflow-hidden">
       <div className="flex items-baseline justify-between px-4 pt-3.5 pb-2.5 border-b border-gray-100 dark:border-white/5">
         <h2 className="text-sm font-medium text-gray-700 dark:text-slate-200 m-0">My Watchlist — Analysis</h2>
-        <span className="font-mono text-[9px] text-gray-500 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 tracking-[0.08em] uppercase dark:bg-green-500/10 dark:border-green-500/20 dark:text-green-400">
-          live
-        </span>
+        <DataFreshnessBadge
+          dataUpdatedAt={dataUpdatedAt}
+          isFetching={isFetching}
+          onRefetch={refetch}
+        />
       </div>
 
       {isEmpty ? (
@@ -122,7 +125,7 @@ export function WatchlistAnalysisWidget() {
                 <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">Trade</span>
               </div>
 
-              <ul className="list-none m-0 p-0">
+              <ul className="list-none m-0 p-0 max-h-[360px] overflow-y-auto overscroll-contain">
                 {isLoading
                   ? Array.from({ length: 3 }, (_, i) => <SkeletonRow key={i} />)
                   : items?.map((item) => (

@@ -1,4 +1,5 @@
 import { useMarketCapCoins } from '@/entities/signal'
+import { DataFreshnessBadge } from '@/shared/ui'
 
 const COINGECKO_BASE = 'https://www.coingecko.com/en/coins'
 
@@ -38,15 +39,17 @@ function SkeletonRow() {
 }
 
 export function TopMarketCapWidget() {
-  const { data: coins, isLoading, isError } = useMarketCapCoins()
+  const { data: coins, isLoading, isError, isFetching, dataUpdatedAt, refetch } = useMarketCapCoins()
 
   return (
     <div className="glass-card overflow-hidden">
       <div className="flex items-baseline justify-between px-4 pt-3.5 pb-2.5 border-b border-gray-100 dark:border-white/5">
         <h2 className="text-sm font-medium text-gray-700 dark:text-slate-200 m-0">Top Market Cap</h2>
-        <span className="font-mono text-[9px] text-gray-500 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 tracking-[0.08em] uppercase dark:bg-green-500/10 dark:border-green-500/20 dark:text-green-400">
-          live
-        </span>
+        <DataFreshnessBadge
+          dataUpdatedAt={dataUpdatedAt}
+          isFetching={isFetching}
+          onRefetch={refetch}
+        />
       </div>
 
       {isError && !isLoading && (
@@ -59,7 +62,7 @@ export function TopMarketCapWidget() {
         <div className="overflow-x-auto">
           <div className="min-w-[640px]">
             <div className="grid [grid-template-columns:40px_1fr_110px_110px_64px_64px_64px] px-4 py-1.5 border-b border-gray-100 dark:border-white/5 gap-2">
-              <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500">#</span>
+              <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500">Rank</span>
               <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500">Name</span>
               <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">Price</span>
               <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">Mkt Cap</span>

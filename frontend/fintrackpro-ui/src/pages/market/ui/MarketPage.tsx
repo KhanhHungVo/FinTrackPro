@@ -18,7 +18,7 @@ export function MarketPage() {
       </div>
 
       {/* Row 2: Fear & Greed compact (25%) | Watchlist Analysis (75%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_3fr] gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_3fr] gap-6 items-start">
         <FearGreedWidget compact />
         <WatchlistAnalysisWidget />
       </div>
