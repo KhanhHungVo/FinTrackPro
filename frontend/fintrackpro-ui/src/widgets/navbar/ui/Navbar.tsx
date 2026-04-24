@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/features/auth'
 import { PlanBadge } from '@/features/plan-badge'
 import { cn } from '@/shared/lib/cn'
+import { AppLogo } from '@/shared/ui/AppLogo'
 import { LocaleSettingsDropdown } from './LocaleSettingsDropdown'
 
 function useNavLinks() {
@@ -33,7 +34,9 @@ export function Navbar() {
   return (
     <nav className="border-b bg-white dark:bg-[#0c0e14] dark:border-white/6">
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
-        <NavLink to="/dashboard" className="font-bold text-lg tracking-tight dark:text-white hover:opacity-80 transition-opacity">FinTrackPro</NavLink>
+        <NavLink to="/dashboard" className="hover:opacity-80 transition-opacity">
+          <AppLogo size="sm" />
+        </NavLink>
 
         <ul className="hidden md:flex gap-1">
           {links.map(({ to, label }) => (

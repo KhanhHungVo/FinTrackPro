@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMobile } from '../../lib/useMobile'
 import { useButtonState, primaryBtnStyle, outlineBtnStyle, hamburgerBtnStyle } from '../../lib/buttonStyles'
+import { AppLogo } from '@/shared/ui/AppLogo'
 
 interface Props {
   onLogin: () => void
@@ -34,8 +35,8 @@ export function LandingNav({ onLogin, onSignup }: Props) {
         height: 56,
       }}>
         {/* Logo */}
-        <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px', color: 'rgba(255,255,255,0.92)', flexShrink: 0 }}>
-          FinTrackPro
+        <span style={{ flexShrink: 0, color: 'rgba(255,255,255,0.92)' }}>
+          <AppLogo size="sm" />
         </span>
 
         {/* Desktop nav links */}
