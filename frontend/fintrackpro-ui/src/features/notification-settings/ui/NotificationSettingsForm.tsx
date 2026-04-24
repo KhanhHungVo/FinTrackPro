@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import {
@@ -9,27 +9,20 @@ import { useSubscriptionStatus } from '@/entities/subscription'
 import { UpgradeButton } from '@/features/upgrade'
 import { errorToastMessage } from '@/shared/lib/apiError'
 
-export function NotificationSettingsForm() {
+interface FormProps {
+  initialChatId: string
+  initialEnabled: boolean
+  isFreePlan: boolean
+}
+
+function NotificationSettingsFormInner({ initialChatId, initialEnabled, isFreePlan }: FormProps) {
   const { t } = useTranslation()
-  const { data: pref, isLoading } = useNotificationPreference()
-  const { data: subscription } = useSubscriptionStatus()
   const { mutate, isPending } = useSaveNotificationPreference()
 
-  const [chatId, setChatId] = useState('')
-  const [enabled, setEnabled] = useState(true)
+  const [chatId, setChatId] = useState(initialChatId)
+  const [enabled, setEnabled] = useState(initialEnabled)
 
-  useEffect(() => {
-    if (pref) {
-      setChatId(pref.telegramChatId ?? '')
-      setEnabled(pref.isEnabled)
-    }
-  }, [pref])
-
-  if (isLoading) return <div className="animate-pulse h-32 rounded-lg bg-gray-100 dark:bg-white/5" />
-
-  const isFreePlan = !subscription || subscription.plan === 'Free'
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     mutate(
       { telegramChatId: chatId, isEnabled: enabled },
@@ -97,5 +90,23 @@ export function NotificationSettingsForm() {
         </div>
       )}
     </div>
+  )
+}
+
+export function NotificationSettingsForm() {
+  const { data: pref, isLoading } = useNotificationPreference()
+  const { data: subscription } = useSubscriptionStatus()
+
+  if (isLoading) return <div className="animate-pulse h-32 rounded-lg bg-gray-100 dark:bg-white/5" />
+
+  const isFreePlan = !subscription || subscription.plan === 'Free'
+
+  return (
+    <NotificationSettingsFormInner
+      key={pref ? 'loaded' : 'empty'}
+      initialChatId={pref?.telegramChatId ?? ''}
+      initialEnabled={pref?.isEnabled ?? true}
+      isFreePlan={isFreePlan}
+    />
   )
 }
