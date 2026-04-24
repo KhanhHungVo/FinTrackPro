@@ -1,5 +1,6 @@
 const en = {
   nav: {
+    home: 'Home',
     dashboard: 'Dashboard',
     transactions: 'Transactions',
     budgets: 'Budgets',
@@ -270,6 +271,7 @@ const en = {
   error: {
     tryAgain: 'Try again',
     goToDashboard: 'Go to Dashboard',
+    notFoundTitle: 'Page Not Found',
     notFoundMessage: "The page you're looking for doesn't exist.",
   },
   about: {

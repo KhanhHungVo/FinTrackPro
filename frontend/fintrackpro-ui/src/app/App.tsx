@@ -16,6 +16,7 @@ import { PlanLimitModal, BankTransferModal } from '@/features/upgrade'
 import { useAuthStore } from '@/features/auth'
 import { NotFoundPage } from '@/shared/ui/NotFoundPage'
 import { DonationFooter } from '@/shared/ui/DonationFooter'
+import { DocumentTitle } from '@/shared/ui/DocumentTitle'
 import { useLocaleStore } from '@/features/locale/model/localeStore'
 import './styles/globals.css'
 
@@ -48,6 +49,7 @@ export function App() {
           <LocaleProvider>
             <Toaster position="top-right" richColors theme={theme === 'dark' ? 'dark' : 'light'} />
             <BrowserRouter>
+              <DocumentTitle />
               <PlanLimitModal />
               <BankTransferModal />
               <Routes>
