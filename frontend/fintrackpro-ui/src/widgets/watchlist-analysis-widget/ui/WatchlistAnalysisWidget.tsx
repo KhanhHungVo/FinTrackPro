@@ -76,8 +76,8 @@ function TradeButton({ symbol }: { symbol: string }) {
 
 function SkeletonRow() {
   return (
-    <li className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_88px_88px_88px] items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2">
-      {Array.from({ length: 6 }, (_, i) => (
+    <li className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_72px_72px_88px_88px_88px] items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2">
+      {Array.from({ length: 8 }, (_, i) => (
         <div key={i} className="h-2.5 rounded-[3px] bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 dark:from-white/5 dark:via-white/8 dark:to-white/5 animate-pulse" />
       ))}
     </li>
@@ -116,10 +116,12 @@ export function WatchlistAnalysisWidget() {
         <>
           <div className="overflow-x-auto">
             <div className="min-w-[640px]">
-              <div className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_88px_88px_88px] px-4 py-1.5 border-b border-gray-100 dark:border-white/5 gap-2">
+              <div className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_72px_72px_88px_88px_88px] px-4 py-1.5 border-b border-gray-100 dark:border-white/5 gap-2">
                 <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500">Symbol</span>
                 <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">Price</span>
                 <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">24h%</span>
+                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">RSI 1h</span>
+                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">RSI 4h</span>
                 <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">RSI Daily</span>
                 <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">RSI Weekly</span>
                 <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">Trade</span>
@@ -131,7 +133,7 @@ export function WatchlistAnalysisWidget() {
                   : items?.map((item) => (
                       <li
                         key={item.symbol}
-                        className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_88px_88px_88px] items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2"
+                        className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_72px_72px_88px_88px_88px] items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2"
                       >
                         <span className="font-mono text-[12px] font-semibold text-gray-800 dark:text-slate-200 tracking-[0.04em]">
                           {item.symbol}
@@ -141,6 +143,12 @@ export function WatchlistAnalysisWidget() {
                         </span>
                         <span className="text-right">
                           <PctCell value={item.change24h} />
+                        </span>
+                        <span className="text-right">
+                          <RsiCell value={item.rsi1h} />
+                        </span>
+                        <span className="text-right">
+                          <RsiCell value={item.rsi4h} />
                         </span>
                         <span className="text-right">
                           <RsiCell value={item.rsiDaily} />

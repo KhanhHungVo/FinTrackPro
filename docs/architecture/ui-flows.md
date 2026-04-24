@@ -258,7 +258,7 @@ None — Dashboard is read-only (all widgets are display-only).
 - Data refreshed every hour
 
 **My Watchlist — Analysis**
-- Table: Symbol | Price | 24h% | RSI Daily | RSI Weekly | Trade
+- Table: Symbol | Price | 24h% | RSI 1h | RSI 4h | RSI Daily | RSI Weekly | Trade
 - RSI < 30 → blue `OS` badge (oversold); RSI > 70 → red `OB` badge (overbought); 30–70 → muted number
 - **Trade column:** amber pill badge (Binance logo + "Trade {BASE}" on `lg+`, icon-only on mobile) linking to `https://www.binance.com/en/trade/{BASE}_{QUOTE}`. URL derived client-side from the symbol string; badge hidden for non-Binance symbols (stocks, forex).
 - **Footer:** "via Binance" attribution link, right-aligned, same style as CoinGecko footer on other market widgets.
@@ -288,7 +288,7 @@ None — Dashboard is read-only (all widgets are display-only).
 | `TrendingCoinsWidget` | Skeleton rows | 10 rows with price/%; `DataFreshnessBadge` in header | — | — |
 | `TopMarketCapWidget` | Skeleton rows | 10 rows; `DataFreshnessBadge` in header | — | "Data temporarily unavailable" banner |
 | `FearGreedWidget` (compact) | Skeleton block | Gauge + value | — | — |
-| `WatchlistAnalysisWidget` | Skeleton rows (6 cols) | Rows with RSI + Trade badge; `DataFreshnessBadge` in header; list scrollable up to 360 px | "No symbols yet" + link | — |
+| `WatchlistAnalysisWidget` | Skeleton rows (8 cols) | Rows with RSI 1h, 4h, Daily, Weekly + Trade badge; `DataFreshnessBadge` in header; list scrollable up to 360 px | "No symbols yet" + link | — |
 
 ### User Actions
 | Action | Result |

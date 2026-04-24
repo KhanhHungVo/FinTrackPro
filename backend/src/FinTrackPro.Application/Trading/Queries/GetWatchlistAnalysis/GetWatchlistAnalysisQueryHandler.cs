@@ -52,20 +52,26 @@ public class GetWatchlistAnalysisQueryHandler(
                 $"watchlist:analysis:{symbol}",
                 async ct =>
                 {
-                    var tickerTask   = binanceService.Get24HrTickerAsync(symbol, ct);
-                    var dailyTask    = binanceService.GetKlinesAsync(symbol, "1d", 100, ct);
-                    var weeklyTask   = binanceService.GetKlinesAsync(symbol, "1w", 100, ct);
+                    var tickerTask      = binanceService.Get24HrTickerAsync(symbol, ct);
+                    var hourlyTask      = binanceService.GetKlinesAsync(symbol, "1h", 100, ct);
+                    var fourHourlyTask  = binanceService.GetKlinesAsync(symbol, "4h", 100, ct);
+                    var dailyTask       = binanceService.GetKlinesAsync(symbol, "1d", 100, ct);
+                    var weeklyTask      = binanceService.GetKlinesAsync(symbol, "1w", 100, ct);
 
-                    await Task.WhenAll(tickerTask, dailyTask, weeklyTask);
+                    await Task.WhenAll(tickerTask, hourlyTask, fourHourlyTask, dailyTask, weeklyTask);
 
-                    var ticker       = await tickerTask;
-                    var dailyKlines  = await dailyTask;
-                    var weeklyKlines = await weeklyTask;
+                    var ticker        = await tickerTask;
+                    var hourlyKlines  = await hourlyTask;
+                    var fourHrKlines  = await fourHourlyTask;
+                    var dailyKlines   = await dailyTask;
+                    var weeklyKlines  = await weeklyTask;
 
                     return new WatchlistAnalysisItemDto(
                         Symbol: symbol,
                         Price: ticker?.LastPrice,
                         Change24h: ticker?.PriceChangePercent,
+                        Rsi1h: ComputeRsi(hourlyKlines),
+                        Rsi4h: ComputeRsi(fourHrKlines),
                         RsiDaily: ComputeRsi(dailyKlines),
                         RsiWeekly: ComputeRsi(weeklyKlines));
                 },
