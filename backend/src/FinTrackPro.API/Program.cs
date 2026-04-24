@@ -87,9 +87,10 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();            // /openapi/v1.json
     app.MapScalarApiReference(); // Scalar UI at /scalar
-    app.UseHttpsRedirection();
+    
 }
 
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseMiddleware<UserContextMiddleware>();
 app.UseAuthorization();
