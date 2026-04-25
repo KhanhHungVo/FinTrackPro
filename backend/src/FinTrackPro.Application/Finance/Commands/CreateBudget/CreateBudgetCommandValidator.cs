@@ -9,8 +9,8 @@ public class CreateBudgetCommandValidator : AbstractValidator<CreateBudgetComman
         RuleFor(v => v.Category)
             .NotEmpty().WithMessage("Category is required.")
             .MaximumLength(100).WithMessage("Category must not exceed 100 characters.")
-            .Matches(@"^[\p{L}\p{N}\s\-\/\.\&\(\)]+$")
-            .WithMessage("Category must contain only letters, numbers, spaces, and common punctuation (- / . & ( )).");
+            .Matches(@"^[\p{L}\p{N}\s\-\/\.\&\(\)_]+$")
+            .WithMessage("Category must contain only letters, numbers, spaces, and common punctuation (- / . & ( ) _).");
         RuleFor(v => v.LimitAmount).GreaterThan(0).WithMessage("Limit amount must be greater than zero.");
         RuleFor(v => v.Currency).NotEmpty().MaximumLength(3).WithMessage("Currency is required and must be at most 3 characters.");
         RuleFor(v => v.Month)
