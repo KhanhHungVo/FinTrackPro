@@ -59,7 +59,7 @@ export function WatchlistManager() {
               <button
                 onClick={() => guardedRemove(ws.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
                 disabled={isRemoving(ws.id)}
-                className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                className="min-h-[44px] min-w-[44px] rounded px-2 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
               >
                 Remove
               </button>
