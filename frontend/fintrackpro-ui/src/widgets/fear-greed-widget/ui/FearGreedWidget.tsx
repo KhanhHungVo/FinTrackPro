@@ -64,26 +64,102 @@ function getActiveZone(value: number): number {
 
 interface FearGreedWidgetProps {
   compact?: boolean
+  horizontal?: boolean
 }
 
-export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
+export function FearGreedWidget({ compact = false, horizontal = false }: FearGreedWidgetProps) {
   const { t } = useTranslation()
   const { data, isLoading } = useFearGreed()
 
-  if (isLoading) return <div className={`animate-pulse rounded-lg bg-gray-100 dark:bg-white/5 ${compact ? 'h-32' : 'h-44'}`} />
+  if (isLoading) {
+    if (horizontal) return <div className="animate-pulse rounded-lg bg-gray-100 dark:bg-white/5 h-14 w-full" />
+    return <div className={`animate-pulse rounded-lg bg-gray-100 dark:bg-white/5 ${compact ? 'h-32' : 'h-44'}`} />
+  }
   if (!data) return null
 
   const activeIdx = getActiveZone(data.value)
   const needleAngle = 180 + (data.value / 100) * 180
 
+  // ── Horizontal mood-bar strip ─────────────────────────────────────
+  if (horizontal) {
+    const activeZone = zones[activeIdx]
+    return (
+      <div className="glass-card px-4 py-3 w-full">
+        {/* Mobile: title sits above, centered */}
+        <p className="text-[9px] text-gray-500 dark:text-slate-400 tracking-[0.12em] uppercase mb-2 text-center sm:hidden">
+          {t('market.fearGreedIndex')}
+        </p>
+
+        <div className="flex items-center gap-3">
+          {/* Colored indicator box — same visual height as the value text */}
+          <div
+            className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center"
+            style={{
+              backgroundColor: `${activeZone.color}22`,
+              border: `1.5px solid ${activeZone.color}`,
+            }}
+          >
+            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: activeZone.color }} />
+          </div>
+
+          {/* Right content column */}
+          <div className="flex-1 min-w-0">
+            {/* Row: title (desktop only) + value + sentiment */}
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[9px] text-gray-500 dark:text-slate-400 tracking-[0.12em] uppercase hidden sm:block shrink-0">
+                {t('market.fearGreedIndex')}
+              </p>
+              <span className="font-bold text-gray-800 dark:text-slate-100 sm:ml-auto">{data.value}</span>
+              <span className="text-[9px] font-bold tracking-[0.15em]" style={{ color: activeZone.color }}>
+                {activeZone.label.replace('\n', ' ')}
+              </span>
+            </div>
+
+            {/* Gradient bar with position marker */}
+            <div className="relative h-1.5 rounded-full" style={{
+              background: 'linear-gradient(to right, #f87171 0%, #fb923c 25%, #facc15 50%, #4ade80 75%, #16a34a 100%)',
+            }}>
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-1 h-3.5 rounded-full shadow-md"
+                style={{
+                  left: `clamp(2px, calc(${data.value}% - 2px), calc(100% - 4px))`,
+                  backgroundColor: '#1e293b',
+                  outline: '1.5px solid white',
+                }}
+              />
+            </div>
+
+            {/* Zone labels */}
+            <div className="flex justify-between mt-1.5">
+              {zones.map((z) => (
+                <span
+                  key={z.label}
+                  className="text-[7px] leading-tight text-center"
+                  style={{ color: z === activeZone ? activeZone.color : undefined }}
+                >
+                  <span className="text-gray-400 dark:text-slate-500 [span&]:text-inherit">
+                    {z.label.split('\n').map((line, i) => (
+                      <span key={i} className="block">{line}</span>
+                    ))}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Compact semicircle (kept for other uses) ──────────────────────
   if (compact) {
     const activeZone = zones[activeIdx]
     return (
-      <div className="glass-card flex flex-col items-center justify-center py-4 text-center mx-auto w-full max-w-xs lg:max-w-none">
+      <div className="glass-card flex flex-col items-center justify-center py-4 text-center w-full">
         <p className="text-[10px] text-gray-500 dark:text-slate-400 tracking-[0.1em] uppercase mb-1 px-4">
           {t('market.fearGreedIndex')}
         </p>
-        <svg viewBox="20 30 260 185" className="w-full max-w-[200px] mx-auto">
+        <svg viewBox="20 30 260 185" className="w-full mx-auto">
           {zones.map((zone, i) => {
             const isActive = i === activeIdx
             const inset = GAP / 2
@@ -117,7 +193,7 @@ export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
     )
   }
 
-  // Generate dot markers between boundary labels
+  // ── Full gauge ────────────────────────────────────────────────────
   const dots: { x: number; y: number }[] = []
   const dotRadius = R - ARC_STROKE / 2 - 8
   for (let v = 0; v <= 100; v += 5) {
@@ -131,13 +207,11 @@ export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
       <p className="text-sm text-gray-500 dark:text-slate-400 mb-1">{t('market.fearGreedIndex')}</p>
 
       <svg viewBox="0 0 300 185" className="w-full max-w-[340px] mx-auto">
-        {/* Arc segments */}
         {zones.map((zone, i) => {
           const isActive = i === activeIdx
           const inset = GAP / 2
           return (
             <g key={zone.label}>
-              {/* Filled wedge background for active zone */}
               {isActive && (
                 <path
                   d={describeWedge(
@@ -151,7 +225,6 @@ export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
                   opacity={0.18}
                 />
               )}
-              {/* Arc band */}
               <path
                 d={describeArc(CX, CY, R, zone.startDeg + inset, zone.endDeg - inset)}
                 fill="none"
@@ -164,12 +237,10 @@ export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
           )
         })}
 
-        {/* Dot markers */}
         {dots.map((d, i) => (
           <circle key={i} cx={d.x} cy={d.y} r={1.5} className="fill-gray-400 dark:fill-slate-600" />
         ))}
 
-        {/* Numeric boundary labels */}
         {boundaryValues.map((val, i) => {
           const pos = polarToCartesian(CX, CY, dotRadius - 6, boundaryAngles[i])
           return (
@@ -188,12 +259,10 @@ export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
           )
         })}
 
-        {/* Zone labels along the arc */}
         {zones.map((zone) => {
           const midAngle = (zone.startDeg + zone.endDeg) / 2
           const labelR = R + ARC_STROKE / 2 + 16
           const pos = polarToCartesian(CX, CY, labelR, midAngle)
-          // Rotate text to follow the arc: perpendicular to radius
           const textRotation = midAngle + 90
           const lines = zone.label.split('\n')
           return (
@@ -217,12 +286,8 @@ export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
           )
         })}
 
-        {/* Needle */}
         <line
-          x1={CX}
-          y1={CY}
-          x2={CX + NEEDLE_LEN}
-          y2={CY}
+          x1={CX} y1={CY} x2={CX + NEEDLE_LEN} y2={CY}
           className="stroke-gray-800 dark:stroke-slate-200"
           strokeWidth={3.5}
           strokeLinecap="round"
@@ -233,13 +298,10 @@ export function FearGreedWidget({ compact = false }: FearGreedWidgetProps) {
           }}
         />
 
-        {/* Pivot dot */}
         <circle cx={CX} cy={CY} r={5} className="fill-gray-800 dark:fill-slate-200" />
 
-        {/* Value below gauge */}
         <text
-          x={CX}
-          y={CY + 28}
+          x={CX} y={CY + 28}
           textAnchor="middle"
           fontWeight="800"
           fontSize="32"

@@ -78,15 +78,25 @@ function TradeButton({ symbol }: { symbol: string }) {
   )
 }
 
+// All 8 columns at every breakpoint — horizontal scroll on small screens.
+// Header and body share one overflow-x-auto container so they always scroll together.
+const ROW_GRID =
+  'grid grid-cols-[minmax(80px,1fr)_82px_58px_56px_56px_74px_74px_96px]'
+
+const SKELETON_BASE =
+  'h-2.5 rounded-[3px] bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 dark:from-white/5 dark:via-white/8 dark:to-white/5 animate-pulse'
+
 function SkeletonRow() {
   return (
-    <li className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_72px_72px_88px_88px_88px] items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2">
+    <li className={`${ROW_GRID} items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2`}>
       {Array.from({ length: 8 }, (_, i) => (
-        <div key={i} className="h-2.5 rounded-[3px] bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 dark:from-white/5 dark:via-white/8 dark:to-white/5 animate-pulse" />
+        <div key={i} className={SKELETON_BASE} />
       ))}
     </li>
   )
 }
+
+const COL_LABEL = 'font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500'
 
 export function WatchlistAnalysisWidget() {
   const { data: items, isLoading, isFetching, dataUpdatedAt, refetch } = useWatchlistAnalysis()
@@ -118,28 +128,36 @@ export function WatchlistAnalysisWidget() {
         </div>
       ) : (
         <>
+          {/*
+            Single overflow-x-auto wraps BOTH the sticky header row and the body list.
+            No nested overflow-y on <ul> — that's what caused the header and body to get
+            independent horizontal scroll positions, making them misalign on mobile.
+            The min-w inner wrapper gives all 8 columns enough room; the outer div scrolls.
+          */}
           <div className="overflow-x-auto">
-            <div className="min-w-[640px]">
-              <div className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_72px_72px_88px_88px_88px] px-4 py-1.5 border-b border-gray-100 dark:border-white/5 gap-2">
-                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500">Symbol</span>
-                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">Price</span>
-                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">24h%</span>
-                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">RSI 1h</span>
-                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">RSI 4h</span>
-                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">RSI Daily</span>
-                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">RSI Weekly</span>
-                <span className="font-mono text-[9px] tracking-[0.08em] uppercase text-gray-400 dark:text-slate-500 text-right">Trade</span>
+            <div className="min-w-[668px]">
+              {/* Header */}
+              <div className={`${ROW_GRID} px-4 py-1.5 border-b border-gray-100 dark:border-white/5 gap-2`}>
+                <span className={COL_LABEL}>Symbol</span>
+                <span className={`${COL_LABEL} text-right`}>Price</span>
+                <span className={`${COL_LABEL} text-right`}>24h%</span>
+                <span className={`${COL_LABEL} text-right`}>RSI 1h</span>
+                <span className={`${COL_LABEL} text-right`}>RSI 4h</span>
+                <span className={`${COL_LABEL} text-right`}>RSI Daily</span>
+                <span className={`${COL_LABEL} text-right`}>RSI Weekly</span>
+                <span className={`${COL_LABEL} text-right`}>Trade</span>
               </div>
 
-              <ul className="list-none m-0 p-0 max-h-[360px] overflow-y-auto overscroll-contain">
+              {/* Body — no overflow-y so header + body share one scroll container */}
+              <ul className="list-none m-0 p-0">
                 {isLoading
                   ? Array.from({ length: 3 }, (_, i) => <SkeletonRow key={i} />)
                   : items?.map((item) => (
                       <li
                         key={item.symbol}
-                        className="grid [grid-template-columns:minmax(100px,1fr)_90px_72px_72px_72px_88px_88px_88px] items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2"
+                        className={`${ROW_GRID} items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2`}
                       >
-                        <span className="font-mono text-[12px] font-semibold text-gray-800 dark:text-slate-200 tracking-[0.04em]">
+                        <span className="font-mono text-[12px] font-semibold text-gray-800 dark:text-slate-200 tracking-[0.04em] truncate">
                           {item.symbol}
                         </span>
                         <span className="font-mono text-[11px] text-gray-700 dark:text-slate-300 text-right">

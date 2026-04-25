@@ -226,9 +226,10 @@ None — Dashboard is read-only (all widgets are display-only).
 │  Market                                              │  ← Page title
 ├──────────────────────────┬──────────────────────────┤
 │  Trending Coins (top 10) │  Top Market Cap (top 10) │  ← 2-col row (50/50)
-├──────────────────┬────────────────────────────────── ┤
-│  Fear & Greed    │  My Watchlist — Analysis          │  ← 2-col row (25/75)
-│  (compact)       │  (RSI Daily + Weekly)             │
+├─────────────────────────────────────────────────────┤
+│  Fear & Greed (horizontal mood-bar strip, full width)│  ← full-width strip
+├─────────────────────────────────────────────────────┤
+│  My Watchlist — Analysis (full width)                │  ← RSI Daily + Weekly
 ├─────────────────────────────────────────────────────┤
 │  Recent Signals (up to 20, full width)               │  ← Signals list
 └─────────────────────────────────────────────────────┘
@@ -250,11 +251,12 @@ None — Dashboard is read-only (all widgets are display-only).
 - Horizontal scroll on mobile; backend cache TTL 60 s; frontend polls every 2 minutes
 - **DataFreshnessBadge** in the card header (same behaviour as Trending Coins)
 
-**Fear & Greed Widget (compact)**
-- SVG semicircle gauge with animated needle, compact variant
+**Fear & Greed Widget (horizontal strip)**
+- Full-width horizontal mood-bar: coloured zone indicator (left) + numeric value + sentiment label + gradient progress bar + zone labels
 - 5 colour zones: Extreme Fear (0–20, red) / Fear (20–40, orange) / Neutral (40–60, yellow) / Greed (60–80, green) / Extreme Greed (80–100, dark green)
-- Numeric value and label displayed below gauge
-- Occupies 25% of the row alongside Watchlist Analysis; row uses `items-start` so heights are independent
+- Active zone highlighted on the gradient bar with a position marker; active label coloured to match the zone
+- Mobile: title centred above; indicator box and "31 · FEAR" text on the same row, vertically centred
+- Desktop: title inline inside the content column; gradient bar spans full remaining width
 - Data refreshed every hour
 
 **My Watchlist — Analysis**
@@ -287,7 +289,7 @@ None — Dashboard is read-only (all widgets are display-only).
 |---|---|---|---|---|
 | `TrendingCoinsWidget` | Skeleton rows | 10 rows with price/%; `DataFreshnessBadge` in header | — | — |
 | `TopMarketCapWidget` | Skeleton rows | 10 rows; `DataFreshnessBadge` in header | — | "Data temporarily unavailable" banner |
-| `FearGreedWidget` (compact) | Skeleton block | Gauge + value | — | — |
+| `FearGreedWidget` (horizontal) | Skeleton block | Mood-bar strip: zone indicator + value + gradient bar + labels | — | — |
 | `WatchlistAnalysisWidget` | Skeleton rows (8 cols) | Rows with RSI 1h, 4h, Daily, Weekly + Trade badge; `DataFreshnessBadge` in header; list scrollable up to 360 px | "No symbols yet" + link | — |
 
 ### User Actions
