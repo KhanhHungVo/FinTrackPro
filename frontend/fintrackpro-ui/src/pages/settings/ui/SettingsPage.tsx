@@ -56,8 +56,8 @@ export function SettingsPage() {
         {t('settings.title')}
       </h1>
 
-      {/* Mobile: horizontal scrollable tab strip */}
-      <div className="flex gap-1 overflow-x-auto pb-1 md:hidden">
+      {/* Mobile: horizontal scrollable tab strip — bleed to viewport edges so first/last tabs aren't clipped by parent padding */}
+      <div className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-3 md:hidden scrollbar-hide">
         {tabs.map(({ slug, label }) => (
           <button
             key={slug}
