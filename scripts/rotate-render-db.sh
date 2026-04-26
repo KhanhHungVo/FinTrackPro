@@ -33,7 +33,7 @@ set -euo pipefail
 
 RENDER_API="https://api.render.com/v1"
 DB_NAME_PREFIX="fintrackpro-db"
-DB_REGION="oregon"
+DB_REGION="singapore"
 DB_VERSION="18"
 DB_PLAN="free"
 PROVISION_TIMEOUT=300   # seconds to wait for new DB to become available
