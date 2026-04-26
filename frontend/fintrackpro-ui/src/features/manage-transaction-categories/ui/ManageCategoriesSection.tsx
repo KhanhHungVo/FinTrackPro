@@ -8,6 +8,8 @@ import {
 } from '@/entities/transaction-category'
 import { useLocaleStore } from '@/features/locale'
 import { CategoryFormModal } from './CategoryFormModal'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Button } from '@/shared/ui'
 
 export function ManageCategoriesSection() {
   const { t } = useTranslation()
@@ -48,25 +50,10 @@ export function ManageCategoriesSection() {
             <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">{t('settings.myCategories')}</p>
             <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{t('settings.myCategoriesHint')}</p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              aria-hidden="true"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+          <Button type="button" variant="primary" size="sm" onClick={openCreate}>
+            <Plus size={12} aria-hidden="true" />
             {t('transactionCategories.newCategory')}
-          </button>
+          </Button>
         </div>
 
         {/* Loading */}
@@ -86,25 +73,10 @@ export function ManageCategoriesSection() {
             <p className="text-xs text-gray-400 dark:text-slate-500 max-w-xs">
               {t('transactionCategories.emptyHint')}
             </p>
-            <button
-              type="button"
-              onClick={openCreate}
-              className="mt-1 flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                aria-hidden="true"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+            <Button type="button" variant="primary" size="sm" onClick={openCreate} className="mt-1">
+              <Plus size={12} aria-hidden="true" />
               {t('transactionCategories.createFirst')}
-            </button>
+            </Button>
           </div>
         )}
 
@@ -137,47 +109,14 @@ export function ManageCategoriesSection() {
                     : t('transactionCategories.income')}
                 </span>
                 <div className="flex gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(cat)}
-                    className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-white/5"
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      aria-hidden="true"
-                    >
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => openEdit(cat)}>
+                    <Pencil size={12} aria-hidden="true" />
                     {t('common.edit')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(cat.id)}
-                    className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors dark:text-slate-500 dark:hover:text-red-400 dark:hover:bg-red-500/10"
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      aria-hidden="true"
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14H6L5 6" />
-                      <path d="M10 11v6" />
-                      <path d="M14 11v6" />
-                      <path d="M9 6V4h6v2" />
-                    </svg>
+                  </Button>
+                  <Button type="button" variant="danger-ghost" size="sm" onClick={() => handleDelete(cat.id)}>
+                    <Trash2 size={12} aria-hidden="true" />
                     {t('common.delete')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

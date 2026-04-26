@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Check, Pencil, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useTrades, useTradesSummary, useDeleteTrade } from '@/entities/trade'
@@ -257,7 +258,7 @@ export function TradesPage() {
                               title={t('trades.closeTrade')}
                               className="rounded px-1.5 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10 transition-colors"
                             >
-                              ✓
+                              <Check size={12} aria-hidden="true" />
                             </button>
                           )}
                           <button
@@ -265,7 +266,7 @@ export function TradesPage() {
                             title={t('common.edit')}
                             className="rounded px-1.5 py-1 text-xs text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:text-slate-600 dark:hover:text-blue-400 dark:hover:bg-blue-500/10 transition-colors"
                           >
-                            ✎
+                            <Pencil size={12} aria-hidden="true" />
                           </button>
                           <button
                             onClick={() => setPendingDeleteId(trade.id)}
@@ -273,7 +274,7 @@ export function TradesPage() {
                             title={t('common.delete')}
                             className="rounded px-1.5 py-1 text-xs text-gray-300 hover:text-red-500 hover:bg-red-50 dark:text-slate-600 dark:hover:text-red-400 dark:hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           >
-                            ✕
+                            <X size={12} aria-hidden="true" />
                           </button>
                         </div>
                       </td>

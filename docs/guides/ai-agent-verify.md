@@ -1,168 +1,103 @@
-# AI Agent Verification Checklist
+# AI Agent Verification — Reusable Prompts
 
-Run this checklist after every implementation task before reporting completion.
-Fix all failures before marking the task done — do not skip steps or report
-partial success.
+Paste the relevant prompt directly into a Claude Code session after finishing an implementation task.
 
 ---
 
-## 1. Backend
+## Prompt A — Backend tests
 
-### 1a. Build
-
-```bash
-cd backend
-dotnet build
 ```
+Run all backend tests and fix any failures.
 
-All projects must compile with **zero errors**. Warnings are acceptable but
-investigate any new ones introduced by the current task.
+1. cd backend && dotnet build                                         # must be zero errors
+2. dotnet test --filter "Category!=Integration"                       # unit tests
+3. dotnet test --filter "Category=Integration"                        # integration (needs TEST_DB_CONNECTION_STRING)
+4. bash scripts/api-e2e-local.sh                                      # Newman API E2E (needs Docker + API on :5018)
 
-### 1b. Unit tests
+For each failure: state root cause in one sentence, fix it, re-run the affected suite to confirm green.
+Skip any suite whose infrastructure is not running — say so explicitly with the reason.
 
-```bash
-cd backend
-dotnet test --filter "Category!=Integration"
+Report using this table:
+| Step                  | Result       | Notes |
+|-----------------------|--------------|-------|
+| BE build              | ✅/❌        |       |
+| BE unit tests         | ✅/❌/⏭ skip |       |
+| BE integration tests  | ✅/❌/⏭ skip |       |
+| BE API E2E (Newman)   | ✅/❌/⏭ skip |       |
+List every file changed and why.
 ```
-
-All tests must pass. If a test fails:
-1. Read the failure message and stack trace carefully.
-2. Determine whether the test or the implementation is wrong.
-3. Fix the root cause — do not comment out or delete failing tests.
-
-### 1c. Integration tests
-
-> **Prerequisites:** PostgreSQL running locally; `TEST_DB_CONNECTION_STRING`
-> environment variable set.  
-> Skip this step only when the local database is genuinely unavailable — note
-> the skip explicitly in your summary.
-
-```bash
-cd backend
-dotnet test --filter "Category=Integration"
-```
-
-All integration tests must pass. Fix failures before proceeding.
-
-### 1d. API E2E tests (Newman)
-
-> **Prerequisites:**
-> - Docker up: `docker compose up -d postgres keycloak`
-> - API running on `http://localhost:5018`
-> - Newman installed: `npm install -g newman`
->
-> Skip this step only when the full stack cannot be started locally — note the
-> skip explicitly in your summary.
-
-```bash
-# Full suite
-bash scripts/api-e2e-local.sh
-
-# Scope to the affected feature folder only (faster, use when confident)
-bash scripts/api-e2e-local.sh --folder "<FolderName>"
-
-# Verbose output for debugging failures
-bash scripts/api-e2e-local.sh --verbose
-```
-
-If a Newman test fails:
-1. Identify the failing request and assertion.
-2. Check whether the API response, the Postman test script, or the environment
-   variable is wrong.
-3. Fix the root cause (API code **or** collection update) — both are valid fixes.
 
 ---
 
-## 2. Frontend
+## Prompt B — Frontend tests
 
-### 2a. Type-check and build
-
-```bash
-cd frontend/fintrackpro-ui
-npm run build
 ```
+Run all frontend tests and fix any failures.
 
-Zero TypeScript errors. Zero build errors. Fix all before proceeding.
+1. cd frontend/fintrackpro-ui && npm run build                        # zero TS + build errors
+2. npm run lint                                                        # zero lint errors
+3. npm test                                                            # Vitest unit tests
+4. bash scripts/e2e-local.sh                                          # Playwright E2E (needs Keycloak + API on :5018)
 
-### 2b. Lint
+For each failure: state root cause in one sentence, fix it, re-run the affected suite to confirm green.
+Do not suppress lint rules or delete failing tests.
+Skip any suite whose infrastructure is not running — say so explicitly with the reason.
 
-```bash
-cd frontend/fintrackpro-ui
-npm run lint
+Report using this table:
+| Step                  | Result       | Notes |
+|-----------------------|--------------|-------|
+| FE build + type-check | ✅/❌        |       |
+| FE lint               | ✅/❌        |       |
+| FE unit tests         | ✅/❌/⏭ skip |       |
+| FE E2E (Playwright)   | ✅/❌/⏭ skip |       |
+List every file changed and why.
 ```
-
-Zero lint errors. Warnings are acceptable; do not suppress rules to silence
-them.
-
-### 2c. Unit tests (Vitest)
-
-```bash
-cd frontend/fintrackpro-ui
-npm test
-```
-
-All tests must pass. Apply the same fix-or-update rule as backend tests.
-
-### 2d. Frontend E2E tests (Playwright)
-
-> **Prerequisites:**
-> - Docker up: `docker compose up -d postgres keycloak`
-> - API running on `http://localhost:5018`
-> - Frontend dev server running: `npm run dev` in `frontend/fintrackpro-ui`
->
-> Skip this step only when the full stack cannot be started locally — note the
-> skip explicitly in your summary.
-
-```bash
-# Full suite (mints Keycloak token automatically)
-bash scripts/e2e-local.sh
-
-# Single spec (scope to affected feature)
-bash scripts/e2e-local.sh tests/e2e/<spec-file>.spec.ts
-
-# Interactive UI mode (useful for debugging)
-bash scripts/e2e-local.sh --ui
-```
-
-If a Playwright test fails:
-1. Read the error and any screenshot/trace artifacts in `test-results/`.
-2. Determine whether the UI, the API, or the test assertion is wrong.
-3. Fix the root cause — do not skip or mark tests as flaky without evidence.
 
 ---
 
-## 3. Documentation sync
+## Prompt C — Backend documentation review
 
-After any change to public API endpoints, request/response shapes,
-configuration keys, environment variables, or project structure:
+```
+Review and update backend documentation to match the current code. Do not rewrite for style — only fix factual inaccuracies or missing content.
 
-- [ ] `docs/architecture/api-spec.md` — updated if endpoints changed
-- [ ] `docs/architecture/database.md` — updated if schema changed
-- [ ] `CLAUDE.md` key-configuration table — updated if env vars changed
-- [ ] `README.md` / `backend/README.md` / `frontend/fintrackpro-ui/README.md` — updated if setup steps changed
-- [ ] Postman collection (`docs/postman/FinTrackPro.e2e.postman_collection.json`) — updated if API contract changed
+Docs to check:
+- README.md                      # project overview, tech stack, quick start
+- CLAUDE.md                      # commands, architecture summary, config table
+- backend/CLAUDE.md              # BE commands, architecture, testing conventions
+- backend/README.md              # BE stack, commands, config, project structure
+- docs/features.md               # feature registry — add/remove/update BE features
+- docs/architecture/             # overview, api-spec, database, background-jobs, auth
+- docs/postman/api-e2e-plan.md   # Newman collection structure and CI diagram
+
+For each file:
+1. Read the doc.
+2. Read the relevant source (controllers, commands, entities, migrations, job classes) to verify accuracy.
+3. Update only sections that are factually wrong or missing.
+4. Skip files that are already accurate.
+
+Report: list every change made and the code evidence that required it. Do not add speculative or planned content.
+```
 
 ---
 
-## 4. Summary format
-
-When all steps pass, report using this format:
+## Prompt D — Frontend documentation review
 
 ```
-## Verification summary
+Review and update frontend documentation to match the current code. Do not rewrite for style — only fix factual inaccuracies or missing content.
 
-| Step                        | Result  | Notes                        |
-|-----------------------------|---------|------------------------------|
-| BE build                    | ✅ pass  |                              |
-| BE unit tests               | ✅ pass  | 142 tests                    |
-| BE integration tests        | ✅ pass  | 18 tests                     |
-| BE API E2E (Newman)         | ✅ pass  | 34 requests                  |
-| FE build + type-check       | ✅ pass  |                              |
-| FE lint                     | ✅ pass  |                              |
-| FE unit tests               | ✅ pass  | 56 tests                     |
-| FE E2E (Playwright)         | ⏭ skip  | Stack not running locally    |
-| Docs sync                   | ✅ done  | api-spec.md updated          |
+Docs to check:
+- README.md                      # project overview, tech stack, quick start
+- CLAUDE.md                      # commands, architecture summary, config table
+- frontend/fintrackpro-ui/CLAUDE.md   # commands, FSD layers, key patterns
+- frontend/fintrackpro-ui/README.md   # stack, env vars, FSD layers, commands
+- docs/features.md                    # feature registry — add/remove/update FE features
+- docs/architecture/ui-flows.md       # user flows and page structure
+
+For each file:
+1. Read the doc.
+2. Read the relevant source (pages, features, entities, shared — especially env.ts, routing, auth adapter) to verify accuracy.
+3. Update only sections that are factually wrong or missing.
+4. Skip files that are already accurate.
+
+Report: list every change made and the code evidence that required it. Do not add speculative or planned content.
 ```
-
-If any step was skipped, state the reason. If any step required a fix, briefly
-describe what was wrong and what was changed.

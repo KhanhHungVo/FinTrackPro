@@ -100,7 +100,7 @@ Layer hierarchy (strict top-down): `app → pages → widgets → features → e
 - Server state: React Query. Client state: Zustand. Axios injects Bearer token, handles 401.
 - Auth adapter pattern: `IAuthAdapter` → `KeycloakAdapter` | `Auth0Adapter` (switched via `VITE_AUTH_PROVIDER`)
 - Key shared utilities: `useGuardedMutation` (prevents duplicate fast-click mutations), `apiError.ts`, `formatCurrency.ts`, `useDebounce`
-- Error UI: `ErrorBoundary.tsx`, `ErrorPage.tsx`, `AuthErrorScreen.tsx`
+- Error UI: `ErrorBoundary.tsx`, `ErrorPage.tsx`, `AuthErrorScreen.tsx`, `AuthDegradedBanner.tsx`
 
 See [frontend/fintrackpro-ui/README.md](frontend/fintrackpro-ui/README.md) for full FSD details.
 

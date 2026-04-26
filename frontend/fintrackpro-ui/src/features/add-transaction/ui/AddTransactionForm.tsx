@@ -7,6 +7,7 @@ import { useLocaleStore } from '@/features/locale'
 import { TransactionCategorySelector, useLastUsedTransactionCategory } from '@/features/select-transaction-category'
 import { cn } from '@/shared/lib/cn'
 import { classifyApiError, errorToastMessage, type ProblemDetails } from '@/shared/lib/apiError'
+import { Button } from '@/shared/ui'
 
 const SUPPORTED_CURRENCIES = ['USD', 'VND']
 
@@ -194,13 +195,9 @@ export function AddTransactionForm({ onSuccess }: { onSuccess?: () => void }) {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending || !categoryId}
-        className="w-full rounded-md bg-blue-600 py-2 text-sm text-white disabled:opacity-50"
-      >
-        {isPending ? t('common.loading') : t('transactions.addTransaction')}
-      </button>
+      <Button type="submit" variant="primary" size="lg" loading={isPending} disabled={!categoryId} className="w-full">
+        {t('transactions.addTransaction')}
+      </Button>
     </form>
   )
 }

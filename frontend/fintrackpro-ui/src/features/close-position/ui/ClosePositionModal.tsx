@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useClosePosition } from '@/entities/trade'
@@ -88,7 +89,7 @@ export function ClosePositionModal({ trade, onClose }: ClosePositionModalProps) 
             className="text-gray-400 hover:text-gray-600 text-xl leading-none dark:text-slate-500 dark:hover:text-slate-300"
             aria-label={t('common.cancel')}
           >
-            ✕
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
 

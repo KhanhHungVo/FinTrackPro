@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pencil, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useTransactions, useTransactionSummary, useDeleteTransaction } from '@/entities/transaction'
@@ -217,7 +218,7 @@ export function TransactionsPage() {
                     className="text-xs text-gray-300 hover:text-blue-500 transition-colors dark:text-slate-600"
                     title={t('common.edit')}
                   >
-                    ✎
+                    <Pencil size={12} aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => setPendingDeleteId(tx.id)}
@@ -225,7 +226,7 @@ export function TransactionsPage() {
                     className="text-xs text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:text-slate-600"
                     title={t('common.delete')}
                   >
-                    ✕
+                    <X size={12} aria-hidden="true" />
                   </button>
                 </div>
               </li>

@@ -8,6 +8,8 @@ import {
 } from '@/entities/transaction-category'
 import type { TransactionType } from '@/entities/transaction/model/types'
 import { classifyApiError, errorToastMessage } from '@/shared/lib/apiError'
+import { X } from 'lucide-react'
+import { Button, IconButton } from '@/shared/ui'
 
 const EMOJIS = [
   // Food & drink
@@ -164,16 +166,16 @@ setErrors(next)
                   : t('transactionCategories.createTitle')}
               </h2>
             </div>
-            <button
+            <IconButton
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="ml-4 text-gray-400 hover:text-gray-600 transition-colors dark:text-slate-500 dark:hover:text-slate-300"
               aria-label={t('common.cancel')}
+              className="ml-4"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+              <X size={16} aria-hidden="true" />
+            </IconButton>
           </div>
 
           <div className="px-6 py-5 space-y-5">
@@ -301,25 +303,12 @@ setErrors(next)
 
           {/* Footer */}
           <div className="px-6 pb-6 flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-md border border-gray-200 py-2.5 text-sm text-gray-700 font-medium hover:bg-gray-50 transition-colors dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
-            >
+            <Button type="button" variant="secondary" size="md" onClick={onClose} className="flex-1">
               {t('common.cancel')}
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isPending}
-              className="flex-1 rounded-md bg-blue-600 py-2.5 text-sm text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {isPending
-                ? '…'
-                : isEdit
-                  ? t('transactionCategories.saveChanges')
-                  : t('transactionCategories.createCategory')}
-            </button>
+            </Button>
+            <Button type="button" variant="primary" size="md" loading={isPending} onClick={handleSubmit} className="flex-1">
+              {isEdit ? t('transactionCategories.saveChanges') : t('transactionCategories.createCategory')}
+            </Button>
           </div>
 
         </div>

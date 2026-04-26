@@ -121,6 +121,9 @@ Full-viewport dark-themed marketing page composed of stacked sections:
 | Unauthenticated | Redirect to IAM |
 | Auth error | IAM provider shows error (invalid credentials, etc.) |
 | First login | Transparent auto-provisioning, lands on Dashboard |
+| Provider unreachable (no cached token) | `AuthErrorScreen` shown — full-page error card with error type badge (`network` / `timeout` / `config` / `unknown`), auto-retry countdown (30 s), manual retry button, up to 3 automatic retries; shows "contact support" block when retries are exhausted |
+| Provider unreachable (cached token available) | `AuthDegradedBanner` shown — fixed amber top-of-page strip displaying a live countdown to token expiry; page reloads automatically when the token expires |
+| Initialising | `AuthLoadingSplash` shown — full-page loading screen with brand name and animated pulse bar |
 
 ---
 
@@ -346,10 +349,11 @@ All other interactions (navigation, links) are read-only.
 **Add Transaction Form (collapsible)**
 - Hidden by default; revealed by the "+ Add" button in the header
 - Type toggle: "Income" (green) / "Expense" (red) — one active at a time
-- Amount field (number, required, > 0)
-- Category field (dropdown selector, required) — groups system and custom categories; shows emoji icon + localized label (EN/VI); includes "Manage my categories" link to `/settings?tab=categories`
-- Note field (text, optional)
+- Amount field (number, required, > 0) — validated on blur and on submit; inline red error message shown below the field
+- Category field (dropdown selector, required) — groups system and custom categories; shows emoji icon + localized label (EN/VI); includes "Manage my categories" link to `/settings?tab=categories`; Submit button is disabled until a category is selected
+- Note field (text, optional, max 500 chars, no `<>`) — validated on blur
 - Submit button: "Add" → "Saving..." while pending → clears form and collapses on success
+- Server validation errors (422) are displayed as a red error block below the note field
 - Month taken from the current month filter selection
 
 **Transaction Table**
@@ -506,15 +510,17 @@ All other interactions (navigation, links) are read-only.
 
 **Add Trade Form (collapsible)**
 - Visible when "+ Log Trade" is clicked; hidden by default
+- Status toggle: Open / Closed (determines which price fields are shown)
 - Direction toggle: Long (green) / Short (red)
 - Symbol field (monospace, auto-uppercase, required — validated against Binance)
 - Entry price (number, required)
-- Exit price (number, required)
+- Exit price (number, required when status = Closed; hidden when Open)
+- Current price (number, optional, shown when status = Open)
 - Position size (number, required)
 - Fees (number, optional, default 0)
 - Notes (text, optional)
-- Error message area (red, shown if symbol is invalid or validation fails)
-- Submit: "Log Trade" → "Saving..." while pending → form clears and collapses on success
+- Fields validated on blur and on submit; inline red errors shown per field; server errors (422) shown in a red block below the form
+- Submit: "Log Trade" → disabled + spinner while pending → form clears and collapses on success
 
 **Trades Table**
 - Sortable column headers (click cycles: default → desc → asc → reset; arrow indicator ↑ ↓ ↕): Date (default desc), P&L, Symbol, Entry Price, Position Size, Fees
@@ -626,10 +632,10 @@ Active tab is stored in the URL query string (`?tab=<slug>`). Invalid slugs fall
 
 **Notifications tab (`NotificationSettingsForm`)**
 - Info box: step-by-step instructions to find your Telegram Chat ID
-- Telegram Chat ID input (monospace, required)
+- Telegram Chat ID input (monospace, required) — validated on blur and on submit; inline red error shown below the field; server validation errors (422) also map back to the field
 - Enable notifications checkbox
-- Save button: "Save Preferences" → "Saving..." while pending
-- Success message: green "✓ Preferences saved." shown after successful save
+- Save button: "Save" → disabled + spinner while pending
+- Success: Sonner toast "Settings saved."
 - Pre-populated with current saved values on load
 
 **Watchlist tab (`WatchlistManager`)**
@@ -645,8 +651,9 @@ Active tab is stored in the URL query string (`?tab=<slug>`). Invalid slugs fall
 |---|---|
 | Loading | Animated skeleton (single block) |
 | Default | Form pre-filled with saved values (or blank if first time) |
-| Pending | Save button disabled, shows "Saving..." |
-| Success | Green success message appears |
+| Pending | Save button disabled, spinner shown |
+| Success | Sonner toast "Settings saved." |
+| Validation error | Inline red error message below Chat ID field |
 
 **Watchlist Manager**
 | State | Description |

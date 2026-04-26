@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Language } from '@/shared/i18n'
 
-const SUPPORTED_CURRENCIES = ['USD', 'VND'] as const
+export const SUPPORTED_CURRENCIES = ['USD', 'VND'] as const
 export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number]
 
 export type Theme = 'light' | 'dark'

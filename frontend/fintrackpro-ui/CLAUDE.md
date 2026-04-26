@@ -46,7 +46,7 @@ app → pages → widgets → features → entities → shared
 | `widgets/` | Self-contained composite UI blocks (navbar, charts) |
 | `features/` | User interactions and use cases (forms, mutations) |
 | `entities/` | Business domain types + React Query hooks for each entity |
-| `shared/` | Reusable utilities: API client, env config, `cn()` helper |
+| `shared/` | Reusable utilities: API client, env config, `cn()` helper, UI primitives (`Button`, `IconButton`, `Pagination`, `SortableColumnHeader`, `ConfirmDeleteDialog`, `AuthDegradedBanner`, `AuthErrorScreen`), i18n setup (EN / VI via i18next), icons (`AppSpinner`) |
 
 ## Key Patterns
 

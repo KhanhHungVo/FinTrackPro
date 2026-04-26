@@ -15,6 +15,8 @@ const en = {
     cancel: 'Cancel',
     delete: 'Delete',
     confirmDelete: 'Delete?',
+    revoke: 'Revoke',
+    confirmRevoke: 'Confirm?',
     confirmDeleteDescription: 'This action cannot be undone.',
     edit: 'Edit',
     add: 'Add',

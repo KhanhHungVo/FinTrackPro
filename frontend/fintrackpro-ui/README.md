@@ -16,6 +16,8 @@ React 19 single-page application for FinTrackPro, structured with Feature-Sliced
 | Validation | Zod v4 |
 | Charts | Recharts v3 |
 | HTTP client | Axios |
+| Toast notifications | Sonner v2 |
+| Internationalisation | i18next + react-i18next (EN / VI) |
 
 ## Prerequisites
 
@@ -59,6 +61,7 @@ Create a `.env` file in this directory (copy from `.env.example`):
 | `VITE_BANK_ACCOUNT_NUMBER` | Account number (text fallback below QR) | `your_account_number` |
 | `VITE_BANK_ACCOUNT_NAME` | Account holder name | `Your Full Name` |
 | `VITE_BANK_TRANSFER_AMOUNT` | Monthly Pro price in VND | `99000` |
+| `VITE_BANK_QR_URL` | Direct URL to QR code image for bank transfer (externally hosted; leave blank to hide QR) | *(empty)* |
 | `VITE_FREE_TRANSACTIONS_LIMIT` | Free plan transaction cap (default `50`) | `50` |
 | `VITE_FREE_HISTORY_DAYS` | Free plan history window in days (default `60`) | `60` |
 | `VITE_FREE_BUDGETS_LIMIT` | Free plan active-budget cap (default `3`) | `3` |
@@ -138,5 +141,6 @@ Common patterns used across all pages (Dashboard, Transactions, Budgets, Trades,
 
 ## Further Reading
 
-- [../../docs/api-spec.md](../../docs/api-spec.md) — API endpoints consumed by this app
-- [../../docs/architecture.md](../../docs/architecture.md) — Full system architecture
+- [../../docs/architecture/api-spec.md](../../docs/architecture/api-spec.md) — API endpoints consumed by this app
+- [../../docs/architecture/overview.md](../../docs/architecture/overview.md) — Full system architecture
+- [../../docs/architecture/ui-flows.md](../../docs/architecture/ui-flows.md) — Screen-by-screen UI flow reference

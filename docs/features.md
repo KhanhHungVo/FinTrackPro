@@ -37,7 +37,7 @@ Set spending limits per category per month and stay on track:
 
 A structured log for crypto trades with automatic profit/loss calculation:
 
-- **Log a trade** — record a completed trade with: symbol (e.g. `BTCUSDT`), direction (Long or Short), entry price, exit price, position size, trading fees, and optional notes.
+- **Log a trade** — record a trade (Open or Closed) with: symbol (e.g. `BTCUSDT`), direction (Long or Short), status (Open / Closed), entry price, exit price (required when Closed), optional current price (shown for Open positions), position size, trading fees, and optional notes.
 - **Symbol validation** — the symbol is verified against Binance's live trading pairs before saving. Invalid or misspelled pairs are rejected immediately.
 - **Automatic P&L** — profit or loss is calculated on every read as `(exitPrice − entryPrice) × positionSize − fees`. It is always computed from your raw inputs, so it is always accurate.
 - **Search and filter** — search by symbol; filter by status (Open/Closed), direction (Long/Short), and date range; all server-side.

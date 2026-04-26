@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   useAdminUsers,
   useAdminActivateSubscription,
@@ -6,6 +7,8 @@ import {
 } from '@/entities/subscription'
 import type { AdminUser } from '@/entities/subscription'
 import { cn } from '@/shared/lib/cn'
+import { XCircle } from 'lucide-react'
+import { Button } from '@/shared/ui'
 
 function PlanPill({ plan }: { plan: string }) {
   const isPro = plan === 'Pro'
@@ -24,6 +27,7 @@ function PlanPill({ plan }: { plan: string }) {
 }
 
 function UserRow({ user }: { user: AdminUser }) {
+  const { t } = useTranslation()
   const [revokeConfirm, setRevokeConfirm] = useState(false)
   const activate = useAdminActivateSubscription()
   const revoke = useAdminRevokeSubscription()
@@ -56,37 +60,27 @@ function UserRow({ user }: { user: AdminUser }) {
       </td>
       <td className="px-4 py-2.5">
         <div className="flex items-center gap-1.5 justify-end">
-          <button
-            onClick={() => handleActivate('Monthly')}
-            disabled={busy}
-            className="rounded px-2 py-0.5 text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 disabled:opacity-40 transition-colors"
-          >
+          <Button variant="primary-soft" size="sm" disabled={busy} onClick={() => handleActivate('Monthly')}>
             +1m
-          </button>
-          <button
-            onClick={() => handleActivate('Yearly')}
-            disabled={busy}
-            className="rounded px-2 py-0.5 text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 disabled:opacity-40 transition-colors"
-          >
+          </Button>
+          <Button variant="primary-soft" size="sm" disabled={busy} onClick={() => handleActivate('Yearly')}>
             +1y
-          </button>
+          </Button>
           {user.plan === 'Pro' && (
             revokeConfirm ? (
-              <button
-                onClick={handleRevoke}
-                disabled={busy}
-                className="rounded px-2 py-0.5 text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 transition-colors"
-              >
-                Confirm?
-              </button>
+              <>
+                <Button variant="danger" size="sm" disabled={busy} onClick={handleRevoke}>
+                  {t('common.confirmRevoke')}
+                </Button>
+                <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRevokeConfirm(false)}>
+                  {t('common.cancel')}
+                </Button>
+              </>
             ) : (
-              <button
-                onClick={() => setRevokeConfirm(true)}
-                disabled={busy}
-                className="rounded px-2 py-0.5 text-[11px] font-medium bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-400 disabled:opacity-40 transition-colors"
-              >
-                Revoke
-              </button>
+              <Button variant="danger-ghost" size="sm" disabled={busy} onClick={() => setRevokeConfirm(true)}>
+                <XCircle size={12} aria-hidden="true" />
+                {t('common.revoke')}
+              </Button>
             )
           )}
         </div>
@@ -118,12 +112,9 @@ export function AdminSubscriptionPanel() {
           placeholder="Search by email..."
           className="flex-1 rounded-md border px-3 py-1.5 text-sm bg-white dark:bg-white/5 dark:border-white/10 dark:text-slate-200 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <button
-          type="submit"
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-        >
+        <Button type="submit" variant="primary" size="sm">
           Search
-        </button>
+        </Button>
       </form>
 
       <div className="rounded-xl border bg-white dark:bg-white/4 dark:border-white/6 overflow-hidden">

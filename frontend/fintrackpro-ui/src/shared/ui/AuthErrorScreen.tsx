@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import { cn } from '@/shared/lib/cn'
 
 export type AuthErrorType = 'network' | 'timeout' | 'config' | 'unknown'
@@ -125,9 +125,26 @@ export function AuthErrorScreen({
   autoRetrySeconds = 30,
 }: AuthErrorScreenProps) {
   const content = ERROR_CONTENT[errorType]
+  type TimerState = { secondsLeft: number; isRetrying: boolean }
+  type TimerAction =
+    | { type: 'reset'; seconds: number }
+    | { type: 'tick' }
+    | { type: 'start_retry' }
+
+  function timerReducer(state: TimerState, action: TimerAction): TimerState {
+    switch (action.type) {
+      case 'reset': return { secondsLeft: action.seconds, isRetrying: false }
+      case 'tick': return { ...state, secondsLeft: Math.max(0, state.secondsLeft - 1) }
+      case 'start_retry': return { ...state, isRetrying: true, secondsLeft: 0 }
+      default: return state
+    }
+  }
+
   const isExhausted = retryCount >= maxRetries
-  const [secondsLeft, setSecondsLeft] = useState(autoRetrySeconds)
-  const [isRetrying, setIsRetrying] = useState(false)
+  const [{ secondsLeft, isRetrying }, dispatch] = useReducer(timerReducer, {
+    secondsLeft: autoRetrySeconds,
+    isRetrying: false,
+  })
   const h1Ref = useRef<HTMLHeadingElement>(null)
 
   // Focus the heading on mount for screen readers
@@ -135,35 +152,29 @@ export function AuthErrorScreen({
     h1Ref.current?.focus()
   }, [])
 
-  // Reset and run countdown on each new attempt
+  // Reset countdown and run interval for each new attempt
   useEffect(() => {
     if (isExhausted) return
 
-    setSecondsLeft(autoRetrySeconds)
+    dispatch({ type: 'reset', seconds: autoRetrySeconds })
 
     const interval = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(interval)
-          setIsRetrying(true)
-          onRetry()
-          return 0
-        }
-        return s - 1
-      })
+      dispatch({ type: 'tick' })
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [retryCount, isExhausted, autoRetrySeconds, onRetry])
+  }, [retryCount, isExhausted, autoRetrySeconds])
 
-  // Reset isRetrying when a new error arrives (retryCount changes)
+  // Trigger onRetry when the countdown hits zero
   useEffect(() => {
-    setIsRetrying(false)
-  }, [retryCount])
+    if (!isExhausted && secondsLeft === 0 && !isRetrying) {
+      dispatch({ type: 'start_retry' })
+      onRetry()
+    }
+  }, [secondsLeft, isExhausted, isRetrying, onRetry])
 
   function handleManualRetry() {
-    setIsRetrying(true)
-    setSecondsLeft(0)
+    dispatch({ type: 'start_retry' })
     onRetry()
   }
 

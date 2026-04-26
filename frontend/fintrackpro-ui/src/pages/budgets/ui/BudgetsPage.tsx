@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Pencil, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useBudgets, useDeleteBudget, useUpdateBudget } from '@/entities/budget'
@@ -78,13 +79,16 @@ export function BudgetsPage() {
   const monthOptions = Array.from({ length: 6 }, (_, i) => monthsBack(i))
 
   // Calculate spending per category from transactions (normalise to USD first, then to preferred)
-  const spentByCategory: Record<string, number> = {}
-  transactionData?.items
-    ?.filter((tx) => tx.type === 'Expense')
-    .forEach((tx) => {
-      const converted = convertAmount(tx.amount, tx.rateToUsd, preferredRate, tx.currency, currency)
-      spentByCategory[tx.category] = (spentByCategory[tx.category] ?? 0) + converted
-    })
+  const spentByCategory = useMemo(() => {
+    const acc: Record<string, number> = {}
+    transactionData?.items
+      ?.filter((tx) => tx.type === 'Expense')
+      .forEach((tx) => {
+        const converted = convertAmount(tx.amount, tx.rateToUsd, preferredRate, tx.currency, currency)
+        acc[tx.category] = (acc[tx.category] ?? 0) + converted
+      })
+    return acc
+  }, [transactionData?.items, preferredRate, currency])
 
   const displayBudgets = useMemo(() => {
     if (!budgets) return []
@@ -269,7 +273,7 @@ export function BudgetsPage() {
                           aria-label={t('common.edit')}
                           title={t('common.edit')}
                         >
-                          ✎
+                          <Pencil size={12} aria-hidden="true" />
                         </button>
                         <button
                           onClick={() => setPendingDeleteId(budget.id)}
@@ -278,7 +282,7 @@ export function BudgetsPage() {
                           aria-label={t('common.delete')}
                           title={t('common.delete')}
                         >
-                          ✕
+                          <X size={12} aria-hidden="true" />
                         </button>
                       </>
                     )}

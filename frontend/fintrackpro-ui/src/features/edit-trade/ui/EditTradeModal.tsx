@@ -6,6 +6,8 @@ import type { Trade, TradeDirection, TradeStatus } from '@/entities/trade'
 import { cn } from '@/shared/lib/cn'
 import { updateTradeSchema, type UpdateTradeInput } from '@/shared/lib/tradeSchema'
 import { classifyApiError, errorToastMessage, type ProblemDetails } from '@/shared/lib/apiError'
+import { X } from 'lucide-react'
+import { Button, IconButton } from '@/shared/ui'
 
 const SUPPORTED_CURRENCIES = ['USD', 'VND']
 
@@ -147,14 +149,15 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
       <div className="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-[#161a25]">
         <div className="flex items-center justify-between border-b px-4 py-3 dark:border-white/6">
           <h2 className="text-lg font-semibold">{t('common.edit')} {t('trades.title')}</h2>
-          <button
+          <IconButton
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none dark:text-slate-500 dark:hover:text-slate-300"
             aria-label={t('common.cancel')}
           >
-            ✕
-          </button>
+            <X size={16} aria-hidden="true" />
+          </IconButton>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-4">
@@ -330,20 +333,12 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
           )}
 
           <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-md border py-2 text-sm text-gray-600 hover:bg-gray-50"
-            >
+            <Button type="button" variant="secondary" size="md" onClick={onClose} className="flex-1">
               {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex-1 rounded-md bg-blue-600 py-2 text-sm text-white disabled:opacity-50"
-            >
-              {isPending ? t('common.loading') : t('common.save')}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" size="md" loading={isPending} className="flex-1">
+              {t('common.save')}
+            </Button>
           </div>
         </form>
       </div>

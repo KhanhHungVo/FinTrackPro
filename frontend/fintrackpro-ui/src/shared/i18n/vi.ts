@@ -14,6 +14,8 @@ const vi = {
     cancel: 'Huỷ',
     delete: 'Xoá',
     confirmDelete: 'Xoá?',
+    revoke: 'Thu hồi',
+    confirmRevoke: 'Xác nhận?',
     confirmDeleteDescription: 'Hành động này không thể hoàn tác.',
     edit: 'Sửa',
     add: 'Thêm',

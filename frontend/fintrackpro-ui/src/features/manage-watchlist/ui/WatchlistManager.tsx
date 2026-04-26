@@ -11,8 +11,11 @@ import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
 import { ProFeatureLock } from '@/features/upgrade'
 import { watchlistSymbolSchema } from '@/shared/lib/tradeSchema'
 import { cn } from '@/shared/lib/cn'
+import { Trash2 } from 'lucide-react'
+import { Button } from '@/shared/ui'
 
 function WatchlistForm() {
+  const { t } = useTranslation()
   const { data: symbols, isLoading } = useWatchedSymbols()
   const { mutate: add, isPending: adding } = useAddWatchedSymbol()
   const { mutate: remove } = useRemoveWatchedSymbol()
@@ -74,13 +77,9 @@ function WatchlistForm() {
             <p className="text-xs text-red-600 dark:text-red-400">{symbolError}</p>
           )}
         </div>
-        <button
-          type="submit"
-          disabled={adding}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
-        >
-          {adding ? '...' : 'Add'}
-        </button>
+        <Button type="submit" variant="primary" size="md" loading={adding}>
+          Add
+        </Button>
       </form>
 
       {isLoading ? (
@@ -95,13 +94,15 @@ function WatchlistForm() {
               className="flex items-center justify-between rounded-md border px-3 py-2 dark:border-white/6"
             >
               <span className="font-mono text-sm font-medium">{ws.symbol}</span>
-              <button
+              <Button
+                variant="danger-ghost"
+                size="sm"
+                loading={isRemoving(ws.id)}
                 onClick={() => guardedRemove(ws.id, { onError: (err) => toast.error(errorToastMessage(err)) })}
-                disabled={isRemoving(ws.id)}
-                className="min-h-[44px] min-w-[44px] rounded px-2 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
               >
-                Remove
-              </button>
+                <Trash2 size={12} aria-hidden="true" />
+                {t('common.delete')}
+              </Button>
             </li>
           ))}
         </ul>

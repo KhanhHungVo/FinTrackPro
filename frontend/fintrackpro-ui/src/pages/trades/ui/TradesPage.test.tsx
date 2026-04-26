@@ -3,6 +3,11 @@ import { render, screen } from '@testing-library/react'
 import { TradesPage } from './TradesPage'
 import type { Trade } from '@/entities/trade'
 import type { PagedResult } from '@/shared/api/types'
+import type { UseQueryResult } from '@tanstack/react-query'
+import type { TradesSummary } from '@/entities/trade'
+
+type TradesResult = UseQueryResult<PagedResult<Trade>>
+type SummaryResult = UseQueryResult<TradesSummary>
 
 const mockDeleteTrade = vi.fn()
 const mockGuardedDelete = vi.fn()
@@ -93,13 +98,13 @@ const defaultSummary = { totalPnl: 495, winRate: 100, totalTrades: 1, unrealized
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(useTradesSummary).mockReturnValue({ data: defaultSummary, isLoading: false } as any)
+  vi.mocked(useTradesSummary).mockReturnValue({ data: defaultSummary, isLoading: false } as unknown as SummaryResult)
 })
 
 describe('TradesPage — summary cards', () => {
   it('shows Total P&L from summary hook', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as any)
-    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as unknown as TradesResult)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as unknown as SummaryResult)
 
     render(<TradesPage />)
 
@@ -108,8 +113,8 @@ describe('TradesPage — summary cards', () => {
   })
 
   it('Win Rate comes from summary hook', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as any)
-    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as unknown as TradesResult)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as unknown as SummaryResult)
 
     render(<TradesPage />)
 
@@ -117,8 +122,8 @@ describe('TradesPage — summary cards', () => {
   })
 
   it('Total Trades comes from summary hook', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade, openTradeWithPrice]), isLoading: false } as any)
-    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 50, totalTrades: 2, unrealizedPnl: 200 }, isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade, openTradeWithPrice]), isLoading: false } as unknown as TradesResult)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 50, totalTrades: 2, unrealizedPnl: 200 }, isLoading: false } as unknown as SummaryResult)
 
     render(<TradesPage />)
 
@@ -126,8 +131,8 @@ describe('TradesPage — summary cards', () => {
   })
 
   it('Unrealized P&L card appears when summary unrealizedPnl is non-zero', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeWithPrice]), isLoading: false } as any)
-    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 0, winRate: 0, totalTrades: 1, unrealizedPnl: 200 }, isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeWithPrice]), isLoading: false } as unknown as TradesResult)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 0, winRate: 0, totalTrades: 1, unrealizedPnl: 200 }, isLoading: false } as unknown as SummaryResult)
 
     render(<TradesPage />)
 
@@ -135,8 +140,8 @@ describe('TradesPage — summary cards', () => {
   })
 
   it('Unrealized P&L card is absent when summary unrealizedPnl is zero', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as any)
-    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as unknown as TradesResult)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: { totalPnl: 495, winRate: 100, totalTrades: 1, unrealizedPnl: 0 }, isLoading: false } as unknown as SummaryResult)
 
     render(<TradesPage />)
 
@@ -146,11 +151,11 @@ describe('TradesPage — summary cards', () => {
 
 describe('TradesPage — trade table badges', () => {
   beforeEach(() => {
-    vi.mocked(useTradesSummary).mockReturnValue({ data: defaultSummary, isLoading: false } as any)
+    vi.mocked(useTradesSummary).mockReturnValue({ data: defaultSummary, isLoading: false } as unknown as SummaryResult)
   })
 
   it('open trade row shows Open badge', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeWithPrice]), isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeWithPrice]), isLoading: false } as unknown as TradesResult)
 
     render(<TradesPage />)
 
@@ -158,7 +163,7 @@ describe('TradesPage — trade table badges', () => {
   })
 
   it('closed trade row shows Closed badge', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade]), isLoading: false } as unknown as TradesResult)
 
     render(<TradesPage />)
 
@@ -166,7 +171,7 @@ describe('TradesPage — trade table badges', () => {
   })
 
   it('open trade with no current price shows — in Exit/Current Price column', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeNoPrice]), isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([openTradeNoPrice]), isLoading: false } as unknown as TradesResult)
 
     render(<TradesPage />)
 
@@ -174,7 +179,7 @@ describe('TradesPage — trade table badges', () => {
   })
 
   it('Close button is visible only for open trades', () => {
-    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade, openTradeWithPrice]), isLoading: false } as any)
+    vi.mocked(useTrades).mockReturnValue({ data: pagedOf([closedTrade, openTradeWithPrice]), isLoading: false } as unknown as TradesResult)
 
     render(<TradesPage />)
 
