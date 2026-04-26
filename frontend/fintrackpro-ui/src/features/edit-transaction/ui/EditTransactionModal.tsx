@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useUpdateTransaction } from '@/entities/transaction'
@@ -15,7 +15,11 @@ const updateTransactionSchema = z.object({
   amount: z.number().positive('Amount must be greater than zero'),
   currency: z.string().min(1, 'Currency is required').max(3),
   categoryId: z.string().min(1, 'Category is required'),
-  note: z.string().max(500).nullable().optional(),
+  note: z.string()
+    .max(500, 'Note must be 500 characters or fewer')
+    .regex(/^[^<>]*$/, 'Note must not contain angle brackets (< >)')
+    .nullable()
+    .optional(),
 })
 
 type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>
@@ -26,41 +30,65 @@ interface EditTransactionModalProps {
   onClose: () => void
 }
 
+type FormState = {
+  type: TransactionType
+  amount: string
+  currency: string
+  categoryId: string
+  note: string
+  fieldErrors: FieldErrors
+  serverErrors: ProblemDetails | null
+}
+
+function formStateFromTransaction(transaction: Transaction): FormState {
+  return {
+    type: transaction.type,
+    amount: String(transaction.amount),
+    currency: transaction.currency,
+    categoryId: transaction.categoryId ?? '',
+    note: transaction.note ?? '',
+    fieldErrors: {},
+    serverErrors: null,
+  }
+}
+
+const emptyForm: FormState = {
+  type: 'Expense', amount: '', currency: 'USD', categoryId: '', note: '', fieldErrors: {}, serverErrors: null,
+}
+
 export function EditTransactionModal({ transaction, onClose }: EditTransactionModalProps) {
   const { t } = useTranslation()
   const { mutate, isPending } = useUpdateTransaction()
 
-  const [type, setType] = useState<TransactionType>('Expense')
-  const [amount, setAmount] = useState('')
-  const [currency, setCurrency] = useState('USD')
-  const [categoryId, setCategoryId] = useState('')
-  const [note, setNote] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
-  const [serverErrors, setServerErrors] = useState<ProblemDetails | null>(null)
+  const [form, setForm] = useState<FormState>(() =>
+    transaction ? formStateFromTransaction(transaction) : emptyForm,
+  )
 
-  useEffect(() => {
-    if (transaction) {
-      setType(transaction.type)
-      setAmount(String(transaction.amount))
-      setCurrency(transaction.currency)
-      setCategoryId(transaction.categoryId ?? '')
-      setNote(transaction.note ?? '')
-      setFieldErrors({})
-      setServerErrors(null)
-    }
-  }, [transaction])
+  const { type, amount, currency, categoryId, note, fieldErrors, serverErrors } = form
 
-  if (!transaction) return null
+  const patch = (partial: Partial<FormState>) => setForm((prev) => ({ ...prev, ...partial }))
 
-  function clearFieldError(field: keyof FieldErrors) {
-    if (fieldErrors[field]) {
-      setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
+  const clearFieldError = (field: keyof FieldErrors) => {
+    if (form.fieldErrors[field]) {
+      setForm((prev) => {
+        const next = { ...prev.fieldErrors }
+        delete next[field]
+        return { ...prev, fieldErrors: next }
+      })
     }
   }
 
+  const [prevTransaction, setPrevTransaction] = useState(transaction)
+  if (prevTransaction !== transaction) {
+    setPrevTransaction(transaction)
+    setForm(transaction ? formStateFromTransaction(transaction) : emptyForm)
+  }
+
+  if (!transaction) return null
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setServerErrors(null)
+    patch({ serverErrors: null })
 
     const raw = {
       type,
@@ -77,7 +105,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
         const field = issue.path[0] as keyof FieldErrors
         if (!errors[field]) errors[field] = issue.message
       }
-      setFieldErrors(errors)
+      patch({ fieldErrors: errors })
       return
     }
 
@@ -96,7 +124,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
         onError: (err) => {
           const kind = classifyApiError(err)
           if (kind.type === 'validation') {
-            setServerErrors(kind.details)
+            patch({ serverErrors: kind.details })
           } else {
             toast.error(errorToastMessage(err))
           }
@@ -130,7 +158,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
               <button
                 key={ty}
                 type="button"
-                onClick={() => { setType(ty); setCategoryId(''); clearFieldError('categoryId') }}
+                onClick={() => patch({ type: ty, categoryId: '', fieldErrors: { ...fieldErrors, categoryId: undefined } })}
                 className={cn(
                   'flex-1 rounded-md py-2 text-sm font-medium',
                   type === ty
@@ -152,7 +180,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
                 type="number"
                 placeholder={t('transactions.amount')}
                 value={amount}
-                onChange={(e) => { setAmount(e.target.value); clearFieldError('amount') }}
+                onChange={(e) => { patch({ amount: e.target.value }); clearFieldError('amount') }}
                 className={cn(
                   'w-full rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.amount && 'border-red-400',
@@ -162,7 +190,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
             </div>
             <select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
+              onChange={(e) => patch({ currency: e.target.value })}
               className="rounded-md border px-3 py-2 text-sm self-start dark:bg-slate-800 dark:border-white/10 dark:text-white"
             >
               {SUPPORTED_CURRENCIES.map((c) => (
@@ -176,7 +204,7 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
             <TransactionCategorySelector
               type={type}
               value={categoryId}
-              onChange={(id) => { setCategoryId(id); clearFieldError('categoryId') }}
+              onChange={(id) => { patch({ categoryId: id }); clearFieldError('categoryId') }}
               showManageLink={false}
             />
             {fieldErrors.categoryId && (
@@ -185,13 +213,28 @@ export function EditTransactionModal({ transaction, onClose }: EditTransactionMo
           </div>
 
           {/* Note */}
-          <textarea
-            placeholder={t('transactions.note')}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-            className="w-full rounded-md border px-3 py-2 text-sm resize-y dark:bg-slate-800 dark:border-white/10 dark:text-white"
-          />
+          <div className="flex flex-col gap-1">
+            <textarea
+              placeholder={t('transactions.note')}
+              value={note}
+              onChange={(e) => { patch({ note: e.target.value }); clearFieldError('note') }}
+              onBlur={() => {
+                if (!note) return
+                const result = updateTransactionSchema.shape.note.safeParse(note)
+                if (!result.success) {
+                  patch({ fieldErrors: { ...fieldErrors, note: result.error.issues[0].message } })
+                } else {
+                  clearFieldError('note')
+                }
+              }}
+              rows={3}
+              className={cn(
+                'w-full rounded-md border px-3 py-2 text-sm resize-y dark:bg-slate-800 dark:text-white',
+                fieldErrors.note ? 'border-red-400 dark:border-red-500' : 'dark:border-white/10',
+              )}
+            />
+            {fieldErrors.note && <p className="text-xs text-red-600 dark:text-red-400">{fieldErrors.note}</p>}
+          </div>
 
           {/* Server-side validation errors */}
           {serverErrors && (

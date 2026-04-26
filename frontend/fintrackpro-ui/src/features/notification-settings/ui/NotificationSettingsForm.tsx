@@ -1,13 +1,21 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { z } from 'zod'
 import {
   useNotificationPreference,
   useSaveNotificationPreference,
 } from '@/entities/notification-preference'
 import { useSubscriptionStatus } from '@/entities/subscription'
 import { UpgradeButton } from '@/features/upgrade'
-import { errorToastMessage } from '@/shared/lib/apiError'
+import { classifyApiError, errorToastMessage } from '@/shared/lib/apiError'
+import { cn } from '@/shared/lib/cn'
+
+const notifSchema = z.object({
+  telegramChatId: z.string()
+    .min(1, 'Telegram chat ID is required')
+    .max(100, 'Chat ID must be 100 characters or fewer'),
+})
 
 interface FormProps {
   initialChatId: string
@@ -21,14 +29,35 @@ function NotificationSettingsFormInner({ initialChatId, initialEnabled, isFreePl
 
   const [chatId, setChatId] = useState(initialChatId)
   const [enabled, setEnabled] = useState(initialEnabled)
+  const [chatIdError, setChatIdError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+  function validateChatId(): boolean {
+    const result = notifSchema.shape.telegramChatId.safeParse(chatId)
+    if (!result.success) {
+      setChatIdError(result.error.issues[0].message)
+      return false
+    }
+    setChatIdError(null)
+    return true
+  }
+
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!validateChatId()) return
+
     mutate(
       { telegramChatId: chatId, isEnabled: enabled },
       {
         onSuccess: () => toast.success(t('notifications.saved')),
-        onError: (err) => toast.error(errorToastMessage(err)),
+        onError: (err) => {
+          const kind = classifyApiError(err)
+          if (kind.type === 'validation') {
+            const fieldMsg = kind.details.errors?.['TelegramChatId']?.[0]
+            setChatIdError(fieldMsg ?? kind.details.title ?? 'Invalid chat ID')
+          } else {
+            toast.error(errorToastMessage(err))
+          }
+        },
       },
     )
   }
@@ -56,10 +85,16 @@ function NotificationSettingsFormInner({ initialChatId, initialEnabled, isFreePl
             type="text"
             placeholder={t('notifications.chatIdPlaceholder')}
             value={chatId}
-            onChange={(e) => setChatId(e.target.value)}
-            required
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-white/12 dark:text-white"
+            onChange={(e) => { setChatId(e.target.value); if (chatIdError) setChatIdError(null) }}
+            onBlur={validateChatId}
+            className={cn(
+              'w-full rounded-md border px-3 py-2 text-sm font-mono outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white',
+              chatIdError ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-white/12',
+            )}
           />
+          {chatIdError && (
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{chatIdError}</p>
+          )}
         </div>
 
         <label className="flex items-center gap-2 cursor-pointer">

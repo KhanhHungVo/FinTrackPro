@@ -4,6 +4,16 @@ import { z } from 'zod'
 // Valid: BTCUSDT, AAPL, EUR/USD, BTC-USDT, VIC
 const symbolRegex = /^[A-Z0-9]{1,10}([/-][A-Z0-9]{1,10})?$/
 
+export const watchlistSymbolSchema = z.object({
+  symbol: z
+    .string()
+    .min(1, 'Symbol is required')
+    .max(20, 'Symbol must be 20 characters or fewer')
+    .regex(symbolRegex, 'Only uppercase letters, digits, and an optional / or - separator are allowed (e.g. BTCUSDT, AAPL, EUR/USD)'),
+})
+
+export type WatchlistSymbolInput = z.infer<typeof watchlistSymbolSchema>
+
 const baseSchema = z.object({
   symbol: z
     .string()
@@ -30,7 +40,10 @@ const baseSchema = z.object({
     .number({ error: 'Fees must be a number' })
     .min(0, 'Fees cannot be negative'),
   currency: z.string().min(1).max(3),
-  notes: z.string().max(1000, 'Notes must be 1000 characters or fewer').nullable(),
+  notes: z.string()
+    .max(1000, 'Notes must be 1000 characters or fewer')
+    .regex(/^[^<>]*$/, 'Notes must not contain angle brackets (< >)')
+    .nullable(),
 })
 
 export const createTradeSchema = baseSchema.superRefine((val, ctx) => {

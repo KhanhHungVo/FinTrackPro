@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
@@ -7,6 +7,7 @@ import {
   type TransactionCategory,
 } from '@/entities/transaction-category'
 import type { TransactionType } from '@/entities/transaction/model/types'
+import { classifyApiError, errorToastMessage } from '@/shared/lib/apiError'
 
 const EMOJIS = [
   // Food & drink
@@ -48,14 +49,19 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
   const [selectedIcon, setSelectedIcon] = useState(category?.icon ?? '📦')
   const [nameEn, setNameEn] = useState(category?.labelEn ?? '')
   const [nameVi, setNameVi] = useState(category?.labelVi ?? '')
-  const [errors, setErrors] = useState<{ nameEn?: string; nameVi?: string }>({})
+  const [errors, setErrors] = useState<{ nameEn?: string; nameVi?: string; slug?: string }>({})
 
   const { mutate: createCategory, isPending: isCreating } = useCreateTransactionCategory()
   const { mutate: updateCategory, isPending: isUpdating } = useUpdateTransactionCategory()
   const isPending = isCreating || isUpdating
 
-  // Reset form when modal opens for a different category (or fresh create)
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open)
+  const [prevCategory, setPrevCategory] = useState(category)
+  const [prevDefaultType, setPrevDefaultType] = useState(defaultType)
+  if (prevOpen !== open || prevCategory !== category || prevDefaultType !== defaultType) {
+    setPrevOpen(open)
+    setPrevCategory(category)
+    setPrevDefaultType(defaultType)
     if (open) {
       setSelectedType(category?.type ?? defaultType)
       setSelectedIcon(category?.icon ?? '📦')
@@ -63,16 +69,36 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
       setNameVi(category?.labelVi ?? '')
       setErrors({})
     }
-  }, [open, category, defaultType])
+  }
 
   if (!open) return null
 
   function validate() {
     const next: typeof errors = {}
     if (!nameEn.trim()) next.nameEn = t('transactionCategories.nameEnRequired')
+    else if (nameEn.trim().length > 100) next.nameEn = 'English name must be 100 characters or fewer'
     if (!nameVi.trim()) next.nameVi = t('transactionCategories.nameViRequired')
-    setErrors(next)
+    else if (nameVi.trim().length > 100) next.nameVi = 'Vietnamese name must be 100 characters or fewer'
+setErrors(next)
     return Object.keys(next).length === 0
+  }
+
+  function handleServerError(err: unknown) {
+    const kind = classifyApiError(err)
+    if (kind.type === 'validation') {
+      const next: typeof errors = {}
+      const fieldMap = kind.details.errors ?? {}
+      if (fieldMap['LabelEn']?.[0]) next.nameEn = fieldMap['LabelEn'][0]
+      if (fieldMap['LabelVi']?.[0]) next.nameVi = fieldMap['LabelVi'][0]
+      if (fieldMap['Slug']?.[0]) next.slug = fieldMap['Slug'][0]
+      if (Object.keys(next).length > 0) {
+        setErrors(next)
+      } else {
+        toast.error(kind.details.title ?? 'Validation failed')
+      }
+    } else {
+      toast.error(errorToastMessage(err))
+    }
   }
 
   function handleSubmit() {
@@ -83,7 +109,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
         { id: category!.id, labelEn: nameEn.trim(), labelVi: nameVi.trim(), icon: selectedIcon },
         {
           onSuccess: onClose,
-          onError: () => toast.error(t('transactionCategories.updateError')),
+          onError: handleServerError,
         },
       )
     } else {
@@ -97,7 +123,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
         },
         {
           onSuccess: onClose,
-          onError: () => toast.error(t('transactionCategories.createError')),
+          onError: handleServerError,
         },
       )
     }
@@ -231,7 +257,7 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
                   value={nameEn}
                   onChange={(e) => {
                     setNameEn(e.target.value)
-                    if (errors.nameEn) setErrors((prev) => ({ ...prev, nameEn: undefined }))
+                    if (errors.nameEn || errors.slug) setErrors((prev) => ({ ...prev, nameEn: undefined, slug: undefined }))
                   }}
                   placeholder={t('transactionCategories.namePlaceholderEn')}
                   className={`w-full rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white ${errors.nameEn ? 'border-red-400' : ''}`}
@@ -262,9 +288,14 @@ export function CategoryFormModal({ open, onClose, category, defaultType = 'Expe
 
             {/* Slug preview */}
             {!isEdit && (
-              <p className="text-[11px] text-gray-400 dark:text-slate-500 font-mono -mt-2">
-                {t('transactionCategories.slugPreview')}: <strong>{slug}</strong>
-              </p>
+              <div className="-mt-2 space-y-1">
+                <p className="text-[11px] text-gray-400 dark:text-slate-500 font-mono">
+                  {t('transactionCategories.slugPreview')}: <strong>{slug}</strong>
+                </p>
+                {errors.slug && (
+                  <p className="text-xs text-red-500">{errors.slug}</p>
+                )}
+              </div>
             )}
           </div>
 

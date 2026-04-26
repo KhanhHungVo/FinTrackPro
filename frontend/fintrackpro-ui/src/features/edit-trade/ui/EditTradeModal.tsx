@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useUpdateTrade } from '@/entities/trade'
@@ -16,61 +16,88 @@ interface EditTradeModalProps {
 
 type FieldErrors = Partial<Record<keyof UpdateTradeInput, string>>
 
+type FormState = {
+  tradeStatus: TradeStatus
+  direction: TradeDirection
+  symbol: string
+  entryPrice: string
+  exitPrice: string
+  currentPrice: string
+  positionSize: string
+  fees: string
+  currency: string
+  notes: string
+  fieldErrors: FieldErrors
+  serverErrors: ProblemDetails | null
+}
+
+function formStateFromTrade(trade: Trade): FormState {
+  return {
+    tradeStatus: trade.status,
+    direction: trade.direction,
+    symbol: trade.symbol,
+    entryPrice: String(trade.entryPrice),
+    exitPrice: trade.exitPrice != null ? String(trade.exitPrice) : '',
+    currentPrice: trade.currentPrice != null ? String(trade.currentPrice) : '',
+    positionSize: String(trade.positionSize),
+    fees: String(trade.fees),
+    currency: trade.currency,
+    notes: trade.notes ?? '',
+    fieldErrors: {},
+    serverErrors: null,
+  }
+}
+
+const emptyForm: FormState = {
+  tradeStatus: 'Closed', direction: 'Long', symbol: '', entryPrice: '', exitPrice: '',
+  currentPrice: '', positionSize: '', fees: '', currency: 'USD', notes: '', fieldErrors: {}, serverErrors: null,
+}
+
 export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
   const { t } = useTranslation()
   const { mutate, isPending } = useUpdateTrade()
-  const [tradeStatus, setTradeStatus] = useState<TradeStatus>('Closed')
-  const [direction, setDirection] = useState<TradeDirection>('Long')
-  const [symbol, setSymbol] = useState('')
-  const [entryPrice, setEntryPrice] = useState('')
-  const [exitPrice, setExitPrice] = useState('')
-  const [currentPrice, setCurrentPrice] = useState('')
-  const [positionSize, setPositionSize] = useState('')
-  const [fees, setFees] = useState('')
-  const [currency, setCurrency] = useState('USD')
-  const [notes, setNotes] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
-  const [serverErrors, setServerErrors] = useState<ProblemDetails | null>(null)
 
-  useEffect(() => {
-    if (trade) {
-      setTradeStatus(trade.status)
-      setDirection(trade.direction)
-      setSymbol(trade.symbol)
-      setEntryPrice(String(trade.entryPrice))
-      setExitPrice(trade.exitPrice != null ? String(trade.exitPrice) : '')
-      setCurrentPrice(trade.currentPrice != null ? String(trade.currentPrice) : '')
-      setPositionSize(String(trade.positionSize))
-      setFees(String(trade.fees))
-      setCurrency(trade.currency)
-      setNotes(trade.notes ?? '')
-      setFieldErrors({})
-      setServerErrors(null)
-    }
-  }, [trade])
+  const [form, setForm] = useState<FormState>(() =>
+    trade ? formStateFromTrade(trade) : emptyForm,
+  )
 
-  if (!trade) return null
+  const { tradeStatus, direction, symbol, entryPrice, exitPrice, currentPrice, positionSize, fees, currency, notes, fieldErrors, serverErrors } = form
 
-  function clearFieldError(field: keyof FieldErrors) {
-    if (fieldErrors[field]) {
-      setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
+  const patch = (partial: Partial<FormState>) => setForm((prev) => ({ ...prev, ...partial }))
+
+  const clearFieldError = (field: keyof FieldErrors) => {
+    if (form.fieldErrors[field]) {
+      setForm((prev) => {
+        const next = { ...prev.fieldErrors }
+        delete next[field]
+        return { ...prev, fieldErrors: next }
+      })
     }
   }
 
+  const [prevTrade, setPrevTrade] = useState(trade)
+  if (prevTrade !== trade) {
+    setPrevTrade(trade)
+    setForm(trade ? formStateFromTrade(trade) : emptyForm)
+  }
+
+  if (!trade) return null
+
   const handleStatusChange = (s: TradeStatus) => {
-    setTradeStatus(s)
     if (s === 'Open') {
-      setExitPrice('')
-      setFieldErrors((prev) => { const next = { ...prev }; delete next.exitPrice; return next })
+      const next = { ...form.fieldErrors }
+      delete next.exitPrice
+      patch({ tradeStatus: s, exitPrice: '', fieldErrors: next })
     } else {
-      setCurrentPrice('')
-      setFieldErrors((prev) => { const next = { ...prev }; delete next.currentPrice; return next })
+      const next = { ...form.fieldErrors }
+      delete next.currentPrice
+      patch({ tradeStatus: s, currentPrice: '', fieldErrors: next })
     }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setServerErrors(null)
+    patch({ serverErrors: null })
 
     const raw = {
       symbol,
@@ -92,7 +119,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
         const field = issue.path[0] as keyof FieldErrors
         if (!errors[field]) errors[field] = issue.message
       }
-      setFieldErrors(errors)
+      patch({ fieldErrors: errors })
       return
     }
 
@@ -103,7 +130,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
         onError: (err) => {
           const kind = classifyApiError(err)
           if (kind.type === 'validation') {
-            setServerErrors(kind.details)
+            patch({ serverErrors: kind.details })
           } else {
             toast.error(errorToastMessage(err))
           }
@@ -158,7 +185,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
               <button
                 key={d}
                 type="button"
-                onClick={() => setDirection(d)}
+                onClick={() => patch({ direction: d })}
                 className={cn(
                   'flex-1 rounded-md py-2 text-sm font-medium',
                   direction === d
@@ -179,7 +206,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                 type="text"
                 placeholder={t('trades.symbol')}
                 value={symbol}
-                onChange={(e) => { setSymbol(e.target.value.toUpperCase()); clearFieldError('symbol') }}
+                onChange={(e) => { patch({ symbol: e.target.value.toUpperCase() }); clearFieldError('symbol') }}
                 className={cn(
                   'w-full rounded-md border px-3 py-2 text-sm font-mono dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.symbol && 'border-red-400',
@@ -189,7 +216,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
             </div>
             <select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
+              onChange={(e) => patch({ currency: e.target.value })}
               className="rounded-md border px-3 py-2 text-sm self-start dark:bg-slate-800 dark:border-white/10 dark:text-white"
             >
               {SUPPORTED_CURRENCIES.map((c) => (
@@ -204,7 +231,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                 type="number"
                 placeholder={t('trades.entryPrice')}
                 value={entryPrice}
-                onChange={(e) => { setEntryPrice(e.target.value); clearFieldError('entryPrice') }}
+                onChange={(e) => { patch({ entryPrice: e.target.value }); clearFieldError('entryPrice') }}
                 className={cn(
                   'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.entryPrice && 'border-red-400',
@@ -221,7 +248,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                   type="number"
                   placeholder={t('trades.exitPrice')}
                   value={exitPrice}
-                  onChange={(e) => { setExitPrice(e.target.value); clearFieldError('exitPrice') }}
+                  onChange={(e) => { patch({ exitPrice: e.target.value }); clearFieldError('exitPrice') }}
                   className={cn(
                     'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                     fieldErrors.exitPrice && 'border-red-400',
@@ -237,7 +264,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                   type="number"
                   placeholder={t('trades.currentPrice')}
                   value={currentPrice}
-                  onChange={(e) => setCurrentPrice(e.target.value)}
+                  onChange={(e) => patch({ currentPrice: e.target.value })}
                   className="rounded-md border px-3 py-2 text-sm"
                 />
               </div>
@@ -250,7 +277,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                 type="number"
                 placeholder={t('trades.positionSize')}
                 value={positionSize}
-                onChange={(e) => { setPositionSize(e.target.value); clearFieldError('positionSize') }}
+                onChange={(e) => { patch({ positionSize: e.target.value }); clearFieldError('positionSize') }}
                 className={cn(
                   'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.positionSize && 'border-red-400',
@@ -265,7 +292,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
                 type="number"
                 placeholder={t('trades.fees')}
                 value={fees}
-                onChange={(e) => { setFees(e.target.value); clearFieldError('fees') }}
+                onChange={(e) => { patch({ fees: e.target.value }); clearFieldError('fees') }}
                 className={cn(
                   'rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-white/10 dark:text-white',
                   fieldErrors.fees && 'border-red-400',
@@ -279,7 +306,7 @@ export function EditTradeModal({ trade, onClose }: EditTradeModalProps) {
             <textarea
               placeholder={t('trades.notes')}
               value={notes}
-              onChange={(e) => { setNotes(e.target.value); clearFieldError('notes') }}
+              onChange={(e) => { patch({ notes: e.target.value }); clearFieldError('notes') }}
               rows={4}
               className={cn(
                 'w-full rounded-md border px-3 py-2 text-sm resize-y dark:bg-slate-800 dark:border-white/10 dark:text-white',
