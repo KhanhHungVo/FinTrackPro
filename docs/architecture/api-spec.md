@@ -442,8 +442,12 @@ Delete a trade (owner only).
 
 ## Watched Symbols
 
+> **Pro-only read access.** `GET /api/watchedsymbols`, `GET /api/watchedsymbols/analysis`, and
+> `GET /api/signals` all require an active Pro subscription. Free users and expired-Pro users
+> receive HTTP 402 with `feature: "watchlist"`.
+
 ### `GET /api/watchedsymbols`
-Returns the user's watchlist.
+Returns the user's watchlist. **Requires Pro plan.**
 
 **Response 200:**
 ```json
@@ -452,10 +456,13 @@ Returns the user's watchlist.
 ]
 ```
 
+**Response 402** for Free / expired-Pro users (see `402 Plan Limit Error Response`).
+
 ---
 
 ### `POST /api/watchedsymbols`
 Add a symbol to watchlist. Validated against Binance `exchangeInfo`. Duplicate check applied.
+Free plan has `WatchlistSymbolLimit: 0`, so this endpoint also returns 402 for Free users.
 
 **Body:** `{ "symbol": "ETHUSDT" }`
 
@@ -471,7 +478,7 @@ Remove a symbol from the watchlist (owner only).
 ---
 
 ### `GET /api/watchedsymbols/analysis`
-Returns live price, 24h % change, and RSI-14 on daily and weekly timeframes for each symbol in the user's watchlist. Per-symbol results are cached 5 minutes. Empty watchlist returns `[]` (HTTP 200, not 404).
+Returns live price, 24h % change, and RSI-14 on daily and weekly timeframes for each symbol in the user's watchlist. **Requires Pro plan.** Per-symbol results are cached 5 minutes. Empty watchlist returns `[]` (HTTP 200, not 404).
 
 RSI is computed using Welles Wilder smoothing (Skender.Stock.Indicators, 100 candles per timeframe) — matches TradingView within ±0.1 point.
 
@@ -496,7 +503,8 @@ The response does **not** include a `tradeUrl` field. Trade links are derived cl
 ## Signals
 
 ### `GET /api/signals`
-Returns the latest signals for the user.
+Returns the latest signals for the user. **Requires Pro plan.** Free / expired-Pro users receive
+HTTP 402 with `feature: "watchlist"`.
 
 **Query params:**
 | Param | Type | Default |
@@ -767,5 +775,80 @@ Returned when any per-plan limit is exceeded:
 }
 ```
 
-The `feature` field identifies which limit was hit. Possible values: `"transaction"`, `"budget"`, `"trade"`, `"watchlist"`, `"transaction_history"`, `"signal_history"`, `"telegram"`. The frontend uses this to open a targeted upgrade modal.
+The `feature` field identifies which limit was hit. Possible values: `"transaction"`, `"budget"`, `"trade"`, `"watchlist"`, `"transaction_history"`, `"signal_history"`, `"telegram"`. The frontend uses this to open a targeted upgrade modal. The `"watchlist"` value is returned by the read-access gate on `GET /api/watchedsymbols`, `GET /api/watchedsymbols/analysis`, and `GET /api/signals`.
+
 | 500 | Unhandled server error |
+
+---
+
+## Admin
+
+> All endpoints require `[Authorize(Roles = "Admin")]`. Non-admin requests receive HTTP 403.
+
+### `GET /api/admin/users`
+Returns a paginated list of all application users with their subscription state.
+
+**Query params:**
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | int | 1 | Page number (≥ 1) |
+| `pageSize` | int | 20 | Items per page (1–100) |
+| `email` | string | — | Partial email filter (case-insensitive) |
+
+**Response 200:**
+```json
+{
+  "items": [
+    {
+      "id": "guid",
+      "email": "alice@example.com",
+      "displayName": "Alice",
+      "plan": "Pro",
+      "subscriptionExpiresAt": "2027-04-06T00:00:00Z",
+      "isActive": true
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 42
+}
+```
+
+`plan` is `"Free"` or `"Pro"`. `subscriptionExpiresAt` is `null` for Free users. `isActive` is
+`false` when the Pro subscription has lapsed.
+
+---
+
+### `POST /api/admin/users/{userId}/subscription`
+Activates or extends the Pro subscription for the specified user. Extends from the existing expiry
+when still active; from `UtcNow` when expired or null.
+
+**Route param:** `userId` — GUID of the target user.
+
+**Body:**
+```json
+{ "period": "Monthly" }
+```
+
+`period` values: `"Monthly"` (adds 1 month), `"Yearly"` (adds 1 year).
+
+**Response 200:**
+```json
+{
+  "plan": "Pro",
+  "isActive": true,
+  "expiresAt": "2027-05-06T00:00:00Z"
+}
+```
+
+**Response 404** if user not found.
+
+---
+
+### `DELETE /api/admin/users/{userId}/subscription`
+Revokes the Pro subscription for the specified user, setting their plan back to Free and clearing
+`SubscriptionExpiresAt`.
+
+**Route param:** `userId` — GUID of the target user.
+
+**Response 204** on success. **404** if user not found.

@@ -132,6 +132,19 @@ Authorization Guards/              ← uses bearerToken2 (second user)
 Market/                            ← third-party contract verification (CoinGecko)
   └─ GET /api/market/fear-greed     → 200, validates shape when data available (null-safe)
   └─ GET /api/market/trending       → 200, validates item shape when array non-empty
+
+Watchlist Pro Gate/                ← uses bearerToken2 (Free-plan user)
+  └─ GET /api/watchedsymbols        → 402, feature = "watchlist"
+  └─ GET /api/watchedsymbols/analysis → 402, feature = "watchlist"
+  └─ GET /api/signals               → 402, feature = "watchlist"
+
+Admin Subscription Management/    ← uses bearerToken (Admin user); user2Id captured in pre-request
+  └─ GET  /api/admin/users          → 200, items array + pagination fields
+  └─ GET  /api/admin/users          → 403 (bearerToken2 — non-admin guard)
+  └─ POST /api/admin/users/{{user2Id}}/subscription → 200, plan = "Pro"
+  └─ POST /api/admin/users/{{user2Id}}/subscription → 200, expiresAt extended
+  └─ DELETE /api/admin/users/{{user2Id}}/subscription → 204
+  └─ GET  /api/admin/users?email=user2 → 200, plan = "Free"
 ```
 
 > Validation / negative-input tests live in `FinTrackPro.dev.postman_collection.json` under `Validation & Error Cases/`.
@@ -198,6 +211,7 @@ if (!expiry || Date.now() > parseInt(expiry)) {
 | `transactionId` | `` | Captured at runtime |
 | `tradeId` | `` | Captured at runtime |
 | `watchedSymbolId` | `` | Captured at runtime |
+| `user2Id` | `` | Captured in Admin folder pre-request script via `GET /api/admin/users?email=user2@fintrackpro.dev` |
 
 ---
 

@@ -5,7 +5,7 @@
 >
 > Collection file: `FinTrackPro.e2e.postman_collection.json`
 > Run command: `bash scripts/api-e2e-local.sh`
-> Current totals: **33 requests · 52 assertions**
+> Current totals: **42 requests · 67 assertions**
 
 ---
 
@@ -84,17 +84,49 @@ All guard 403 tests use `bearerToken2` (user2 — User role only). Seed resource
 
 ---
 
+## Watchlist Pro Gate (3 requests)
+
+Uses `bearerToken2` (Free-plan user, `user2@fintrackpro.dev`).
+
+| # | Test name | Method | Endpoint | Status | Key assertions |
+|---|---|---|---|---|---|
+| 30 | Free user: GET watchedsymbols | GET | `/api/watchedsymbols` | 402 | `feature` = `"watchlist"` in body |
+| 31 | Free user: GET analysis | GET | `/api/watchedsymbols/analysis` | 402 | `feature` = `"watchlist"` in body |
+| 32 | Free user: GET signals | GET | `/api/signals` | 402 | `feature` = `"watchlist"` in body |
+
+---
+
+## Admin Subscription Management (6 requests)
+
+Uses `bearerToken` (Admin user). `user2Id` is captured via a pre-request script
+(`GET /api/admin/users?email=user2@fintrackpro.dev`).
+
+| # | Test name | Method | Endpoint | Status | Key assertions |
+|---|---|---|---|---|---|
+| 33 | GET /api/admin/users (admin) | GET | `/api/admin/users` | 200 | `items` array; `id`, `email`, `plan`, `subscriptionExpiresAt` fields present; `page`, `pageSize`, `totalCount` present |
+| 34 | GET /api/admin/users (user2 → 403) | GET | `/api/admin/users` (bearerToken2) | 403 | Status 403 |
+| 35 | Activate Monthly for user2 | POST | `/api/admin/users/{{user2Id}}/subscription` | 200 | `plan = "Pro"`; `expiresAt` ≈ now + 1 month |
+| 36 | Activate again → extends expiry | POST | `/api/admin/users/{{user2Id}}/subscription` | 200 | new `expiresAt` > previous `expiresAt` |
+| 37 | Revoke user2 subscription | DELETE | `/api/admin/users/{{user2Id}}/subscription` | 204 | — |
+| 38 | Verify user2 back to Free | GET | `/api/admin/users?email=user2` | 200 | user2 row shows `plan = "Free"` |
+
+---
+
 ## Coverage Matrix
 
-| Resource | Create | Read list | Summary | Update | Delete | Conflict guard | Ownership guard |
-|---|---|---|---|---|---|---|---|
-| Trades | 201 (#3) | 200 (#4, #7) — paged | 200 (#7a) | 200 (#5) | 204 (#6) | — | PUT 403 (#23), DELETE 403 (#24) |
-| Budgets | 201 (#8, #22) | via pre-req cleanup | — | PATCH 204 (#12) | 204 (#14, #26, #27) | — | DELETE 403 (#25) |
-| Transactions | 201 (#10) | 200 (#11) — paged | 200 (#11a) | — | 204 (#13) | — | — |
-| Watched Symbols | 201 (#15) | 200 (#17) | — | — | 204 (#18) | 409 (#16) | — |
-| Transaction Categories | — | 200 (#9) | — | — | — | — | — |
-| Market / Fear-Greed | — | 200 (#28) | — | — | — | — | — |
-| Market / Trending | — | 200 (#29) | — | — | — | — | — |
+| Resource | Create | Read list | Summary | Update | Delete | Conflict guard | Ownership guard | Plan gate |
+|---|---|---|---|---|---|---|---|---|
+| Trades | 201 (#3) | 200 (#4, #7) — paged | 200 (#7a) | 200 (#5) | 204 (#6) | — | PUT 403 (#23), DELETE 403 (#24) | — |
+| Budgets | 201 (#8, #22) | via pre-req cleanup | — | PATCH 204 (#12) | 204 (#14, #26, #27) | — | DELETE 403 (#25) | — |
+| Transactions | 201 (#10) | 200 (#11) — paged | 200 (#11a) | — | 204 (#13) | — | — | — |
+| Watched Symbols | 201 (#15) | 200 (#17) | — | — | 204 (#18) | 409 (#16) | — | 402 (#30) |
+| Watched Symbols — Analysis | — | — | — | — | — | — | — | 402 (#31) |
+| Signals | — | — | — | — | — | — | — | 402 (#32) |
+| Transaction Categories | — | 200 (#9) | — | — | — | — | — | — |
+| Market / Fear-Greed | — | 200 (#28) | — | — | — | — | — | — |
+| Market / Trending | — | 200 (#29) | — | — | — | — | — | — |
+| Admin / Users | — | 200 (#33, #38) | — | — | — | — | 403 (#34) | — |
+| Admin / Subscription | — | — | — | 200 (#35, #36) | 204 (#37) | — | — | — |
 
 ---
 
@@ -118,6 +150,7 @@ All guard 403 tests use `bearerToken2` (user2 — User role only). Seed resource
 | `watchedSymbolId` | Captured in #15 | Used in #17, #18 |
 | `guardTradeId` | Captured in #21 | Used in #23, #24, #26 |
 | `guardBudgetId` | Captured in #22 | Used in #25, #27 |
+| `user2Id` | Captured in Admin folder pre-request script | Used in #35–#37 |
 | `_tokenExpiry` | Set in #2 | Internal cache marker; not used directly by requests |
 
 ---

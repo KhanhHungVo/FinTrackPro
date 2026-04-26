@@ -48,19 +48,20 @@ A structured log for crypto trades with automatic profit/loss calculation:
 
 ---
 
-## 4. Crypto Watchlist
+## 4. Crypto Watchlist *(Pro plan only)*
 
-Maintain a personal list of symbols to monitor for market signals:
+Maintain a personal list of symbols to monitor for market signals. Reading and managing the watchlist requires an active Pro subscription; Free users see an upsell overlay with a preview of what they are missing.
 
 - **Add a symbol** — enter any Binance trading pair (e.g. `ETHUSDT`); it is validated against Binance and checked for duplicates before being added.
 - **Remove a symbol** — remove a symbol you no longer want to track.
 - **Drives signal generation** — the watchlist is the source of truth for which symbols the signal engine analyses. Only symbols on your watchlist will generate alerts for your account.
+- **Pro gate** — Free and expired-Pro users receive HTTP 402 (`feature: "watchlist"`) on all watchlist read endpoints. The frontend renders a `ProFeatureLock` blurred overlay with an upgrade call-to-action in place of the real content.
 
 ---
 
-## 5. Market Signals
+## 5. Market Signals *(Pro plan only)*
 
-An automated engine analyses your watchlist every 4 hours and notifies you of notable market conditions:
+An automated engine analyses your watchlist every 4 hours and notifies you of notable market conditions. Viewing signals requires an active Pro subscription; Free users see a compact teaser in the dashboard and a full upsell overlay on the Market page.
 
 ### RSI (Relative Strength Index) — Weekly timeframe
 
@@ -111,6 +112,18 @@ Receive alerts directly in Telegram without opening the app:
 - **Secure login** — all access requires authentication via an industry-standard JWT-based login flow.
 - **Automatic account creation** — the first time you log in, your account is created automatically. No separate registration step required.
 - **Role-based access** — two roles exist: standard user access and admin access.
+
+---
+
+## 9. Admin Subscription Management *(Admin role only)*
+
+A dedicated tab inside the Settings page (`/settings?tab=admin`) that lets admins manage user subscriptions without direct database access. The tab is only visible to users with the Admin role.
+
+- **User list** — paginated list of all registered users showing their email, display name, current plan (`Free` / `Pro`), and subscription expiry date. Filterable by partial email.
+- **Activate Pro** — two buttons per user: `+1 month` and `+1 year`. Extending an already-active subscription stacks onto the existing expiry rather than starting from today, so a user is never penalised for a late-activation run.
+- **Revoke Pro** — an inline confirmation chip must be clicked to confirm before the subscription is revoked. Revocation sets the user back to Free immediately.
+- **Audit trail** — manually activated subscriptions are stamped with a `bank_` prefix on `PaymentSubscriptionId`, making them distinguishable from Stripe-issued activations in the database.
+- **Use case** — bank-transfer payments: when a user pays via bank transfer, the admin activates Pro here instead of running a raw SQL update.
 
 ---
 
