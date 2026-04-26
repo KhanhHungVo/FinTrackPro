@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { extractRoles, ADMIN_ROLE } from './extractRoles'
 
 const WS_ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+const AUTH0_ROLES_CLAIM = 'https://fintrackpro.dev/roles'
 
 describe('extractRoles — keycloak', () => {
   it('returns roles from realm_access.roles', () => {
@@ -45,6 +46,16 @@ describe('extractRoles — keycloak', () => {
 })
 
 describe('extractRoles — auth0', () => {
+  it('reads roles from Auth0 custom namespaced claim as a JSON array string', () => {
+    const payload = { [AUTH0_ROLES_CLAIM]: '["Admin","User"]' }
+    expect(extractRoles(payload, 'auth0')).toEqual(['Admin', 'User'])
+  })
+
+  it('reads roles from Auth0 custom namespaced claim as an array', () => {
+    const payload = { [AUTH0_ROLES_CLAIM]: ['Admin', 'User'] }
+    expect(extractRoles(payload, 'auth0')).toEqual(['Admin', 'User'])
+  })
+
   it('reads roles from WS-Federation URI claim', () => {
     const payload = { [WS_ROLE_CLAIM]: ['Admin'] }
     expect(extractRoles(payload, 'auth0')).toEqual(['Admin'])
@@ -65,6 +76,15 @@ describe('extractRoles — auth0', () => {
 
   it('returns [] when roles is an empty array', () => {
     expect(extractRoles({ roles: [] }, 'auth0')).toEqual([])
+  })
+
+  it('Auth0 custom namespaced claim takes precedence over other role claims', () => {
+    const payload = {
+      [AUTH0_ROLES_CLAIM]: '["Admin"]',
+      [WS_ROLE_CLAIM]: ['User'],
+      roles: ['User'],
+    }
+    expect(extractRoles(payload, 'auth0')).toEqual(['Admin'])
   })
 
   it('WS-Federation claim takes precedence over roles', () => {
