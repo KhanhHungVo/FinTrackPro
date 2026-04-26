@@ -1,213 +1,238 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
 ## Commands
 
 ### Backend (.NET 10)
 ```bash
 cd backend
-dotnet restore
-dotnet build
+dotnet restore && dotnet build
 dotnet run --project src/FinTrackPro.API
+
 dotnet test                                           # all tests
-dotnet test --filter "Category!=Integration"          # unit tests only (no external dependencies)
-dotnet test --filter "Category=Integration"           # integration tests (requires local PostgreSQL — set TEST_DB_CONNECTION_STRING)
+dotnet test --filter "Category!=Integration"          # unit only
+dotnet test --filter "Category=Integration"           # requires PostgreSQL (TEST_DB_CONNECTION_STRING)
 dotnet test --filter "FullyQualifiedName~<Test>"      # single test
 
 # EF Core migrations
 dotnet ef migrations add <Name> --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
-dotnet ef database update --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
+dotnet ef database update  --project src/FinTrackPro.Infrastructure --startup-project src/FinTrackPro.API
 ```
 
 ### Frontend (React 19 + Vite)
 ```bash
 cd frontend/fintrackpro-ui
 npm install
-npm run dev      # dev server with HMR
-npm run build    # type-check + production build
-npm run lint     # ESLint
-npm test         # Vitest unit tests
-npm run test:e2e # Playwright E2E (requires E2E_TOKEN — use scripts/e2e-local.sh instead)
+npm run dev       # HMR dev server → :5173
+npm run build     # type-check + production build
+npm run lint
+npm test          # Vitest unit tests
+npm run test:e2e  # Playwright (use scripts/e2e-local.sh instead — needs E2E_TOKEN)
 ```
 
-### E2E tests (Playwright)
+### E2E & API tests
 ```bash
-# Git Bash / WSL — mints token from local Keycloak and runs all Playwright specs
-bash scripts/e2e-local.sh
-bash scripts/e2e-local.sh --ui                             # UI mode
-bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts        # single spec
-```
+# Playwright — mints Keycloak token automatically
+bash scripts/e2e-local.sh                                    # all specs
+bash scripts/e2e-local.sh --ui
+bash scripts/e2e-local.sh tests/e2e/budgets.spec.ts
 
-> Full prerequisites, token-flow internals, and troubleshooting: `docs/guides/dev-setup.md` (Mode E).
-
-### API E2E tests (Newman)
-Newman-based suite that hits a real running API process with a real Keycloak-issued JWT.
-
-```bash
-# Prerequisites: Docker up (postgres + keycloak), API on :5018, Newman installed globally
+# Newman API E2E (Docker up + API on :5018 required)
 npm install -g newman
+bash scripts/api-e2e-local.sh                                # full suite
+bash scripts/api-e2e-local.sh --folder "Trades — Full lifecycle"
+bash scripts/api-e2e-local.sh --verbose
 
-bash scripts/api-e2e-local.sh                                     # full suite
-bash scripts/api-e2e-local.sh --folder "Trades — Full lifecycle"  # single folder
-bash scripts/api-e2e-local.sh --verbose                           # full output
-```
-
-> Full prerequisites, env var overrides, token-flow internals, and troubleshooting: `docs/guides/dev-setup.md` (Mode F).  
-> Collection structure, CI job diagram, and GitHub secrets: `docs/postman/api-e2e-plan.md`.
-
-### External API schema checks (Newman)
-Verifies third-party API schemas (CoinGecko, Fear & Greed, ExchangeRate-API, Binance). No running API or Keycloak required.
-
-```bash
-# No API keys (free-tier endpoints; ExchangeRate step is skipped)
+# External API schema checks (no running API needed)
 newman run docs/postman/FinTrackPro.external-schema.postman_collection.json \
-  -e docs/postman/FinTrackPro.postman_environment.json \
-  --reporters cli
-
-# With API keys
-newman run docs/postman/FinTrackPro.external-schema.postman_collection.json \
-  -e docs/postman/FinTrackPro.postman_environment.json \
-  --env-var "coinGeckoApiKey=<your-key>" \
-  --env-var "exchangeRateApiKey=<your-key>" \
-  --reporters cli
+  -e docs/postman/FinTrackPro.postman_environment.json --reporters cli
 ```
+> Details: `docs/guides/dev-setup.md` (Mode E = Playwright, Mode F = Newman). CI job diagram: `docs/postman/api-e2e-plan.md`.
 
 ### Infrastructure
 ```bash
 docker compose up -d postgres keycloak    # hybrid dev (recommended)
-docker compose up --build                 # full docker
+docker compose up --build                 # full Docker stack
+docker compose -f docker-compose.auth0.yml up -d   # Auth0 variant
 
-# Terraform (Render deployment)
-cd infra/terraform
-terraform init && terraform plan && terraform apply
+# Rotate Render managed DB
+bash scripts/rotate-render-db.sh
+
+# Terraform (Render)
+cd infra/terraform && terraform init && terraform plan && terraform apply
 ```
 
 ## Architecture
 
 ### Backend — Clean Architecture
-Strict layer isolation with inward-only dependencies:
+Strict inward-only dependency flow:
 
-- **Domain** (`FinTrackPro.Domain`) — entities, value objects, repository interfaces. No external dependencies.
-- **Application** (`FinTrackPro.Application`) — CQRS via MediatR (commands/queries/handlers), DTOs, FluentValidation validators, MediatR pipeline behaviors: `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login).
-- **Infrastructure** (`FinTrackPro.Infrastructure`) — EF Core (Code-First, migrations here), repository implementations, IAM provider abstraction (`IIamProviderService` / `IClaimsTransformation` — selected via `IdentityProvider:Provider` config: `"keycloak"` uses `KeycloakAdminService` + `KeycloakClaimsTransformer`; `"auth0"` uses `Auth0ManagementService` + `Auth0ClaimsTransformer`), Telegram.Bot, Skender.Stock.Indicators.
-- **API** (`FinTrackPro.API`) — ASP.NET Core controllers, DI registration, middleware (exception handling → maps domain exceptions to RFC 7807 Problem Details: 400/403/404/409/500), Scalar API docs.
-- **BackgroundJobs** (`FinTrackPro.BackgroundJobs`) — Hangfire job definitions: `MarketSignalJob` (every 4h), `BudgetOverrunJob` (daily), `IamUserSyncJob` (daily — deactivates deleted/disabled users from the active IAM provider in the local DB).
+| Layer | Project | Key contents |
+|---|---|---|
+| Domain | `FinTrackPro.Domain` | Entities (`BaseEntity`), value objects, domain events (`BaseEvent`), repository interfaces, domain exceptions |
+| Application | `FinTrackPro.Application` | CQRS (MediatR commands/queries/handlers), DTOs, FluentValidation, MediatR pipeline |
+| Infrastructure | `FinTrackPro.Infrastructure` | EF Core (Code-First + migrations), repository impls, IAM adapters, `IDataSeeder` seeders, interceptors (audit timestamps), Telegram.Bot, Skender.Stock.Indicators |
+| API | `FinTrackPro.API` | `BaseApiController`, controllers, DI registration, `ExceptionHandlingMiddleware`, `HangfireBasicAuthFilter`, health checks (`/health`), Scalar docs |
+| BackgroundJobs | `FinTrackPro.BackgroundJobs` | Hangfire: `MarketSignalJob` (4h), `BudgetOverrunJob` (daily), `IamUserSyncJob` (daily) |
 
-DTOs use explicit `operator` conversions instead of AutoMapper. `ICurrentUserService` extracts the authenticated user from the JWT claim. Add new features as a command/query + handler pair in Application, then expose via a thin controller action.
+**MediatR pipeline order:** `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login).
+
+**Key conventions:**
+- DTOs use explicit `operator` conversions (no AutoMapper)
+- `ICurrentUserService` — extracts authenticated user from JWT
+- New features → command/query + handler in Application, thin controller action in API
+- `NotificationService` / `NullNotificationChannel` — null-object notification pattern
+
+**Domain exceptions** (mapped to Problem Details by middleware):
+
+| Exception | HTTP |
+|---|---|
+| `NotFoundException` | 404 |
+| `AuthorizationException` | 403 |
+| `ConflictException` | 409 |
+| `PlanLimitExceededException` | 403 (freemium gate) |
+| Unhandled | 500 |
 
 ### Frontend — Feature-Sliced Design (FSD)
-Strict top-down layer hierarchy (`app → pages → widgets → features → entities → shared`). Server state: React Query. Client state: Zustand. Axios injects Bearer token and handles 401. See [frontend/fintrackpro-ui/README.md](frontend/fintrackpro-ui/README.md) for details.
+Layer hierarchy (strict top-down): `app → pages → widgets → features → entities → shared`
+
+- Server state: React Query. Client state: Zustand. Axios injects Bearer token, handles 401.
+- Auth adapter pattern: `IAuthAdapter` → `KeycloakAdapter` | `Auth0Adapter` (switched via `VITE_AUTH_PROVIDER`)
+- Key shared utilities: `useGuardedMutation` (prevents duplicate fast-click mutations), `apiError.ts`, `formatCurrency.ts`, `useDebounce`
+- Error UI: `ErrorBoundary.tsx`, `ErrorPage.tsx`, `AuthErrorScreen.tsx`
+
+See [frontend/fintrackpro-ui/README.md](frontend/fintrackpro-ui/README.md) for full FSD details.
 
 ### Auth
-The IAM provider is selected by a single config key: `IdentityProvider:Provider = "keycloak" | "auth0"` (backend) and `VITE_AUTH_PROVIDER=keycloak|auth0` (frontend). Both providers issue JWT Bearer tokens; the backend and frontend use provider-specific adapters behind a shared interface.
+Single config key switches providers: `IdentityProvider:Provider = "keycloak" | "auth0"` (backend), `VITE_AUTH_PROVIDER` (frontend).
 
-**Keycloak** (local dev, Docker): realm `fintrackpro` is auto-provisioned from `infra/docker/keycloak-realm.json` on first `docker compose up`. Import is idempotent. Default dev credentials: `admin@fintrackpro.dev` / `Admin1234!`. The `User` role is assigned by Default Roles; `Admin` is assigned manually.
+**Keycloak** (local/Docker): realm `fintrackpro` auto-provisioned from `infra/docker/keycloak-realm.json`. Dev credentials: `admin@fintrackpro.dev` / `Admin1234!`. `User` role via Default Roles; `Admin` assigned manually.
 
-**Auth0** (cloud, free tier): requires one-time dashboard setup (API, SPA app, M2M app, roles, post-login Action). See `docs/guides/auth-setup.md` for the full Auth0 setup guide.
+**Auth0** (cloud): one-time dashboard setup (API, SPA, M2M apps, roles, post-login Action). See `docs/guides/auth-setup.md`.
 
-Roles (`User`, `Admin`) are stored only in the IAM provider — never in the database. `AppUser.ExternalUserId` stores the JWT `sub` claim; `AppUser.Provider` records which IAM issued it.
+Roles stored only in the IAM provider. `AppUser.ExternalUserId` = JWT `sub`; `AppUser.Provider` = issuer.
+
+### CI/CD
+GitHub Actions (`.github/workflows/`):
+- `ci.yml` — backend build/test (unit + integration), frontend build/test, Newman API E2E, Playwright E2E; triggers on push to `main`/`develop` and PRs to `main`
+- `external-schema-check.yml` — third-party API schema validation
+- `db-rotation.yml` — Render DB rotation
+
+Render deployment: `render.yaml` (manifest) + `infra/terraform/` (Terraform). See `docs/guides/render-deploy.md`.
 
 ## Key Configuration
 
-| Variable | Where |
+### Backend (`appsettings.json` / env / `dotnet user-secrets`)
+
+| Variable | Notes |
 |---|---|
-| `ConnectionStrings__DefaultConnection` | `appsettings.json` / env |
-| `IdentityProvider__Provider` | `appsettings.json` (default `"keycloak"`); override to `"auth0"` for cloud |
-| `IdentityProvider__Audience` | `appsettings.json` — JWT `aud` claim; URI convention (`https://api.fintrackpro.dev`) |
-| `IdentityProvider__AdminClientId` | `appsettings.json` — M2M client ID for the active IAM provider's admin API |
-| `IdentityProvider__AdminClientSecret` | `appsettings.Development.json` (gitignored); env var for production |
-| `Keycloak__Authority` | `appsettings.json` — validates `iss` claim |
-| `Keycloak__MetadataAddress` | `appsettings.json` — overridden in `docker-compose.yml` for container DNS |
-| `Auth0__Domain` | `appsettings.Development.json` / env |
-| `Telegram__BotToken` | env var only |
-| `CoinGecko__ApiKey` | `appsettings.Development.json` / env — Demo or Pro API key; required for `/market/trending` endpoint |
-| `ExchangeRate__ApiKey` | `appsettings.Development.json` / env — ExchangeRate-API v6 key; required for fiat rate sync |
-| `PaymentGateway__Provider` | `appsettings.json` — `"stripe"` (default); swap to add future providers |
-| `PaymentGateway__PriceId` | `appsettings.json` / env — logical Pro plan price identifier (provider-neutral) |
-| `Stripe__SecretKey` | env var / `dotnet user-secrets` — Stripe API secret key |
-| `Stripe__WebhookSecret` | env var / `dotnet user-secrets` — Stripe webhook endpoint signing secret |
-| `LoggingBehavior__SlowHandlerThresholdMs` | `appsettings.json` — MediatR handler warning threshold in ms (default `500`) |
-| `VITE_AUTH_PROVIDER` | `frontend/fintrackpro-ui/.env` (`"keycloak"` or `"auth0"`) |
-| `VITE_API_BASE_URL` | `frontend/fintrackpro-ui/.env` |
-| `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | `frontend/fintrackpro-ui/.env` (Keycloak mode) |
-| `VITE_AUTH0_DOMAIN/CLIENT_ID/AUDIENCE` | `frontend/fintrackpro-ui/.env` (Auth0 mode) |
-| `VITE_ADMIN_TELEGRAM` | `frontend/fintrackpro-ui/.env` — Telegram handle shown in bank transfer modal |
-| `VITE_ADMIN_EMAIL` | `frontend/fintrackpro-ui/.env` — admin email shown in bank transfer modal |
-| `VITE_BANK_NAME` | `frontend/fintrackpro-ui/.env` — bank name displayed in transfer details |
-| `VITE_BANK_ACCOUNT_NUMBER` | `frontend/fintrackpro-ui/.env` — account number for bank transfer |
-| `VITE_BANK_ACCOUNT_NAME` | `frontend/fintrackpro-ui/.env` — account holder name |
-| `VITE_BANK_TRANSFER_AMOUNT` | `frontend/fintrackpro-ui/.env` — monthly Pro price in VND (default `99000`) |
-| `VITE_FREE_TRANSACTIONS_LIMIT` | `frontend/fintrackpro-ui/.env` — Free plan transaction cap (default `50`); shown on landing page pricing section |
-| `VITE_FREE_HISTORY_DAYS` | `frontend/fintrackpro-ui/.env` — Free plan history window in days (default `60`) |
-| `VITE_FREE_BUDGETS_LIMIT` | `frontend/fintrackpro-ui/.env` — Free plan active-budget cap (default `3`) |
-| `VITE_FREE_TRADES_LIMIT` | `frontend/fintrackpro-ui/.env` — Free plan stored-trade cap (default `20`) |
-| `VITE_FREE_WATCHLIST_LIMIT` | `frontend/fintrackpro-ui/.env` — Free plan watchlist symbol cap (default `1`) |
-| `VITE_PRO_TRANSACTIONS_LIMIT` | `frontend/fintrackpro-ui/.env` — Pro plan transaction cap (default `500`) |
-| `VITE_PRO_BUDGETS_LIMIT` | `frontend/fintrackpro-ui/.env` — Pro plan active-budget cap (default `20`) |
-| `VITE_PRO_TRADES_LIMIT` | `frontend/fintrackpro-ui/.env` — Pro plan stored-trade cap (default `200`) |
-| `VITE_PRO_WATCHLIST_LIMIT` | `frontend/fintrackpro-ui/.env` — Pro plan watchlist symbol cap (default `20`) |
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string |
+| `IdentityProvider__Provider` | `"keycloak"` (default) or `"auth0"` |
+| `IdentityProvider__Audience` | JWT `aud` — `https://api.fintrackpro.dev` |
+| `IdentityProvider__AdminClientId` | M2M client ID for IAM admin API |
+| `IdentityProvider__AdminClientSecret` | Secret — gitignored / env var in prod |
+| `Keycloak__Authority` | Validates `iss` claim |
+| `Keycloak__MetadataAddress` | Overridden in `docker-compose.yml` for container DNS |
+| `Auth0__Domain` | Auth0 tenant domain |
+| `Telegram__BotToken` | Env var only |
+| `CoinGecko__ApiKey` | Demo or Pro key; required for `/market/trending` |
+| `ExchangeRate__ApiKey` | ExchangeRate-API v6; required for fiat rate sync |
+| `PaymentGateway__Provider` | `"stripe"` (default) |
+| `PaymentGateway__PriceId` | Provider-neutral Pro plan price ID |
+| `Stripe__SecretKey` | `dotnet user-secrets` / env var |
+| `Stripe__WebhookSecret` | `dotnet user-secrets` / env var |
+| `LoggingBehavior__SlowHandlerThresholdMs` | Default `500` ms |
 
-Copy `frontend/fintrackpro-ui/.env.example` → `.env` before first run.
-
-**Local dev secrets:** use `dotnet user-secrets` (Development environment only) to store sensitive values outside the repo. Secrets override `appsettings.Development.json` at runtime:
 ```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string>" --project backend/src/FinTrackPro.API
+# Set local dev secrets
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<conn>" --project backend/src/FinTrackPro.API
 dotnet user-secrets set "IdentityProvider:AdminClientSecret" "<secret>" --project backend/src/FinTrackPro.API
-dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrackPro.API
 dotnet user-secrets set "Stripe:SecretKey" "<sk_test_...>" --project backend/src/FinTrackPro.API
 dotnet user-secrets set "Stripe:WebhookSecret" "<whsec_...>" --project backend/src/FinTrackPro.API
+dotnet user-secrets set "CoinGecko:ApiKey" "<key>" --project backend/src/FinTrackPro.API
 ```
 
-## Ports (local hybrid dev)
+### Frontend (`frontend/fintrackpro-ui/.env` — copy from `.env.example`)
+
+| Variable | Notes |
+|---|---|
+| `VITE_AUTH_PROVIDER` | `"keycloak"` or `"auth0"` |
+| `VITE_API_BASE_URL` | Backend API URL |
+| `VITE_KEYCLOAK_URL/REALM/CLIENT_ID` | Keycloak mode |
+| `VITE_AUTH0_DOMAIN/CLIENT_ID/AUDIENCE` | Auth0 mode |
+| `VITE_ADMIN_TELEGRAM` | Shown in bank transfer modal |
+| `VITE_ADMIN_EMAIL` | Shown in bank transfer modal |
+| `VITE_BANK_NAME` | Bank transfer UI |
+| `VITE_BANK_ACCOUNT_NUMBER` | Bank transfer UI |
+| `VITE_BANK_ACCOUNT_NAME` | Bank transfer UI |
+| `VITE_BANK_TRANSFER_AMOUNT` | Monthly Pro price in VND (default `99000`) |
+| `VITE_BANK_QR_URL` | QR code image URL for bank transfer |
+| `VITE_FREE_TRANSACTIONS_LIMIT` | Default `50` |
+| `VITE_FREE_HISTORY_DAYS` | Default `60` |
+| `VITE_FREE_BUDGETS_LIMIT` | Default `3` |
+| `VITE_FREE_TRADES_LIMIT` | Default `20` |
+| `VITE_FREE_WATCHLIST_LIMIT` | Default `1` |
+| `VITE_PRO_TRANSACTIONS_LIMIT` | Default `500` |
+| `VITE_PRO_BUDGETS_LIMIT` | Default `20` |
+| `VITE_PRO_TRADES_LIMIT` | Default `200` |
+| `VITE_PRO_WATCHLIST_LIMIT` | Default `20` |
+
+## Ports (hybrid dev)
+
 | Service | Port |
 |---|---|
 | API | 5018 |
 | Frontend (Vite) | 5173 |
 | Keycloak | 8080 |
-| SQL Server | 1433 |
 | PostgreSQL | 5432 |
 | API (Docker) | 5000 |
 
-## Docs
-### Architecture (reference — what the system is)
-- `docs/architecture/overview.md` — layer descriptions and design decisions
-- `docs/architecture/auth.md` — IAM provider overview, auth flows (sign-up, login, nightly sync), and provider switching reference
+## Docs Index
+
+### Architecture
+- `docs/architecture/overview.md` — layers and design decisions
+- `docs/architecture/auth.md` — IAM flows, provider switching
 - `docs/architecture/api-spec.md` — REST endpoints and schemas
-- `docs/architecture/database.md` — schema, tables, relationships, migration commands
-- `docs/architecture/background-jobs.md` — Hangfire job details and sequence diagrams
+- `docs/architecture/database.md` — schema, tables, migrations
+- `docs/architecture/background-jobs.md` — Hangfire job details
 - `docs/architecture/ui-flows.md` — frontend user flows
 
-### Guides (how-to — operational and setup)
-- `docs/guides/dev-setup.md` — hybrid vs full-Docker setup, local PostgreSQL, Render deployment
-- `docs/guides/auth-setup.md` — IAM provider setup (Keycloak, Auth0, switching providers)
-- `docs/guides/render-deploy.md` — Render deploy guide (Terraform primary + render.yaml fallback + migration strategies)
-- `docs/guides/testing.md` — manual E2E test guide across provider × mode combinations
-- `docs/guides/security-hardening.md` — rate limiting, headers, HTTPS, Cloudflare setup
+### Guides
+- `docs/guides/dev-setup.md` — hybrid/Docker setup, Modes E & F
+- `docs/guides/auth-setup.md` — Keycloak and Auth0 setup
+- `docs/guides/render-deploy.md` — Terraform + render.yaml deploy
+- `docs/guides/testing.md` — manual E2E across provider × mode
+- `docs/guides/security-hardening.md` — rate limiting, headers, HTTPS, Cloudflare
 
-### Decisions (implemented — why things are the way they are)
-- `docs/decisions/postgres-migration.md` — migration from Azure SQL to PostgreSQL
-- `docs/decisions/integration-test-refactor.md` — SQL Server → PostgreSQL test infra change
-- `docs/decisions/preventing-duplicate-calls-on-fast-clicks.md` — useGuardedMutation hook design rationale
-- `docs/decisions/transaction-category-system.md` — structured TransactionCategory entity (system-seeded defaults + user-custom, three-phase migration strategy)
-- `docs/decisions/open-positions-trade-status.md` — Open/Closed status model for trades; nullable exitPrice, ClosePositionCommand, realized vs. unrealized P&L split
-- `docs/decisions/monetisation-subscription-design.md` — Freemium subscription system with Stripe (backend + frontend)
-- `docs/decisions/landing-page-fsd-integration.md` — public landing page at `/`; check-sso auth init, `login()` adapter method, `RequireAuth` guard, pricing limit env vars
-- `docs/decisions/nav-avatar-dropdown-tabbed-settings.md` — avatar dropdown nav links; tabbed Settings with URL-persisted active tab; About page
-- `docs/decisions/market-dashboard-phase1.md` — Market page upgrade: HybridCache migration, Trending Coins enrichment (top 10 + price/%), Top Market Cap widget, Watchlist RSI Analysis widget
-- `docs/decisions/watchlist-pro-only-gate.md` — Pro-only read gate on watchlist/signals; soft expiry helper; admin subscription management (activate/revoke); ProFeatureLock upsell component
-- `docs/planned/dashboard-command-center.md` — Dashboard redesign: personalized command center (expense allocation, budget health, trading intelligence, recent activity, contextual signals); market data moved to `/market`
+### Decisions (implemented)
+- `docs/decisions/postgres-migration.md`
+- `docs/decisions/integration-test-refactor.md`
+- `docs/decisions/preventing-duplicate-calls-on-fast-clicks.md` — `useGuardedMutation`
+- `docs/decisions/transaction-category-system.md`
+- `docs/decisions/open-positions-trade-status.md`
+- `docs/decisions/monetisation-subscription-design.md`
+- `docs/decisions/landing-page-fsd-integration.md`
+- `docs/decisions/nav-avatar-dropdown-tabbed-settings.md`
+- `docs/decisions/market-dashboard-phase1.md`
+- `docs/decisions/watchlist-pro-only-gate.md`
+- `docs/planned/dashboard-command-center.md`
 
-### Planned (not yet implemented)
-- `docs/planned/identity-linking-refactor.md` — multi-provider identity linking via UserContextMiddleware
-- `docs/planned/auth0-config-as-code.md` — Auth0 CLI deploy automation
-- `docs/planned/frontend-error-handling.md` — consistent error handling and form validation
-- `docs/planned/health-checks-external-services.md` — health check endpoints for external services
+### Planned
+- `docs/planned/identity-linking-refactor.md`
+- `docs/planned/auth0-config-as-code.md`
+- `docs/planned/frontend-error-handling.md`
+- `docs/planned/health-checks-external-services.md`
+
+### Other
+- `docs/features.md` — feature registry
+- `docs/roadmap.md` — product roadmap
+- `docs/postman/api-e2e-plan.md` — Newman collection structure, CI diagram, secrets
 
 ## Documentation Sync Rules
 
-After any change to the **backend** (API endpoints, configuration, project structure, test setup, environment variables):
-- Review and update as needed: `README.md`, `backend/README.md`, `backend/tests/README.md`, and any affected file under `docs/`
+After **backend** changes (endpoints, config, env vars, project structure):
+- Update `README.md`, `backend/README.md`, `backend/tests/README.md`, affected `docs/` files
 
-After any change to the **frontend**:
-- Additionally review and update: `frontend/fintrackpro-ui/README.md`
+After **frontend** changes:
+- Also update `frontend/fintrackpro-ui/README.md`
