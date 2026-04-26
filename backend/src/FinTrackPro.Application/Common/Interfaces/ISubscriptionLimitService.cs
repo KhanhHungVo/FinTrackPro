@@ -17,4 +17,5 @@ public interface ISubscriptionLimitService
     Task EnforceTransactionHistoryAccessAsync(AppUser user, DateTime fromDate, CancellationToken ct = default);
     Task EnforceSignalHistoryAccessAsync(AppUser user, DateTime fromDate, CancellationToken ct = default);
     Task EnforceTelegramAsync(AppUser user, CancellationToken ct = default);
+    Task EnforceWatchlistReadAccessAsync(AppUser user, CancellationToken ct = default);
 }

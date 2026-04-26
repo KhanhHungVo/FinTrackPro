@@ -1,5 +1,7 @@
 using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Common.Models;
+using FinTrackPro.Domain.Entities;
+using FinTrackPro.Domain.Exceptions;
 using FinTrackPro.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -10,7 +12,9 @@ namespace FinTrackPro.Application.Trading.Queries.GetWatchlistAnalysis;
 
 public class GetWatchlistAnalysisQueryHandler(
     IWatchedSymbolRepository watchedSymbolRepository,
+    IUserRepository userRepository,
     ICurrentUser currentUser,
+    ISubscriptionLimitService subscriptionLimitService,
     IBinanceService binanceService,
     HybridCache cache,
     ILogger<GetWatchlistAnalysisQueryHandler> logger)
@@ -20,6 +24,11 @@ public class GetWatchlistAnalysisQueryHandler(
     public async Task<IEnumerable<WatchlistAnalysisItemDto>> Handle(
         GetWatchlistAnalysisQuery request, CancellationToken cancellationToken)
     {
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AppUser), currentUser.UserId);
+
+        await subscriptionLimitService.EnforceWatchlistReadAccessAsync(user, cancellationToken);
+
         var watchedSymbols = await watchedSymbolRepository.GetByUserAsync(currentUser.UserId, cancellationToken);
         var symbols = watchedSymbols.Select(s => s.Symbol).ToList();
 

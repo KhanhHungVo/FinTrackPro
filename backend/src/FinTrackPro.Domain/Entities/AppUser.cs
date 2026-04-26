@@ -84,4 +84,18 @@ public class AppUser : AggregateRoot
         SubscriptionExpiresAt = null;
         // PaymentCustomerId is intentionally kept so re-subscription reuses the same customer record.
     }
+
+    public void RenewSubscription(BillingPeriod period)
+    {
+        var baseDate = SubscriptionExpiresAt.HasValue && SubscriptionExpiresAt.Value > DateTime.UtcNow
+            ? SubscriptionExpiresAt.Value
+            : DateTime.UtcNow;
+
+        SubscriptionExpiresAt = period == BillingPeriod.Yearly
+            ? baseDate.AddYears(1)
+            : baseDate.AddMonths(1);
+
+        Plan                  = SubscriptionPlan.Pro;
+        PaymentSubscriptionId = $"bank_{Guid.NewGuid()}";
+    }
 }

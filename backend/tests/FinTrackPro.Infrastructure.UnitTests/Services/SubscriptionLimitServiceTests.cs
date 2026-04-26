@@ -323,4 +323,52 @@ public class SubscriptionLimitServiceTests
 
         await act.Should().NotThrowAsync();
     }
+
+    // -------------------------------------------------------------------
+    // EnforceWatchlistReadAccessAsync
+    // -------------------------------------------------------------------
+
+    [Fact]
+    public async Task EnforceWatchlistReadAccess_FreeUser_ThrowsPlanLimitExceededException_WithFeatureWatchlist()
+    {
+        var svc = BuildService(isAdmin: false);
+
+        var act = () => svc.EnforceWatchlistReadAccessAsync(FreeUser());
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>()
+            .Where(e => e.Feature == "watchlist");
+    }
+
+    [Fact]
+    public async Task EnforceWatchlistReadAccess_ActiveProUser_DoesNotThrow()
+    {
+        var svc = BuildService(isAdmin: false);
+
+        var act = () => svc.EnforceWatchlistReadAccessAsync(ProUser());
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task EnforceWatchlistReadAccess_ExpiredProUser_ThrowsPlanLimitExceededException()
+    {
+        var svc = BuildService(isAdmin: false);
+        var expiredUser = AppUser.Create("expired@dev.com", "Expired");
+        expiredUser.ActivateSubscription("sub_expired", DateTime.UtcNow.AddDays(-1));
+
+        var act = () => svc.EnforceWatchlistReadAccessAsync(expiredUser);
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>()
+            .Where(e => e.Feature == "watchlist");
+    }
+
+    [Fact]
+    public async Task EnforceWatchlistReadAccess_Admin_DoesNotThrow()
+    {
+        var svc = BuildService(isAdmin: true);
+
+        var act = () => svc.EnforceWatchlistReadAccessAsync(FreeUser());
+
+        await act.Should().NotThrowAsync();
+    }
 }

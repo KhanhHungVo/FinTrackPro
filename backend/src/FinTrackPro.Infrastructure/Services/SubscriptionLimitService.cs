@@ -14,6 +14,10 @@ public class SubscriptionLimitService(
 {
     private bool IsUnlimited() => currentUser.IsAdmin;
 
+    private static bool IsProActive(AppUser user) =>
+        user.Plan == SubscriptionPlan.Pro &&
+        (!user.SubscriptionExpiresAt.HasValue || user.SubscriptionExpiresAt.Value > DateTime.UtcNow);
+
     private PlanLimits GetLimits(AppUser user) => user.Plan switch
     {
         SubscriptionPlan.Pro => options.Value.Pro,
@@ -108,5 +112,14 @@ public class SubscriptionLimitService(
 
         throw new PlanLimitExceededException("telegram",
             "Telegram notifications are not available on your current plan.");
+    }
+
+    public Task EnforceWatchlistReadAccessAsync(AppUser user, CancellationToken ct = default)
+    {
+        if (IsUnlimited()) return Task.CompletedTask;
+        if (IsProActive(user)) return Task.CompletedTask;
+
+        throw new PlanLimitExceededException("watchlist",
+            "Watchlist and trading signals are available on the Pro plan.");
     }
 }

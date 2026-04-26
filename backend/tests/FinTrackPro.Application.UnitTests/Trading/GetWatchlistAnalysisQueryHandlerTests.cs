@@ -2,19 +2,23 @@ using FinTrackPro.Application.Common.Interfaces;
 using FinTrackPro.Application.Common.Models;
 using FinTrackPro.Application.Trading.Queries.GetWatchlistAnalysis;
 using FinTrackPro.Domain.Entities;
+using FinTrackPro.Domain.Exceptions;
 using FinTrackPro.Domain.Repositories;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 namespace FinTrackPro.Application.UnitTests.Trading;
 
 public class GetWatchlistAnalysisQueryHandlerTests
 {
     private readonly IWatchedSymbolRepository _watchedSymbolRepository = Substitute.For<IWatchedSymbolRepository>();
+    private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
+    private readonly ISubscriptionLimitService _limitService = Substitute.For<ISubscriptionLimitService>();
     private readonly IBinanceService _binanceService = Substitute.For<IBinanceService>();
     private readonly HybridCache _cache;
     private readonly GetWatchlistAnalysisQueryHandler _handler;
@@ -30,12 +34,16 @@ public class GetWatchlistAnalysisQueryHandlerTests
 
         _handler = new GetWatchlistAnalysisQueryHandler(
             _watchedSymbolRepository,
+            _userRepository,
             _currentUser,
+            _limitService,
             _binanceService,
             _cache,
             Substitute.For<ILogger<GetWatchlistAnalysisQueryHandler>>());
 
         _currentUser.UserId.Returns(TestUser.Id);
+        _userRepository.GetByIdAsync(TestUser.Id, Arg.Any<CancellationToken>())
+            .Returns(TestUser);
 
         // Default: all symbols are valid on Binance
         _binanceService.GetValidSymbolsAsync(Arg.Any<CancellationToken>())
@@ -232,5 +240,34 @@ public class GetWatchlistAnalysisQueryHandlerTests
 
         result.Should().HaveCount(1);
         result[0].Symbol.Should().Be("BTCUSDT");
+    }
+
+    [Fact]
+    public async Task Handle_FreeUser_CallsEnforceWatchlistReadAccess_AndThrows()
+    {
+        _limitService.EnforceWatchlistReadAccessAsync(TestUser, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new PlanLimitExceededException("watchlist", "Pro only"));
+
+        var act = async () => await _handler.Handle(new GetWatchlistAnalysisQuery(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<PlanLimitExceededException>()
+            .Where(e => e.Feature == "watchlist");
+    }
+
+    [Fact]
+    public async Task Handle_ProUser_PassesThroughToRepository()
+    {
+        var proUser = AppUser.Create("pro@dev.com", "Pro");
+        proUser.ActivateSubscription("sub_123", DateTime.UtcNow.AddMonths(1));
+        _currentUser.UserId.Returns(proUser.Id);
+        _userRepository.GetByIdAsync(proUser.Id, Arg.Any<CancellationToken>())
+            .Returns(proUser);
+        _watchedSymbolRepository.GetByUserAsync(proUser.Id, Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<WatchedSymbol>());
+
+        var result = await _handler.Handle(new GetWatchlistAnalysisQuery(), CancellationToken.None);
+
+        result.Should().BeEmpty();
+        await _limitService.Received(1).EnforceWatchlistReadAccessAsync(proUser, Arg.Any<CancellationToken>());
     }
 }

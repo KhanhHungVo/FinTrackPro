@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FluentAssertions;
 using Tests.Common;
 
@@ -12,6 +13,7 @@ public class WatchedSymbolsTests : IAsyncLifetime
 {
     private readonly DatabaseFixture _fixture;
     private readonly HttpClient _client;
+    private readonly HttpClient _freeClient;
 
     public WatchedSymbolsTests(DatabaseFixture fixture)
     {
@@ -21,6 +23,12 @@ public class WatchedSymbolsTests : IAsyncLifetime
         var token = AuthTokenFactory.GenerateToken("test-keycloak-id", "User");
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
+
+        // Free user — different sub so they get their own AppUser record with Free plan
+        _freeClient = fixture.Factory.CreateClient();
+        var freeToken = AuthTokenFactory.GenerateToken("free-user-keycloak-id", "User");
+        _freeClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", freeToken);
     }
 
     public async Task InitializeAsync() => await _fixture.ResetAsync();
@@ -75,5 +83,44 @@ public class WatchedSymbolsTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/watchedsymbols", new { symbol = "" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetWatchedSymbols_FreeUser_Returns402WithFeatureWatchlist()
+    {
+        // Trigger AppUser provisioning for the free user
+        await _freeClient.GetAsync("/api/watchedsymbols");
+
+        var response = await _freeClient.GetAsync("/api/watchedsymbols");
+
+        response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("extensions").GetProperty("feature").GetString().Should().Be("watchlist");
+    }
+
+    [Fact]
+    public async Task GetWatchlistAnalysis_FreeUser_Returns402WithFeatureWatchlist()
+    {
+        // Provision user
+        await _freeClient.GetAsync("/api/watchedsymbols");
+
+        var response = await _freeClient.GetAsync("/api/watchedsymbols/analysis");
+
+        response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("extensions").GetProperty("feature").GetString().Should().Be("watchlist");
+    }
+
+    [Fact]
+    public async Task GetSignals_FreeUser_Returns402WithFeatureWatchlist()
+    {
+        // Provision user
+        await _freeClient.GetAsync("/api/watchedsymbols");
+
+        var response = await _freeClient.GetAsync("/api/signals?count=5");
+
+        response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("extensions").GetProperty("feature").GetString().Should().Be("watchlist");
     }
 }
