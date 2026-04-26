@@ -80,7 +80,7 @@ public class AdminSubscriptionTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("plan").GetInt32().Should().Be(1); // Pro = 1
+        body.GetProperty("plan").GetString().Should().Be("Pro");
     }
 
     [Fact]
@@ -115,6 +115,6 @@ public class AdminSubscriptionTests : IAsyncLifetime
         var paged = await listResponse.Content.ReadFromJsonAsync<JsonElement>();
         var user = paged.GetProperty("items").EnumerateArray()
             .FirstOrDefault(u => Guid.Parse(u.GetProperty("id").GetString()!) == userId);
-        user.GetProperty("plan").GetInt32().Should().Be(0); // Free = 0
+        user.GetProperty("plan").GetString().Should().Be("Free");
     }
 }

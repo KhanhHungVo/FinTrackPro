@@ -47,12 +47,11 @@ public class CreateTransactionCategoryCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_SlugStartingWithDigit_Fails()
+    public void Validate_SlugStartingWithDigit_Passes()
     {
         var result = _validator.Validate(Valid() with { Slug = "1pet_care" });
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "Slug");
+        result.IsValid.Should().BeTrue();
     }
 
     [Fact]

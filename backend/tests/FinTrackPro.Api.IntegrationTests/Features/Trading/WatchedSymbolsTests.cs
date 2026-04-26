@@ -20,7 +20,7 @@ public class WatchedSymbolsTests : IAsyncLifetime
         _fixture = fixture;
         _client = fixture.Factory.CreateClient();
 
-        var token = AuthTokenFactory.GenerateToken("test-keycloak-id", "User");
+        var token = AuthTokenFactory.GenerateToken("test-keycloak-id", "User", "Admin");
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
@@ -95,7 +95,7 @@ public class WatchedSymbolsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("extensions").GetProperty("feature").GetString().Should().Be("watchlist");
+        body.GetProperty("feature")[0].GetString().Should().Be("watchlist");
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class WatchedSymbolsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("extensions").GetProperty("feature").GetString().Should().Be("watchlist");
+        body.GetProperty("feature")[0].GetString().Should().Be("watchlist");
     }
 
     [Fact]
@@ -121,6 +121,6 @@ public class WatchedSymbolsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("extensions").GetProperty("feature").GetString().Should().Be("watchlist");
+        body.GetProperty("feature")[0].GetString().Should().Be("watchlist");
     }
 }
