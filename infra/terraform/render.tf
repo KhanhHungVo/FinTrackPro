@@ -28,7 +28,7 @@ resource "render_postgres" "db" {
 resource "render_web_service" "api" {
   name           = "fintrackpro-api"
   plan           = "free"
-  region         = "oregon"
+  region         = "singapore"
   environment_id = render_project.fintrackpro.environments["production"].id
 
   runtime_source = {
@@ -48,7 +48,7 @@ resource "render_web_service" "api" {
     ASPNETCORE_URLS        = { value = "http://+:8080" }
 
     DatabaseProvider__Provider           = { value = "postgresql" }
-    ConnectionStrings__DefaultConnection = { value = render_postgres.db.connection_info.internal_connection_string }
+    ConnectionStrings__DefaultConnection = { value = var.db_connection_string }
 
     IdentityProvider__Provider = { value = "auth0" }
     IdentityProvider__Audience = { value = "https://api.fintrackpro.dev" }

@@ -12,10 +12,10 @@ auth0_domain         = "dev-xxxx.us.auth0.com"
 auth0_m2m_client_id  = "your-m2m-client-id"
 
 # ── App ────────────────────────────────────────────────────────────────────────
-# Database connection string is NOT required here — the PostgreSQL instance is
-# provisioned by Terraform (render_postgres.db) and its internal URL is auto-injected
-# into the API service. Retrieve the external URL for local migrations with:
-#   terraform output -raw db_external_url
+# Retrieve from the Render dashboard → your PostgreSQL instance → Connections → External Connection String.
+# Use Npgsql key-value format (not a libpq URI):
+# db_connection_string = "Host=dpg-xxxx-a.singapore-postgres.render.com;Port=5432;Database=fintrackpro_db_xxxx;Username=fintrackpro_db_xxxx_user;Password=xxxx;SSL Mode=Require;"
+# Treat this as sensitive — set it as a Terraform Cloud workspace variable (sensitive) rather than storing it here.
 
 # Set cors_origins to the frontend URL after first deploy.
 # Re-run `terraform apply` once you have the URL.
@@ -38,8 +38,8 @@ vite_bank_account_name    = "Your Full Name"
 # vite_bank_transfer_amount = "99000"
 vite_bank_qr_url          = "https://i.postimg.cc/your-image-url.jpg"
 
-# Sensitive variables (render_api_key, auth0_m2m_client_secret, coingecko_api_key,
-# exchangerate_api_key, telegram_bot_token, hangfire_dashboard_password,
+# Sensitive variables (render_api_key, auth0_m2m_client_secret, db_connection_string,
+# coingecko_api_key, exchangerate_api_key, telegram_bot_token, hangfire_dashboard_password,
 # stripe_secret_key, stripe_webhook_secret)
 # should be set as sensitive Terraform Cloud workspace variables,
 # NOT stored here.

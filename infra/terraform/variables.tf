@@ -58,6 +58,13 @@ variable "hangfire_dashboard_password" {
   description = "Password for the Hangfire dashboard Basic Auth (username: hangfire-admin)"
 }
 
+# ── Database ───────────────────────────────────────────────────────────────────
+variable "db_connection_string" {
+  type        = string
+  sensitive   = true
+  description = "Npgsql connection string for the Render PostgreSQL DB, e.g. Host=dpg-...;Port=5432;Database=...;Username=...;Password=...;SSL Mode=Require;"
+}
+
 # ── Stripe ─────────────────────────────────────────────────────────────────────
 variable "stripe_secret_key" {
   type        = string
