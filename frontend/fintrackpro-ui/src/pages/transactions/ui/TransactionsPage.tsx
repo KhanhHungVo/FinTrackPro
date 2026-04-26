@@ -141,7 +141,7 @@ export function TransactionsPage() {
 
       {/* Column headers (sortable) */}
       {!isLoading && transactions.length > 0 && (
-        <div className="flex items-center gap-4 px-4 text-xs">
+        <div className="hidden items-center gap-4 px-4 text-xs sm:flex">
           <SortableColumnHeader
             label={t('transactions.category')}
             field="category"
@@ -186,12 +186,12 @@ export function TransactionsPage() {
             return (
               <li
                 key={tx.id}
-                className="page-card flex items-center justify-between px-4 py-3"
+                className="page-card grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-4 py-3 sm:flex sm:items-center sm:justify-between"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3 self-center">
                   <span
                     className={cn(
-                      'rounded px-2 py-0.5 text-xs font-medium',
+                      'flex-shrink-0 rounded px-2 py-0.5 text-xs font-medium',
                       tx.type === 'Income'
                         ? 'bg-green-100 text-green-700'
                         : 'bg-red-100 text-red-700',
@@ -199,35 +199,37 @@ export function TransactionsPage() {
                   >
                     {tx.type === 'Income' ? t('transactions.income') : t('transactions.expense')}
                   </span>
-                  <div>
-                    <p className="text-sm font-medium">{resolveCategoryLabel(tx.category)}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{resolveCategoryLabel(tx.category)}</p>
                     {tx.note && (
-                      <p className="text-xs text-gray-400 dark:text-slate-500">{tx.note}</p>
+                      <p className="truncate text-xs text-gray-400 dark:text-slate-500">{tx.note}</p>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className={cn('text-sm font-semibold', TYPE_COLORS[tx.type])}>
+                <div className="flex w-[7.75rem] flex-shrink-0 flex-col items-end gap-1 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+                  <span className={cn('max-w-full truncate text-right text-sm font-semibold', TYPE_COLORS[tx.type])}>
                     {tx.type === 'Income' ? '+' : '-'}{formatCurrency(displayAmount, currency, i18n.language)}
                   </span>
-                  <span className="text-xs text-gray-400 dark:text-slate-500">
-                    {new Date(tx.createdAt).toLocaleDateString(i18n.language)}
-                  </span>
-                  <button
-                    onClick={() => setEditingTx(tx)}
-                    className="text-xs text-gray-300 hover:text-blue-500 transition-colors dark:text-slate-600"
-                    title={t('common.edit')}
-                  >
-                    <Pencil size={12} aria-hidden="true" />
-                  </button>
-                  <button
-                    onClick={() => setPendingDeleteId(tx.id)}
-                    disabled={isDeleting(tx.id)}
-                    className="text-xs text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:text-slate-600"
-                    title={t('common.delete')}
-                  >
-                    <X size={12} aria-hidden="true" />
-                  </button>
+                  <div className="flex items-center justify-end gap-1.5 sm:gap-4">
+                    <span className="whitespace-nowrap text-xs text-gray-400 dark:text-slate-500">
+                      {new Date(tx.createdAt).toLocaleDateString(i18n.language)}
+                    </span>
+                    <button
+                      onClick={() => setEditingTx(tx)}
+                      className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center text-xs text-gray-300 transition-colors hover:text-blue-500 dark:text-slate-600"
+                      title={t('common.edit')}
+                    >
+                      <Pencil size={12} aria-hidden="true" />
+                    </button>
+                    <button
+                      onClick={() => setPendingDeleteId(tx.id)}
+                      disabled={isDeleting(tx.id)}
+                      className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center text-xs text-gray-300 transition-colors hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-600"
+                      title={t('common.delete')}
+                    >
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               </li>
             )
