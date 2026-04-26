@@ -29,7 +29,7 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
-    if (error.response?.status === 402) {
+    if (error.response?.status === 402 && error.config?.method !== 'get') {
       const data = error.response.data
       const feature = data?.extensions?.feature?.[0] ?? 'unknown'
       const title = data?.title ?? 'Plan limit reached.'

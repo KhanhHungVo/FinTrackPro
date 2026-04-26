@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
   useWatchedSymbols,
@@ -7,15 +8,16 @@ import {
 } from '@/entities/watched-symbol'
 import { errorToastMessage } from '@/shared/lib/apiError'
 import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
+import { ProFeatureLock } from '@/features/upgrade'
 
-export function WatchlistManager() {
+function WatchlistForm() {
   const { data: symbols, isLoading } = useWatchedSymbols()
   const { mutate: add, isPending: adding } = useAddWatchedSymbol()
   const { mutate: remove } = useRemoveWatchedSymbol()
   const { guarded: guardedRemove, isPending: isRemoving } = useGuardedMutation(remove)
   const [symbol, setSymbol] = useState('')
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     add(symbol, {
       onSuccess: () => setSymbol(''),
@@ -24,8 +26,7 @@ export function WatchlistManager() {
   }
 
   return (
-    <div className="page-card p-4 md:p-6 w-full space-y-4">
-
+    <div className="space-y-4">
       <form onSubmit={handleAdd} className="flex gap-2">
         <input
           type="text"
@@ -68,5 +69,16 @@ export function WatchlistManager() {
         </ul>
       )}
     </div>
+  )
+}
+
+export function WatchlistManager() {
+  const { t } = useTranslation()
+  return (
+    <ProFeatureLock title={t('proLock.watchlist')}>
+      <div className="page-card p-4 md:p-6 w-full">
+        <WatchlistForm />
+      </div>
+    </ProFeatureLock>
   )
 }

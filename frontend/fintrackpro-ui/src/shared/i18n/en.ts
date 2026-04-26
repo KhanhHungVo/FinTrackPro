@@ -259,6 +259,11 @@ const en = {
     poweredBy: 'Powered by CoinGecko',
     fearGreedIndex: 'Crypto Fear & Greed Index',
   },
+  proLock: {
+    watchlist: 'Watchlist',
+    marketIntelligence: 'Market Intelligence',
+    tradingSignals: 'Trading Signals',
+  },
   signals: {
     noSignals: 'No signals yet — add symbols to your watchlist.',
     rsiOversold: 'RSI Oversold',

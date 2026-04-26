@@ -31,4 +31,6 @@ export interface IAuthAdapter {
   refreshToken(): Promise<string>
   /** Trigger provider logout and redirect. */
   logout(redirectUri?: string): void
+  /** Returns roles from the cached token payload. Synchronous — call only after init() resolves. */
+  getRoles(): string[]
 }

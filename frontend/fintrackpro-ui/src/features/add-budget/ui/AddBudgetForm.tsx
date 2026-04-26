@@ -84,7 +84,7 @@ export function AddBudgetForm({ month, onAdded }: Props) {
       </form>
       <button
         type="button"
-        onClick={() => navigate('/settings?tab=notifications')}
+        onClick={() => navigate('/settings?tab=categories')}
         className="flex items-center gap-1 w-fit text-xs text-gray-400 hover:text-blue-600 transition-colors"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">

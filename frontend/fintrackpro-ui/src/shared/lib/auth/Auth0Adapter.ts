@@ -1,10 +1,19 @@
 import { createAuth0Client, type Auth0Client } from '@auth0/auth0-spa-js'
 import { env } from '@/shared/config/env'
 import type { AuthProfile, IAuthAdapter, InitOptions, LoginOptions } from './IAuthAdapter'
-
+import { extractRoles } from './extractRoles'
 
 class Auth0Adapter implements IAuthAdapter {
   private client: Auth0Client | null = null
+  private cachedPayload: Record<string, unknown> | null = null
+
+  private static parsePayload(token: string): Record<string, unknown> | null {
+    try {
+      return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    } catch {
+      return null
+    }
+  }
 
   async init(options?: InitOptions): Promise<AuthProfile | null> {
     this.client = await createAuth0Client({
@@ -43,6 +52,8 @@ class Auth0Adapter implements IAuthAdapter {
     }
 
     const user = await this.client.getUser()
+    const rawToken = await this.client.getTokenSilently()
+    this.cachedPayload = Auth0Adapter.parsePayload(rawToken)
     return {
       displayName: user?.name ?? user?.email ?? '',
       email: user?.email ?? '',
@@ -71,6 +82,11 @@ class Auth0Adapter implements IAuthAdapter {
     this.client?.logout({
       logoutParams: { returnTo: redirectUri ?? window.location.origin },
     })
+  }
+
+  getRoles(): string[] {
+    if (!this.cachedPayload) return []
+    return extractRoles(this.cachedPayload, 'auth0')
   }
 }
 

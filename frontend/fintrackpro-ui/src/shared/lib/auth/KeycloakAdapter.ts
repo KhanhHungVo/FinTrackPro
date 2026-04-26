@@ -1,9 +1,11 @@
 import Keycloak from 'keycloak-js'
 import { env } from '@/shared/config/env'
 import type { AuthProfile, IAuthAdapter, InitOptions, LoginOptions } from './IAuthAdapter'
+import { extractRoles } from './extractRoles'
 
 class KeycloakAdapter implements IAuthAdapter {
   private readonly kc: Keycloak
+  private cachedPayload: Record<string, unknown> | null = null
 
   constructor() {
     this.kc = new Keycloak({
@@ -29,6 +31,8 @@ class KeycloakAdapter implements IAuthAdapter {
     this.kc.onTokenExpired = () => {
       this.kc.updateToken(30).catch(() => this.kc.login())
     }
+
+    this.cachedPayload = (this.kc.tokenParsed as Record<string, unknown>) ?? null
 
     return {
       displayName:
@@ -58,6 +62,11 @@ class KeycloakAdapter implements IAuthAdapter {
 
   logout(redirectUri?: string): void {
     this.kc.logout({ redirectUri: redirectUri ?? window.location.origin })
+  }
+
+  getRoles(): string[] {
+    if (!this.cachedPayload) return []
+    return extractRoles(this.cachedPayload, 'keycloak')
   }
 }
 

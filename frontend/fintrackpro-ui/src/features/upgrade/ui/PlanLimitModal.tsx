@@ -31,10 +31,7 @@ export function PlanLimitModal() {
             </svg>
           </button>
         </div>
-        <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
-          {t('planLimitModal.description')}
-        </p>
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-2">
           <UpgradeButton className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50" />
           <button
             onClick={clear}

@@ -1,5 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
-import { authAdapter } from '@/shared/lib/auth'
+import { authAdapter, extractRoles, ADMIN_ROLE } from '@/shared/lib/auth'
+import { env } from '@/shared/config/env'
 import { useAuthStore } from '@/features/auth'
 import {
   AuthErrorScreen,
@@ -63,9 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [degraded, setDegraded] = useState<{ expiresAt: Date } | null>(null)
   const setToken = useAuthStore((s) => s.setToken)
   const setProfile = useAuthStore((s) => s.setProfile)
+  const setIsAdmin = useAuthStore((s) => s.setIsAdmin)
 
-  function runInit() {
+  const runInit = useCallback(() => {
     const publicRoute = window.location.pathname === '/'
+    const provider = env.AUTH_PROVIDER === 'auth0' ? 'auth0' : 'keycloak' as const
 
     // E2E bypass: Playwright injects localStorage['e2e_bypass'] = '1' alongside
     // a pre-issued JWT. This skips the provider SDK init (which would redirect
@@ -83,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             '',
           (payload.email as string) ?? '',
         )
+        setIsAdmin(extractRoles(payload, provider).includes(ADMIN_ROLE))
         setDegraded({ expiresAt: cached.expiresAt })
         setInitialized(true)
         return
@@ -100,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authAdapter.getToken().then((token) => {
           setToken(token)
           setProfile(profile.displayName, profile.email)
+          setIsAdmin(authAdapter.getRoles().includes(ADMIN_ROLE))
         })
         setInitialized(true)
       })
@@ -116,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               '',
             (payload.email as string) ?? '',
           )
+          setIsAdmin(extractRoles(payload, provider).includes(ADMIN_ROLE))
           setDegraded({ expiresAt: cached.expiresAt })
         } else if (publicRoute) {
           // Provider unreachable on a public route — still render the landing page
@@ -126,20 +132,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setInitialized(true)
       })
-  }
+  }, [setToken, setProfile, setIsAdmin])
 
   useEffect(() => {
     if (initStarted) return
     initStarted = true
-    runInit()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    runInit() // eslint-disable-line react-hooks/set-state-in-effect
+  }, [runInit])
 
   const handleRetry = useCallback(() => {
     setAuthError(null)
     setInitialized(false)
     initStarted = true
     runInit()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [runInit])
 
   if (!initialized) return <AuthLoadingSplash />
 

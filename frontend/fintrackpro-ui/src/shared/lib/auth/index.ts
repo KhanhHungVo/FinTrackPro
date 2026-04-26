@@ -7,3 +7,5 @@ export const authAdapter: IAuthAdapter =
   env.AUTH_PROVIDER === 'auth0' ? auth0Adapter : keycloakAdapter
 
 export type { IAuthAdapter, AuthProfile, LoginOptions }
+export { extractRoles, ADMIN_ROLE } from './extractRoles'
+export type { AuthProviderName } from './extractRoles'

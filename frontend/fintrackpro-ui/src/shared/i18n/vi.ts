@@ -258,6 +258,11 @@ const vi = {
     poweredBy: 'Dữ liệu từ CoinGecko',
     fearGreedIndex: 'Crypto Fear & Greed Index',
   },
+  proLock: {
+    watchlist: 'Danh sách theo dõi',
+    marketIntelligence: 'Phân tích thị trường',
+    tradingSignals: 'Tín hiệu giao dịch',
+  },
   signals: {
     noSignals: 'Chưa có tín hiệu — thêm mã vào danh sách theo dõi.',
     rsiOversold: 'RSI Oversold',

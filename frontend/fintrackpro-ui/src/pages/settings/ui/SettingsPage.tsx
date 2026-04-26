@@ -4,19 +4,23 @@ import { NotificationSettingsForm } from '@/features/notification-settings'
 import { WatchlistManager } from '@/features/manage-watchlist'
 import { SubscriptionSection } from '@/features/upgrade'
 import { ManageCategoriesSection } from '@/features/manage-transaction-categories'
+import { AdminSubscriptionPanel } from '@/features/admin-subscription'
+import { useAuthStore } from '@/features/auth'
 import { cn } from '@/shared/lib/cn'
 
-type TabSlug = 'account' | 'billing' | 'notifications' | 'categories' | 'watchlist'
+type TabSlug = 'account' | 'billing' | 'notifications' | 'categories' | 'watchlist' | 'admin'
 
-function useSettingsTabs() {
+function useSettingsTabs(isAdmin: boolean) {
   const { t } = useTranslation()
-  return [
-    { slug: 'account'       as TabSlug, label: t('settings.account')          },
-    { slug: 'billing'       as TabSlug, label: t('settings.billing')           },
-    { slug: 'notifications' as TabSlug, label: t('settings.notifications_tab') },
-    { slug: 'categories'    as TabSlug, label: t('settings.categories_tab')    },
-    { slug: 'watchlist'     as TabSlug, label: t('settings.watchlist_tab')     },
+  const tabs: { slug: TabSlug; label: string }[] = [
+    { slug: 'account',       label: t('settings.account')          },
+    { slug: 'billing',       label: t('settings.billing')           },
+    { slug: 'notifications', label: t('settings.notifications_tab') },
+    { slug: 'categories',    label: t('settings.categories_tab')    },
+    { slug: 'watchlist',     label: t('settings.watchlist_tab')     },
   ]
+  if (isAdmin) tabs.push({ slug: 'admin', label: '⚙ Admin' })
+  return tabs
 }
 
 function AccountTab() {
@@ -36,11 +40,15 @@ function AccountTab() {
 export function SettingsPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const tabs = useSettingsTabs()
+  const isAdmin = useAuthStore((s) => s.isAdmin)
+  const tabs = useSettingsTabs(isAdmin)
 
   const rawTab = searchParams.get('tab') as TabSlug | null
   const validSlugs = tabs.map((tab) => tab.slug)
-  const activeTab: TabSlug = rawTab && validSlugs.includes(rawTab) ? rawTab : 'account'
+  const activeTab: TabSlug =
+    rawTab && validSlugs.includes(rawTab) && (rawTab !== 'admin' || isAdmin)
+      ? rawTab
+      : 'account'
 
   function handleTabChange(slug: TabSlug) {
     setSearchParams((prev) => {
@@ -99,6 +107,7 @@ export function SettingsPage() {
           {activeTab === 'notifications' && <NotificationSettingsForm />}
           {activeTab === 'categories'    && <ManageCategoriesSection />}
           {activeTab === 'watchlist'     && <WatchlistManager />}
+          {activeTab === 'admin'         && isAdmin && <AdminSubscriptionPanel />}
         </div>
       </div>
 
@@ -109,6 +118,7 @@ export function SettingsPage() {
         {activeTab === 'notifications' && <NotificationSettingsForm />}
         {activeTab === 'categories'    && <ManageCategoriesSection />}
         {activeTab === 'watchlist'     && <WatchlistManager />}
+        {activeTab === 'admin'         && isAdmin && <AdminSubscriptionPanel />}
       </div>
     </div>
   )
