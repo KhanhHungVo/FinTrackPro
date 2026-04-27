@@ -14,7 +14,7 @@ resource "render_project" "fintrackpro" {
 resource "render_postgres" "db" {
   name           = "fintrackpro-db"
   plan           = "free"
-  region         = "oregon"
+  region         = "singapore"
   version        = "18"
   environment_id = render_project.fintrackpro.environments["production"].id
 
