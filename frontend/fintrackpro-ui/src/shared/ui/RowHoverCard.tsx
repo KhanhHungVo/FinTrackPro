@@ -236,7 +236,7 @@ interface RowHoverCardProps {
   className?: string
 }
 
-function RowHoverCard({ data, href, as: Tag = 'div', children, className }: RowHoverCardProps) {
+function RowHoverCard({ data, href, as: Tag = href ? 'a' : 'div', children, className }: RowHoverCardProps) {
   const [visible, setVisible] = useState(false)
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const rowRef = useRef<HTMLElement>(null)
@@ -327,7 +327,7 @@ function RowHoverCard({ data, href, as: Tag = 'div', children, className }: RowH
     onMouseEnter: show,
     onMouseMove: handleMouseMove,
     onMouseLeave: hide,
-    ...(href ? { href } : {}),
+    ...(href ? { href, target: '_blank', rel: 'noopener noreferrer' } : {}),
   }
 
   return (
