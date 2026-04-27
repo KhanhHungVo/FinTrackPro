@@ -324,8 +324,8 @@ All other interactions (navigation, links) are read-only.
 ├─────────────────────────────────────────────────────┤
 │  [Add Transaction Form — visible only when toggled]  │  ← Collapsible form
 ├─────────────────────────────────────────────────────┤
-│  ↕ Date  ↕ Category  Note    ↕ Amount  [✕]          │  ← Sortable column headers
-│  [badge] Category   Note     Amount   Date    [✕]   │  ← Transaction rows
+│  ↕ Date  ↕ Category  Note    ↕ Amount  [✎] [✕]       │  ← Sortable column headers
+│  [badge] Category   Note     Amount   Date  [✎] [✕] │  ← Transaction rows
 │  ...                                                 │
 ├─────────────────────────────────────────────────────┤
 │  < 1 2 3 >   10 ▼ per page                          │  ← Pagination
@@ -360,7 +360,8 @@ All other interactions (navigation, links) are read-only.
 
 **Transaction Table**
 - Sortable column headers: Date (default desc), Amount, Category — click cycles: default → desc → asc → reset; arrow indicator (↑ ↓ ↕)
-- One row per transaction: type badge, category name, note (gray subtext), amount (green/red), date, delete button (✕)
+- One row per transaction: type badge, category name, note (gray subtext), amount (green/red), date, edit button (✎), delete button (✕)
+- Edit button opens `EditTransactionModal` pre-filled with the transaction's current values
 
 **Pagination**
 - Classic `< 1 2 … N >` with ellipsis beyond 7 pages
@@ -386,6 +387,7 @@ All other interactions (navigation, links) are read-only.
 | Click "+ Add" | Toggle form visibility |
 | Toggle Income/Expense | Sets transaction type on form |
 | Fill and submit form | Creates transaction, refreshes list and summary |
+| Click ✎ on a row | Opens `EditTransactionModal` pre-filled with that transaction |
 | Click ✕ on a row | Deletes that transaction, refreshes list and summary |
 | Navigate pagination | Load selected page |
 | Change page size | Reload with new page size; page resets to 1 |
@@ -608,6 +610,7 @@ Active tab is stored in the URL query string (`?tab=<slug>`). Invalid slugs fall
 | `notifications` | Notifications | `NotificationSettingsForm` |
 | `categories` | Categories | `ManageCategoriesSection` |
 | `watchlist` | Watchlist | `WatchlistManager` |
+| `admin` | ⚙ Admin | `AdminSubscriptionPanel` — visible only to users with the Admin role |
 
 ### Regions
 

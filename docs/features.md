@@ -1,6 +1,6 @@
 # FinTrackPro — Features
 
-> Last updated: 2026-03-24
+> Last updated: 2026-04-27
 
 A personal finance and crypto trading companion. Track your spending, manage monthly budgets, journal your trades, and receive automated market alerts — all in one place.
 
@@ -16,6 +16,7 @@ Record every inflow and outflow of money:
 - **Sort** — sort the list by date (default), amount, or category with a single click; direction cycles desc → asc → reset.
 - **Paginated list** — transactions load 20 per page by default (configurable: 10/20/50); pagination controls below the list.
 - **Income vs. expense summary** — the Transactions page KPI cards show a running total of income, expenses, and net balance for the active filter state, sourced from a dedicated summary endpoint. Cards update when filters change and are unaffected by the current page or sort.
+- **Edit transactions** — correct the amount, category, note, or type of any transaction you own via an inline modal.
 - **Delete transactions** — remove any entry you own.
 
 ---
@@ -72,9 +73,9 @@ The engine fetches the last 14 weekly candles from Binance and computes a 14-per
 
 ### Volume Spike — Daily timeframe
 
-The engine compares the current 24-hour trading volume against the average volume of the previous 6 daily candles:
+The engine compares the current 24-hour trading volume against the average volume of the previous 7 daily candles:
 
-- **Volume Spike** — fires when today's volume is 2× or more above that 6-day average. Example: *"Volume spike detected on ETHUSDT: 3.4x above 7-day average."* An unusual surge in volume often precedes or accompanies a significant price move.
+- **Volume Spike** — fires when today's volume is 2× or more above that 7-day average. Example: *"Volume spike detected on ETHUSDT: 3.4x above 7-day average."* An unusual surge in volume often precedes or accompanies a significant price move.
 
 ### Deduplication
 
