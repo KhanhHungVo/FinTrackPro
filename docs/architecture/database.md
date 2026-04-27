@@ -170,6 +170,20 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 
 ---
 
+### BudgetAlertLogs
+| Column | Type | Constraints |
+|---|---|---|
+| Id | uuid | PK |
+| UserId | uuid | FK → Users, CASCADE DELETE |
+| Category | character varying(100) | NOT NULL |
+| Month | character varying(7) | NOT NULL (YYYY-MM) |
+| CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
+| — | — | UNIQUE INDEX (UserId, Category, Month) |
+
+> Internal dedup marker used by `BudgetOverrunJob`. Records that an overrun alert was sent for a given user / category / month. Never exposed via API. The unique index prevents duplicate rows even under concurrent job runs.
+
+---
+
 ## Running Migrations
 
 Migrations are **applied automatically at startup** via `db.Database.MigrateAsync()` in `Program.cs`. No manual `dotnet ef database update` is needed in CI or production.

@@ -1,13 +1,13 @@
 # Background Jobs
 
-FinTrackPro runs four Hangfire recurring jobs plus one hosted-service warm-up. All are registered in `Program.cs`. Hangfire storage uses the active database provider — PostgreSQL (`Hangfire.PostgreSql`) in production on Render, SQL Server (`Hangfire.SqlServer`) for local Docker dev.
+FinTrackPro runs three active Hangfire recurring jobs plus one hosted-service warm-up. All active jobs are registered in `Program.cs`. Hangfire storage uses the active database provider — PostgreSQL (`Hangfire.PostgreSql`) in production on Render, SQL Server (`Hangfire.SqlServer`) for local Docker dev.
 
-| Job | Schedule | Purpose |
-|---|---|---|
-| `MarketSignalJob` | Every 4 hours | RSI + volume spike signals for watched symbols |
-| `BudgetOverrunJob` | Daily | Detect and alert on budget limit breaches (USD-normalised) |
-| `ExchangeRateSyncJob` | Every 8 hours + startup | Warm and refresh in-memory exchange rate cache |
-| `IamUserSyncJob` | Daily | Deactivate local users deleted from IAM provider |
+| Job | Schedule | Status | Purpose |
+|---|---|---|---|
+| `MarketSignalJob` | Every 4 hours | Active | RSI + volume spike signals for watched symbols |
+| `BudgetOverrunJob` | Daily | Active | Detect and alert on budget limit breaches (USD-normalised) |
+| `ExchangeRateSyncJob` | Every 8 hours + startup | Active | Warm and refresh in-memory exchange rate cache |
+| `IamUserSyncJob` | Daily | **Commented out** | Deactivate local users deleted from IAM provider |
 
 The Hangfire dashboard is available at `/hangfire` (requires `Admin` role).
 
@@ -69,14 +69,14 @@ sequenceDiagram
 **Key details:**
 - Signal dedup window: 24 hours per `(UserId, Symbol, SignalType)` triple
 - RSI computed on 14 weekly candles (1W timeframe)
-- Volume spike threshold: 2× the 6-day average daily volume
+- Volume spike threshold: 2× the 7-day average daily volume (8 klines fetched; today's open candle excluded from baseline via `Take(7)`; today's live volume comes from the 24h ticker)
 - Errors per symbol are caught and logged; job continues to next symbol
 
 ---
 
 ## BudgetOverrunJob
 
-Runs daily. For each budget in the current month, loads the user's expenses in that category and normalises all amounts to USD using each record's stored `RateToUsd`. If USD-normalised spending exceeds the USD-normalised limit and no alert has been sent yet this month, it sends one Telegram notification (formatted in the budget's own currency) and records a marker `Signal` to prevent duplicate alerts.
+Runs daily. For each budget in the current month, loads the user's expenses in that category and normalises all amounts to USD using each record's stored `RateToUsd`. If USD-normalised spending exceeds the USD-normalised limit and no alert has been sent yet this month, it sends one Telegram notification (formatted in the budget's own currency) and inserts a `BudgetAlertLog` row to prevent duplicate alerts.
 
 ```mermaid
 sequenceDiagram
@@ -84,7 +84,7 @@ sequenceDiagram
     participant Job as BudgetOverrunJob
     participant BR as BudgetRepo
     participant TR as TransactionRepo
-    participant SR as SignalRepo
+    participant AL as BudgetAlertLogs (DbContext)
     participant NS as NotificationService
     participant Telegram
     participant DB as DbContext
@@ -101,11 +101,12 @@ sequenceDiagram
         Note over Job: spentInUsd = Sum(t.Amount / t.RateToUsd)
 
         alt spentInUsd > budgetInUsd
-            Job->>SR: ExistsAsync(userId, "BUDGET:<category>", FundingRate, currentMonth)
-            alt No marker exists (first breach this month)
+            Job->>AL: AnyAsync(userId, category, currentMonth)
+            alt No log row exists (first breach this month)
                 Job->>NS: NotifyAsync(userId, "Budget Alert", message in budget.Currency)
                 NS->>Telegram: SendMessage(chatId, text)
-                Job->>SR: Add(Signal) — marker with Symbol="BUDGET:<category>", Type=FundingRate
+                Job->>AL: Add(BudgetAlertLog) — dedup marker
+                Job->>DB: SaveChangesAsync
             end
         end
     end
@@ -113,10 +114,9 @@ sequenceDiagram
 
 **Key details:**
 - All comparisons are in USD using stored `RateToUsd` — avoids live rate calls and is consistent with historical data
-- Alert fires only once per `(UserId, Category, Month)` — first breach only
+- Alert fires only once per `(UserId, Category, Month)` — first breach only, enforced by unique index on `BudgetAlertLogs`
 - Notification message formats amounts back in `budget.Currency` for human readability
-- Marker signal uses `SignalType.FundingRate` as a workaround (no dedicated `BudgetOverrun` type yet)
-- `Symbol` field stores `"BUDGET:<category>"` to namespace budget markers from market signals
+- Dedup uses the dedicated `BudgetAlertLogs` table — the `Signals` table contains only market signals
 
 ---
 

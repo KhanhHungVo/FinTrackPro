@@ -74,9 +74,9 @@ Strict inward-only dependency flow:
 | Application | `FinTrackPro.Application` | CQRS (MediatR commands/queries/handlers), DTOs, FluentValidation, MediatR pipeline |
 | Infrastructure | `FinTrackPro.Infrastructure` | EF Core (Code-First + migrations), repository impls, IAM adapters, `IDataSeeder` seeders, interceptors (audit timestamps), Telegram.Bot, Skender.Stock.Indicators |
 | API | `FinTrackPro.API` | `BaseApiController`, controllers, DI registration, `ExceptionHandlingMiddleware`, `HangfireBasicAuthFilter`, health checks (`/health`), Scalar docs |
-| BackgroundJobs | `FinTrackPro.BackgroundJobs` | Hangfire: `MarketSignalJob` (4h), `BudgetOverrunJob` (daily), `IamUserSyncJob` (daily) |
+| BackgroundJobs | `FinTrackPro.BackgroundJobs` | Hangfire: `MarketSignalJob` (4h), `BudgetOverrunJob` (daily), `ExchangeRateSyncJob` (8h + startup); `IamUserSyncJob` exists but is currently commented out in Program.cs |
 
-**MediatR pipeline order:** `ValidationBehavior` → `LoggingBehavior` → `EnsureUserBehavior` (auto-provisions `AppUser` on first login).
+**MediatR pipeline order:** `ValidationBehavior` → `LoggingBehavior`. User auto-provisioning runs in `UserContextMiddleware` before MediatR, not as a pipeline behavior.
 
 **Key conventions:**
 - DTOs use explicit `operator` conversions (no AutoMapper)
@@ -91,7 +91,7 @@ Strict inward-only dependency flow:
 | `NotFoundException` | 404 |
 | `AuthorizationException` | 403 |
 | `ConflictException` | 409 |
-| `PlanLimitExceededException` | 403 (freemium gate) |
+| `PlanLimitExceededException` | 402 (freemium gate) |
 | Unhandled | 500 |
 
 ### Frontend — Feature-Sliced Design (FSD)

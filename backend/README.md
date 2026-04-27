@@ -109,4 +109,4 @@ src/
 └── FinTrackPro.BackgroundJobs/ # Hangfire job definitions and schedules
 ```
 
-See [../docs/architecture.md](../docs/architecture.md) for the full architecture overview.
+See [../docs/architecture/overview.md](../docs/architecture/overview.md) for the full architecture overview.
