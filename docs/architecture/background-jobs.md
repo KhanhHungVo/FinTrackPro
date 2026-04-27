@@ -1,12 +1,13 @@
 # Background Jobs
 
-FinTrackPro runs three active Hangfire recurring jobs plus one hosted-service warm-up. All active jobs are registered in `Program.cs`. Hangfire storage uses the active database provider — PostgreSQL (`Hangfire.PostgreSql`) in production on Render, SQL Server (`Hangfire.SqlServer`) for local Docker dev.
+FinTrackPro runs four active Hangfire recurring jobs plus one hosted-service warm-up. All active jobs are registered in `Program.cs`. Hangfire storage uses the active database provider — PostgreSQL (`Hangfire.PostgreSql`) in production on Render, SQL Server (`Hangfire.SqlServer`) for local Docker dev.
 
 | Job | Schedule | Status | Purpose |
 |---|---|---|---|
 | `MarketSignalJob` | Every 4 hours | Active | RSI + volume spike signals for watched symbols |
 | `BudgetOverrunJob` | Daily | Active | Detect and alert on budget limit breaches (USD-normalised) |
 | `ExchangeRateSyncJob` | Every 8 hours + startup | Active | Warm and refresh in-memory exchange rate cache |
+| `SignalCleanupJob` | Daily | Active | Hard-delete dismissed signals older than 90 days |
 | `IamUserSyncJob` | Daily | **Commented out** | Deactivate local users deleted from IAM provider |
 
 The Hangfire dashboard is available at `/hangfire` (requires `Admin` role).
@@ -128,6 +129,17 @@ Implements `IHostedService` (startup warm-up) and is also scheduled as a Hangfir
 - USD is short-circuited: returns `1.0m` without a network call
 - Per-currency errors are caught and logged; other currencies continue
 - Registered as both `AddScoped<ExchangeRateSyncJob>()` and `AddHostedService<ExchangeRateSyncJob>()` so it runs at startup and via Hangfire
+
+---
+
+## SignalCleanupJob
+
+Runs daily. Hard-deletes all `Signals` rows where `DismissedAt IS NOT NULL AND DismissedAt < UtcNow - 90 days`, using a single bulk `ExecuteDeleteAsync` (no entity loading, no `SaveChangesAsync`). Logs the deleted row count at `Information` level. All exceptions are caught and logged — the job never throws.
+
+**Key details:**
+- 90-day retention window; active signals (never dismissed) are never deleted
+- Uses `ISignalRepository.DeleteOldDismissedAsync(cutoff)` — bulk SQL DELETE via EF `ExecuteDeleteAsync`, bypasses the change tracker
+- Served by the partial index `IX_Signals_DismissedAt WHERE DismissedAt IS NOT NULL` for an efficient cross-user sweep
 
 ---
 

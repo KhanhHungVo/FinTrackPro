@@ -84,6 +84,10 @@ Each signal type (RSI Oversold, RSI Overbought, Volume Spike) is suppressed for 
 
 All generated signals are stored in your account. Each entry shows the symbol, signal type, the computed value (e.g. the RSI reading or the volume ratio), the timeframe analysed, and the timestamp. You can retrieve up to 1,000 of your most recent signals.
 
+### Dismissing signals
+
+Each signal card has an ✕ button. Clicking it immediately removes the card from your feed (optimistic UI — no confirmation dialog needed for auto-generated data). The signal is soft-deleted (`DismissedAt` timestamp set) and excluded from subsequent fetches. If the server call fails the card reappears with an error toast. Dismissed signals are permanently deleted after 90 days by a daily cleanup job; active signals are never automatically deleted.
+
 ---
 
 ## 6. Market Data

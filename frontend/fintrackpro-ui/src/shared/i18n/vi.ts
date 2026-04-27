@@ -273,6 +273,8 @@ const vi = {
     fundingRate: 'Funding Rate',
     emaCross: 'EMA Cross',
     bbSqueeze: 'BB Squeeze',
+    dismiss: 'Bỏ qua tín hiệu',
+    dismissError: 'Không thể bỏ qua tín hiệu',
   },
   error: {
     tryAgain: 'Thử lại',

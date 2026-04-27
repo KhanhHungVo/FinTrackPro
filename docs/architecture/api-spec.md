@@ -503,8 +503,7 @@ The response does **not** include a `tradeUrl` field. Trade links are derived cl
 ## Signals
 
 ### `GET /api/signals`
-Returns the latest signals for the user. **Requires Pro plan.** Free / expired-Pro users receive
-HTTP 402 with `feature: "watchlist"`.
+Returns the latest **active** (non-dismissed) signals for the user. **Requires Pro plan.** Free / expired-Pro users receive HTTP 402 with `feature: "watchlist"`.
 
 **Query params:**
 | Param | Type | Default |
@@ -522,12 +521,29 @@ HTTP 402 with `feature: "watchlist"`.
     "value": 28.5,
     "timeframe": "1W",
     "isNotified": true,
-    "createdAt": "2026-03-12T08:00:00Z"
+    "createdAt": "2026-03-12T08:00:00Z",
+    "dismissedAt": null
   }
 ]
 ```
 
 **SignalType values:** `RsiOversold | RsiOverbought | VolumeSpike | FundingRate | EmaCross | BbSqueeze`
+
+---
+
+### `PATCH /api/signals/{id}/dismiss`
+Soft-deletes a signal by setting `DismissedAt = UtcNow`. Idempotent — a second call on the same signal returns `204` with no state change. The signal is hidden from `GET /api/signals` immediately. `SignalCleanupJob` hard-deletes it after 90 days.
+
+**Auth:** Bearer JWT, `User` role. Signal must belong to the calling user (403 otherwise).
+
+**Response 204:** No content.
+
+**Errors:**
+| Status | Reason |
+|---|---|
+| 401 | Missing or invalid JWT |
+| 403 | Signal belongs to a different user |
+| 404 | Signal not found |
 
 ---
 

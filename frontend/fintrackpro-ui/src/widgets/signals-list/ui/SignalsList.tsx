@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useSignals } from '@/entities/signal'
+import { DismissSignalButton } from '@/features/dismiss-signal'
 
 const signalColors: Record<string, string> = {
   RsiOversold: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
@@ -54,6 +55,7 @@ export function SignalsList({ count = 20 }: SignalsListProps) {
             <p className="text-xs text-gray-400 dark:text-slate-500 whitespace-nowrap">
               {new Date(signal.createdAt).toLocaleDateString()}
             </p>
+            <DismissSignalButton signalId={signal.id} />
           </div>
         )
       })}

@@ -12,6 +12,7 @@ public class Signal : CreatedEntity
     public decimal Value { get; private set; }
     public string Timeframe { get; private set; } = string.Empty;
     public bool IsNotified { get; private set; }
+    public DateTime? DismissedAt { get; private set; }
 
 
     private Signal() { }
@@ -34,4 +35,10 @@ public class Signal : CreatedEntity
     }
 
     public void MarkNotified() => IsNotified = true;
+
+    public void Dismiss()
+    {
+        if (DismissedAt.HasValue) return;
+        DismissedAt = DateTime.UtcNow;
+    }
 }

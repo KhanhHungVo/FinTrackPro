@@ -11,6 +11,7 @@ public static class DependencyInjection
         services.AddScoped<BudgetOverrunJob>();
         services.AddScoped<IamUserSyncJob>();
         services.AddScoped<ExchangeRateSyncJob>();
+        services.AddScoped<SignalCleanupJob>();
 
         return services;
     }

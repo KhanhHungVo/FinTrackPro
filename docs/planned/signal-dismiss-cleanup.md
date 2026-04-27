@@ -1,6 +1,6 @@
 # Technical Design: Signal Dismiss Flow + 90-Day Auto-Cleanup
 
-**Status:** Draft
+**Status:** Implemented (2026-04-27)
 **Active surfaces:** FE / BE / DB
 **Stack:**
   - FE: React 19 + Vite, Feature-Sliced Design, React Query v5, Axios, i18next, lucide-react

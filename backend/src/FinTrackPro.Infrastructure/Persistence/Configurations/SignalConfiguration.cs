@@ -16,7 +16,11 @@ public class SignalConfiguration : IEntityTypeConfiguration<Signal>
         builder.Property(s => s.Value).HasPrecision(18, 8);
         builder.Property(s => s.Timeframe).HasMaxLength(10);
         builder.Property(s => s.CreatedAt).IsRequired().HasDefaultValueSql("NOW()").ValueGeneratedNever();
+        builder.Property(s => s.DismissedAt).IsRequired(false);
         builder.HasIndex(s => new { s.UserId, s.CreatedAt });
+        builder.HasIndex(s => s.DismissedAt)
+               .HasFilter("\"DismissedAt\" IS NOT NULL")
+               .HasDatabaseName("IX_Signals_DismissedAt");
 
         builder.HasOne<AppUser>()
                .WithMany()

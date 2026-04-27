@@ -274,6 +274,8 @@ const en = {
     fundingRate: 'Funding Rate',
     emaCross: 'EMA Cross',
     bbSqueeze: 'BB Squeeze',
+    dismiss: 'Dismiss signal',
+    dismissError: 'Failed to dismiss signal',
   },
   error: {
     tryAgain: 'Try again',

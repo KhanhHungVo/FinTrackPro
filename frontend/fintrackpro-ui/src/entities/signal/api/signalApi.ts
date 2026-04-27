@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/shared/api/client'
 import type { FearGreed, MarketCapCoin, Signal, TrendingCoin } from '../model/types'
 
@@ -12,6 +12,34 @@ export function useSignals(count = 20) {
       return data
     },
     staleTime: 1000 * 60 * 4, // 4 minutes — matches job interval
+  })
+}
+
+export function useDismissSignal() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => apiClient.patch(`/api/signals/${id}/dismiss`),
+
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['signals'] })
+
+      const snapshots = queryClient.getQueriesData<Signal[]>({ queryKey: ['signals'] })
+
+      queryClient.setQueriesData<Signal[]>({ queryKey: ['signals'] }, (prev) =>
+        prev ? prev.filter((s) => s.id !== id) : prev,
+      )
+
+      return { snapshots }
+    },
+
+    onError: (_err, _id, context) => {
+      context?.snapshots.forEach(([key, data]) => queryClient.setQueryData(key, data))
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['signals'] })
+    },
   })
 }
 

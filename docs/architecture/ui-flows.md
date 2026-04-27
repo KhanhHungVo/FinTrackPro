@@ -195,6 +195,7 @@ Full-viewport dark-themed marketing page composed of stacked sections:
 **Contextual Signals** (`ContextualSignalsWidget`) — hidden when watchlist is empty
 - Wraps `SignalsList` (5 items) with section heading + "Manage watchlist" link to `/settings?tab=watchlist`
 - Full signals list available on the Market page
+- Each signal card has an ✕ dismiss button (`DismissSignalButton`); clicking removes it optimistically with rollback on error
 
 ### States
 | State | Description |
@@ -274,8 +275,9 @@ None — Dashboard is read-only (all widgets are display-only).
 - **DataFreshnessBadge** in the card header (same behaviour as Trending Coins)
 
 **Recent Signals (full list)**
-- Up to 20 latest market signals across all watched symbols
-- Each row: signal type badge (colour-coded) + symbol + message preview + timestamp
+- Up to 20 latest **active** (non-dismissed) market signals across all watched symbols
+- Each row: signal type badge (colour-coded) + symbol + message preview + timestamp + ✕ dismiss button
+- Dismiss removes the card optimistically; rolls back with an error toast on failure
 - Empty state: "No signals yet — add symbols to your watchlist."
 
 ### States

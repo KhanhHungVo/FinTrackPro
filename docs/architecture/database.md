@@ -152,7 +152,9 @@ Column types below show PostgreSQL (production). SQL Server equivalents: `uuid` 
 | Timeframe | character varying(10) | |
 | IsNotified | boolean | NOT NULL |
 | CreatedAt | timestamp | NOT NULL, DEFAULT NOW() |
+| DismissedAt | timestamptz | NULL (set on user dismiss) |
 | — | — | INDEX (UserId, CreatedAt) |
+| — | — | PARTIAL INDEX (DismissedAt) WHERE DismissedAt IS NOT NULL — `IX_Signals_DismissedAt` |
 
 ---
 
