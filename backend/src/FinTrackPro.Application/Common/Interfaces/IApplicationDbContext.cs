@@ -15,6 +15,7 @@ public interface IApplicationDbContext
     DbSet<WatchedSymbol> WatchedSymbols { get; }
     DbSet<Signal> Signals { get; }
     DbSet<NotificationPreference> NotificationPreferences { get; }
+    DbSet<BudgetAlertLog> BudgetAlertLogs { get; }
 
     Task<IDbContextTransaction> BeginTransactionAsync(System.Data.IsolationLevel isolationLevel, CancellationToken cancellationToken);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);

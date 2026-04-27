@@ -1,4 +1,5 @@
 using FinTrackPro.Application.Common.Interfaces;
+using FinTrackPro.Domain.Entities;
 using FinTrackPro.Domain.Enums;
 using FinTrackPro.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,8 @@ namespace FinTrackPro.BackgroundJobs.Jobs;
 /// <summary>
 /// Runs daily. Checks each user's budgets for the current month.
 /// All amounts are normalised to USD via stored RateToUsd for currency-agnostic comparison.
-/// Fires a Telegram alert once per category per month on first breach.
+/// Fires a Telegram alert once per category per month on first breach,
+/// tracked via BudgetAlertLog to avoid repeat notifications.
 /// </summary>
 public class BudgetOverrunJob(
     IApplicationDbContext context,
@@ -35,30 +37,31 @@ public class BudgetOverrunJob(
                              && t.BudgetMonth == currentMonth)
                     .ToListAsync(cancellationToken);
 
-                // Normalise all amounts to USD using stored rates
                 var budgetInUsd = budget.LimitAmount / budget.RateToUsd;
                 var spentInUsd  = transactions.Sum(t => t.Amount / t.RateToUsd);
 
                 if (spentInUsd <= budgetInUsd) continue;
 
-                // Check if already notified this month for this budget
-                var alreadyAlerted = await context.Signals
-                    .AnyAsync(s => s.UserId == budget.UserId
-                               && s.Symbol == $"BUDGET:{budget.Category}"
-                               && s.SignalType == SignalType.FundingRate  // reused as budget overrun marker
-                               && s.CreatedAt.ToString("yyyy-MM") == currentMonth,
+                var alreadyAlerted = await context.BudgetAlertLogs
+                    .AnyAsync(l => l.UserId == budget.UserId
+                               && l.Category == budget.Category
+                               && l.Month == currentMonth,
                         cancellationToken);
 
                 if (alreadyAlerted) continue;
 
-                // Format back in budget's own currency for the alert message
-                var spentInBudgetCurrency = spentInUsd  * budget.RateToUsd;
+                var spentInBudgetCurrency = spentInUsd * budget.RateToUsd;
                 var overage              = spentInBudgetCurrency - budget.LimitAmount;
                 var message = $"Budget overrun: '{budget.Category}' spent {spentInBudgetCurrency:F2} {budget.Currency} " +
                               $"of {budget.LimitAmount:F2} {budget.Currency} limit ({overage:F2} {budget.Currency} over).";
 
                 await notificationService.NotifyAsync(
                     budget.UserId, $"Budget Alert: {budget.Category}", message, cancellationToken);
+
+                context.BudgetAlertLogs.Add(
+                    BudgetAlertLog.Create(budget.UserId, budget.Category, currentMonth));
+
+                await context.SaveChangesAsync(cancellationToken);
 
                 logger.LogInformation(
                     "Budget overrun alert sent for user {UserId} / category {Category}",

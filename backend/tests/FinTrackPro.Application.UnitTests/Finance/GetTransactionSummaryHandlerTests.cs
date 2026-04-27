@@ -21,6 +21,7 @@ internal class TestDbContext(DbContextOptions options) : DbContext(options), IAp
     public DbSet<WatchedSymbol> WatchedSymbols => Set<WatchedSymbol>();
     public DbSet<Signal> Signals => Set<Signal>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<BudgetAlertLog> BudgetAlertLogs => Set<BudgetAlertLog>();
 
     public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(
         System.Data.IsolationLevel isolationLevel, CancellationToken cancellationToken)
