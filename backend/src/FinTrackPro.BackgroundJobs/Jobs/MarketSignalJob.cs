@@ -102,13 +102,24 @@ public class MarketSignalJob(
         var ticker = await binanceService.Get24HrTickerAsync(watched.Symbol, cancellationToken);
         if (ticker is null) return;
 
-        // Volume spike: compare current volume to an estimated baseline from klines
+        // Volume spike detection algorithm: Rolling-Average Ratio (RAR)
+        //   baseline = simple mean of the last 7 complete daily candles (klines[0..6])
+        //   signal   = live 24h ticker volume (Get24HrTickerAsync) — today's open candle
+        //   trigger  = signal / baseline >= 2.0×
+        //
+        // We fetch 8 candles and take(7) to exclude today's still-open kline from the
+        // baseline — today's live volume comes from the ticker, not the incomplete candle.
+        // Threshold of 2× is a simple heuristic; literature uses 1.5×–3× depending on
+        // asset volatility. See: Blume, Easley & O'Hara (1994) "Market Statistics and
+        // Technical Analysis" (JF) for volume-price relationship theory; Granville's OBV
+        // for volume trend context; and Buff Dormeier's "Investing with Volume Analysis"
+        // for modern spike detection approaches.
         var klines = (await binanceService.GetKlinesAsync(
-            watched.Symbol, "1d", 7, cancellationToken)).ToList();
+            watched.Symbol, "1d", 8, cancellationToken)).ToList();
 
-        if (klines.Count < 7) return;
+        if (klines.Count < 8) return;
 
-        var avgVolume = klines.Take(6).Average(k => (double)k.Volume);
+        var avgVolume = klines.Take(7).Average(k => (double)k.Volume);
         if (avgVolume == 0) return;
 
         var spikeRatio = (double)ticker.Volume / avgVolume;
