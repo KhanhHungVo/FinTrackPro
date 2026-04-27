@@ -37,6 +37,11 @@ const vi = {
     sortBy: 'Sắp xếp theo',
     total: 'Tổng',
     saved: 'Đã lưu',
+    close: 'Đóng',
+  },
+  truncatedText: {
+    dragHandle: 'Kéo để đóng',
+    viewFullText: 'Toàn bộ nội dung',
   },
   dashboard: {
     title: 'Tổng quan',

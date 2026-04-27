@@ -1,5 +1,6 @@
 import { formatCurrency } from '@/shared/lib/formatCurrency'
 import { cn } from '@/shared/lib/cn'
+import { TruncatedText } from '@/shared/ui'
 import type { ActivityItem as ActivityItemData } from '../lib/useMergedActivity'
 
 function relativeTime(dateStr: string): string {
@@ -42,9 +43,7 @@ export function ActivityItem({ item, locale }: ActivityItemProps) {
   return (
     <li className={cn('flex items-center gap-3 py-2.5 border-l-2 pl-3 rounded-r', borderColor)}>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium capitalize text-gray-800 dark:text-slate-200 truncate">
-          {item.label}
-        </p>
+        <TruncatedText text={item.label} className="text-sm font-medium capitalize text-gray-800 dark:text-slate-200" as="p" />
         <p className="text-xs text-gray-400 dark:text-slate-500">{item.detail}</p>
       </div>
       <span className={cn('text-sm font-semibold tabular-nums', amountColor)}>

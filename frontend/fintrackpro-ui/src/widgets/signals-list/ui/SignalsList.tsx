@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useSignals } from '@/entities/signal'
 import { DismissSignalButton } from '@/features/dismiss-signal'
+import { TruncatedText } from '@/shared/ui'
 
 const signalColors: Record<string, string> = {
   RsiOversold: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
@@ -50,7 +51,7 @@ export function SignalsList({ count = 20 }: SignalsListProps) {
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{signal.symbol}</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{signal.message}</p>
+              <TruncatedText text={signal.message} className="text-xs text-gray-500 dark:text-slate-400" as="p" />
             </div>
             <p className="text-xs text-gray-400 dark:text-slate-500 whitespace-nowrap">
               {new Date(signal.createdAt).toLocaleDateString()}

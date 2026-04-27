@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { useWatchlistAnalysis } from '@/entities/watched-symbol'
-import { DataFreshnessBadge } from '@/shared/ui'
+import { DataFreshnessBadge, RowHoverCard } from '@/shared/ui'
 
 function formatPrice(value: number | null): string {
   if (value == null) return '—'
@@ -153,9 +153,21 @@ export function WatchlistAnalysisWidget() {
                 {isLoading
                   ? Array.from({ length: 3 }, (_, i) => <SkeletonRow key={i} />)
                   : items?.map((item) => (
-                      <li
+                      <RowHoverCard
                         key={item.symbol}
-                        className={`${ROW_GRID} items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2`}
+                        as="li"
+                        data={{
+                          symbol: item.symbol,
+                          price: item.price,
+                          change24h: item.change24h,
+                          rsi: {
+                            '1h': item.rsi1h,
+                            '4h': item.rsi4h,
+                            daily: item.rsiDaily,
+                            weekly: item.rsiWeekly,
+                          },
+                        }}
+                        className={`${ROW_GRID} items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 gap-2 hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors duration-[120ms]`}
                       >
                         <span className="font-mono text-[12px] font-semibold text-gray-800 dark:text-slate-200 tracking-[0.04em] truncate">
                           {item.symbol}
@@ -181,7 +193,7 @@ export function WatchlistAnalysisWidget() {
                         <span className="flex justify-end">
                           <TradeButton symbol={item.symbol} />
                         </span>
-                      </li>
+                      </RowHoverCard>
                     ))}
               </ul>
             </div>

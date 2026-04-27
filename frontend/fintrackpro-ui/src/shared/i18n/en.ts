@@ -38,6 +38,11 @@ const en = {
     sortBy: 'Sort by',
     total: 'Total',
     saved: 'Saved',
+    close: 'Close',
+  },
+  truncatedText: {
+    dragHandle: 'Drag to dismiss',
+    viewFullText: 'Full text',
   },
   dashboard: {
     title: 'Dashboard',

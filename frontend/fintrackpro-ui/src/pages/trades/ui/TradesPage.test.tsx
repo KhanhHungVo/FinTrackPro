@@ -39,6 +39,7 @@ vi.mock('@/shared/ui', () => ({
   ConfirmDeleteDialog: () => null,
   Pagination: () => null,
   SortableColumnHeader: ({ label }: { label: string }) => <span>{label}</span>,
+  RowHoverCard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),

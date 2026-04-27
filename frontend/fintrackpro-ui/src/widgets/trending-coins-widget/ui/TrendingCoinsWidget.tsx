@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useTrendingCoins } from '@/entities/signal'
-import { DataFreshnessBadge } from '@/shared/ui'
+import { DataFreshnessBadge, RowHoverCard } from '@/shared/ui'
 
 const COINGECKO_BASE = 'https://www.coingecko.com/en/coins'
 
@@ -71,18 +71,27 @@ export function TrendingCoinsWidget() {
               ? Array.from({ length: 10 }, (_, i) => <SkeletonRow key={i} />)
               : coins?.map((coin) => (
                   <li key={coin.id}>
-                    <a
-                      className="group grid [grid-template-columns:40px_1fr_100px_64px_64px_64px] items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 no-underline text-inherit border-l-2 border-l-transparent transition-[background,border-left-color] duration-[120ms] ease-[ease] cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 hover:border-l-gray-500 gap-2"
+                    <RowHoverCard
                       href={`${COINGECKO_BASE}/${coin.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      data={{
+                        name: coin.name,
+                        symbol: coin.symbol,
+                        rank: coin.marketCapRank,
+                        price: coin.price,
+                        change1h: coin.change1h,
+                        change24h: coin.change24h,
+                        change7d: coin.change7d,
+                      }}
+                      className="group grid [grid-template-columns:40px_1fr_100px_64px_64px_64px] items-center px-4 py-[9px] border-b border-gray-50 dark:border-white/5 last:border-b-0 no-underline text-inherit border-l-2 border-l-transparent transition-[background,border-left-color] duration-[120ms] ease-[ease] cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 hover:border-l-gray-500 gap-2"
                     >
                       <span className="font-mono text-[11px] text-gray-400 dark:text-slate-500 tracking-[0.02em]">
                         #{coin.marketCapRank}
                       </span>
-                      <span className="text-[13px] font-medium text-gray-900 dark:text-slate-200 tracking-[0.01em] whitespace-nowrap overflow-hidden text-ellipsis pr-2">
-                        {coin.name}
-                        <span className="ml-1.5 font-mono text-[11px] font-medium text-gray-500 dark:text-slate-400 tracking-[0.06em]">
+                      <span className="flex items-center min-w-0 gap-1.5">
+                        <span className="truncate text-[13px] font-medium text-gray-900 dark:text-slate-200 tracking-[0.01em]">
+                          {coin.name}
+                        </span>
+                        <span className="font-mono text-[11px] font-medium text-gray-500 dark:text-slate-400 tracking-[0.06em] flex-shrink-0">
                           {coin.symbol.toUpperCase()}
                         </span>
                       </span>
@@ -98,7 +107,7 @@ export function TrendingCoinsWidget() {
                       <span className="font-mono text-[11px] text-right">
                         <PctCell value={coin.change7d} />
                       </span>
-                    </a>
+                    </RowHoverCard>
                   </li>
                 ))}
           </ul>

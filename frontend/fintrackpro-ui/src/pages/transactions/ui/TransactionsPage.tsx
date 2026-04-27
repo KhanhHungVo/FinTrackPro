@@ -18,7 +18,7 @@ import { errorToastMessage } from '@/shared/lib/apiError'
 import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
 import { useDebounce } from '@/shared/lib/useDebounce'
 import { useCategoryLabel } from '@/shared/lib/useCategoryLabel'
-import { ConfirmDeleteDialog, Pagination, SortableColumnHeader } from '@/shared/ui'
+import { ConfirmDeleteDialog, Pagination, SortableColumnHeader, TruncatedText } from '@/shared/ui'
 
 type SortDir = 'asc' | 'desc' | null
 
@@ -200,9 +200,9 @@ export function TransactionsPage() {
                     {tx.type === 'Income' ? t('transactions.income') : t('transactions.expense')}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{resolveCategoryLabel(tx.category)}</p>
+                    <TruncatedText text={resolveCategoryLabel(tx.category)} className="text-sm font-medium" as="p" />
                     {tx.note && (
-                      <p className="truncate text-xs text-gray-400 dark:text-slate-500">{tx.note}</p>
+                      <TruncatedText text={tx.note} className="text-xs text-gray-400 dark:text-slate-500" as="p" />
                     )}
                   </div>
                 </div>

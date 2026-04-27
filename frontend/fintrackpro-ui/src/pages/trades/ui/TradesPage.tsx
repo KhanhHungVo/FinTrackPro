@@ -17,7 +17,8 @@ import { cn } from '@/shared/lib/cn'
 import { errorToastMessage } from '@/shared/lib/apiError'
 import { useGuardedMutation } from '@/shared/lib/useGuardedMutation'
 import { useDebounce } from '@/shared/lib/useDebounce'
-import { ConfirmDeleteDialog, Pagination, SortableColumnHeader } from '@/shared/ui'
+import { ConfirmDeleteDialog, Pagination, SortableColumnHeader, RowHoverCard } from '@/shared/ui'
+import type { RowHoverCardData } from '@/shared/ui'
 
 type SortDir = 'asc' | 'desc' | null
 
@@ -191,9 +192,54 @@ export function TradesPage() {
                     ? convertAmount(pnlRaw, trade.rateToUsd, preferredRate)
                     : null
                   const displayFees = convertAmount(trade.fees, trade.rateToUsd, preferredRate)
+                  const displayEntry = convertAmount(trade.entryPrice, trade.rateToUsd, preferredRate)
+                  const displayExit = displayPrice != null
+                    ? convertAmount(displayPrice, trade.rateToUsd, preferredRate)
+                    : null
+
+                  const hoverData: RowHoverCardData = {
+                    symbol: trade.symbol,
+                    badges: [
+                      {
+                        label: trade.direction,
+                        color: trade.direction === 'Long' ? 'green' : 'red',
+                      },
+                      {
+                        label: trade.status,
+                        color: isOpen ? 'emerald' : 'gray',
+                      },
+                    ],
+                    extra: [
+                      {
+                        label: t('trades.entryPrice'),
+                        value: formatCurrency(displayEntry, currency, i18n.language),
+                      },
+                      ...(displayExit != null ? [{
+                        label: isOpen ? t('trades.currentPrice') : t('trades.exitPrice'),
+                        value: formatCurrency(displayExit, currency, i18n.language),
+                      }] : []),
+                      ...(displayPnl != null ? [{
+                        label: isOpen ? t('trades.unrealizedPnl') : t('trades.pnl'),
+                        value: `${displayPnl >= 0 ? '+' : ''}${formatCurrency(displayPnl, currency, i18n.language)}`,
+                        highlight: (displayPnl >= 0 ? 'green' : 'red') as 'green' | 'red',
+                      }] : []),
+                      {
+                        label: t('trades.positionSize'),
+                        value: String(trade.positionSize),
+                      },
+                      {
+                        label: t('trades.fees'),
+                        value: formatCurrency(displayFees, currency, i18n.language),
+                      },
+                      {
+                        label: t('trades.date'),
+                        value: new Date(trade.createdAt).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', year: 'numeric' }),
+                      },
+                    ],
+                  }
 
                   return (
-                    <tr key={trade.id} className="hover:bg-gray-50/70 dark:hover:bg-white/3 transition-colors">
+                    <RowHoverCard key={trade.id} as="tr" data={hoverData} className="hover:bg-gray-50/70 dark:hover:bg-white/3 transition-colors">
                       <td className="px-4 py-3">
                         <span className="font-mono font-semibold text-gray-900 dark:text-slate-100">{trade.symbol}</span>
                       </td>
@@ -278,7 +324,7 @@ export function TradesPage() {
                           </button>
                         </div>
                       </td>
-                    </tr>
+                    </RowHoverCard>
                   )
                 })}
               </tbody>
