@@ -38,7 +38,7 @@ const MONTHS = Array.from({ length: 6 }, (_, i) => monthsBack(i))
 export function TransactionsPage() {
   const { t, i18n } = useTranslation()
   const currency = useLocaleStore((s) => s.currency)
-  const resolveCategoryLabel = useCategoryLabel()
+  const categoryLabel = useCategoryLabel()
 
   const [filters, setFilters] = useState<TransactionFilters>({
     search: '',
@@ -200,7 +200,7 @@ export function TransactionsPage() {
                     {tx.type === 'Income' ? t('transactions.income') : t('transactions.expense')}
                   </span>
                   <div className="min-w-0">
-                    <TruncatedText text={resolveCategoryLabel(tx.category)} className="text-sm font-medium" as="p" />
+                    <TruncatedText text={categoryLabel(tx.category)} className="text-sm font-medium" as="p" />
                     {tx.note && (
                       <TruncatedText text={tx.note} className="text-xs text-gray-400 dark:text-slate-500" as="p" />
                     )}

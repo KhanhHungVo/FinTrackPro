@@ -4,6 +4,7 @@ import { useTransactions } from '@/entities/transaction'
 import { useExchangeRates } from '@/entities/exchange-rate'
 import { useLocaleStore } from '@/features/locale'
 import { convertAmount } from '@/shared/lib/convertAmount'
+import { useCategoryLabel } from '@/shared/lib/useCategoryLabel'
 
 export interface BudgetHealthItem {
   id: string
@@ -19,6 +20,7 @@ export function useBudgetHealth(month: string) {
   const { data: budgets, isLoading: loadingBudgets } = useBudgets(month)
   const { data: txData, isLoading: loadingTx } = useTransactions({ month, type: 'Expense', pageSize: 100 })
   const { data: rates } = useExchangeRates([currency])
+  const categoryLabel = useCategoryLabel()
   const preferredRate = rates?.[currency] ?? 1
 
   const { items, onTrackCount, totalCount } = useMemo(() => {
@@ -37,7 +39,7 @@ export function useBudgetHealth(month: string) {
         const limit = convertAmount(b.limitAmount, b.rateToUsd, preferredRate, b.currency, currency)
         const spent = spentByCategory[b.category] ?? 0
         const pct = limit > 0 ? (spent / limit) * 100 : 0
-        return { id: b.id, category: b.category, spent, limit, pct, overrun: spent > limit }
+        return { id: b.id, category: categoryLabel(b.category), spent, limit, pct, overrun: spent > limit }
       })
       // Sort worst-first
       .sort((a, b) => b.pct - a.pct)
@@ -51,7 +53,7 @@ export function useBudgetHealth(month: string) {
     }).length
 
     return { items, onTrackCount, totalCount }
-  }, [budgets, txData, preferredRate, currency])
+  }, [budgets, txData, preferredRate, currency, categoryLabel])
 
   return { items, onTrackCount, totalCount, isLoading: loadingBudgets || loadingTx, currency }
 }
